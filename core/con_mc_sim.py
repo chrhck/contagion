@@ -12,13 +12,12 @@ from time import time
 from scipy.stats import binom
 from scipy.stats import norm
 from numpy.random import choice
-from fd_config import config
+from con_config import config
 
-class fd_roll_dice_social(object):
+class con_mc_sim(object):
     """
     class: fd_roll_dice_social
-    Monte-carlo simulation for the light
-    emissions.
+    Monte-carlo simulation for the infection spread.
     Parameters:
         -mean vel:
             The mean social velocity

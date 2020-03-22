@@ -6,14 +6,14 @@ Constructs the geometry of the system
 
 "Imports"
 from sys import exit
-from fd_config import config
+from con_config import config
 import numpy as np
 from scipy import spatial
 import pickle
 
-class fd_adamah(object):
+class con_adamah(object):
     """
-    class: fd_adamah
+    class: con_adamah
     Constructs the geometry of the system.
     Parameters:
         -obj log:
