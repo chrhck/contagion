@@ -28,9 +28,7 @@ class CONTAGION(object):
     Returns:
         -None
     """
-    def __init__(self,
-     org_filter=config['filter']
-     ):
+    def __init__(self):
         """
         function: __init__
         Initializes the class CONTAGION.
@@ -48,7 +46,7 @@ class CONTAGION(object):
         self.log.setLevel(logging.DEBUG)
         self.log.propagate = False
         # creating file handler with debug messages
-        self.fh = logging.FileHandler('../fd.log', mode='w')
+        self.fh = logging.FileHandler('../contagion.log', mode='w')
         self.fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         self.ch = logging.StreamHandler()

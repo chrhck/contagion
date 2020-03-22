@@ -341,7 +341,7 @@ class con_mc_sim(object):
                 The sample size
         """
         encounter_r = []
-        for i in range(n):
+        for _ in range(n):
             res = -1
             while res <=0:
                 res = norm.rvs(

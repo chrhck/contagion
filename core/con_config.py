@@ -36,13 +36,13 @@ config = {
     #            'volume': v,  # The volume
     #            'points': np.array  # point cloud as 2d array with e.g. [x,y,z]
     'geometry': 'box',
-    'box size': 1e3,  # Side length in mm of box
+    'box size': 1e2,  # Side length in mm of box
     'sphere diameter': 1e2,  # Radius of the sphere
     'custom geometry': 'example_tetrahedron.pkl',  # File for custom geometry
     # Size of bounding box
     # This box needs to surround the volume of interest
     # It is used to create a population sample
-    'bounding box': 1.1e3   	,
+    'bounding box': 1.1e2   	,
     # Switch to store steps or not
     # This requires a bit more memory
     "save population": True,

@@ -1,5 +1,5 @@
 """
-Name: fd_adamah.py
+Name: con_adamah.py
 Authors: Stephan Meighen-Berger
 Constructs the geometry of the system
 """
