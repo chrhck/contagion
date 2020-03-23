@@ -58,7 +58,7 @@ class CON_population(object):
 
         self.__log.debug('Constructing population')
         self.__pop = np.array([
-            [np.random.randint(0, high=pop, size=self.__social_circles[i]),
+            [np.random.choice(range(pop), size=self.__social_circles[i], replace=False),
              self.__sc_interactions[i]]
             for i in range(pop)
         ])

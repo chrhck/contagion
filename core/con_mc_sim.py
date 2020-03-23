@@ -22,6 +22,8 @@ class CON_mc_sim(object):
             The population
         -obj infection:
             The infection object
+        -np.array tracked:
+            The tracked population
         -obj log:
             The logger
         -dic config:
@@ -31,17 +33,19 @@ class CON_mc_sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(self, infected, population, infection, log, config):
+    def __init__(self, infected, population, infection, tracked, log, config):
         """
         function: __init__
         Initializes the class.
         Parameters:
             -int infected:
                 The starting infected population
-            -obj infection:
-                The infection object
             -np.array population:
                 The population
+            -obj infection:
+                The infection object
+            -np.array tracked:
+                The tracked population
             -obj log:
                 The logger
             -dic config:
@@ -66,7 +70,7 @@ class CON_mc_sim(object):
             exit('Check the interaction intensity in the config file!')
         self.__log.debug('Constructing simulation population')
         self.__log.debug('The infected ids and durations...')
-        infect_id = np.random.randint(0, high=len(population)-1, size=infected)
+        infect_id = np.random.choice(range(len(population)), size=infected, replace=False)
         infect_dur = np.around(self.__infect.pdf_duration(infected).flatten())
         # Constructing population array
         # Every individual has 5 components
@@ -86,6 +90,10 @@ class CON_mc_sim(object):
             self.__population[id_inf][3] = True
             self.__population[id_inf][4] = infect_dur[i]
         self.__log.info('There will be %d simulation steps' %len(self.__t))
+        # Removing social mobility of tracked people
+        if tracked is not None:
+            for i in tracked:
+                self.__population[i][2] = 0
         if self.__config['save population']:
             self.__log.debug("Saving the distribution of infected")
             self.__distribution = []

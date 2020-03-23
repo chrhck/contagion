@@ -24,6 +24,7 @@ from con_adamah import con_adamah
 from con_random_walk import CON_random_walk
 from con_infection import CON_infection
 from con_mc_sim import CON_mc_sim
+from con_measures import CON_measures
 
 class CONTAGION(object):
     """
@@ -32,8 +33,6 @@ class CONTAGION(object):
     stores all methods required to run the simulation
     of the infection spread
     Parameters:
-        -int pop:
-            The population size
         -int infected:
                 The number of starting infections
         -optional dic config:
@@ -41,14 +40,12 @@ class CONTAGION(object):
     Returns:
         -None
     """
-    def __init__(self, pop, infected, config=confi):
+    def __init__(self, infected, config=confi):
         """
         function: __init__
         Initializes the class CONTAGION.
         Here all run parameters are set.
         Parameters:
-            -int pop:
-                The population size
             -int infected:
                 The number of starting infections
             -optional dic config:
@@ -57,9 +54,9 @@ class CONTAGION(object):
             -None
         """
         # Inputs
-        self.population = pop
         self.infected = infected
         self.config = config
+        pop = self.config['population size']
         "Logger"
         # Basic config empty for now
         logging.basicConfig()
@@ -101,9 +98,9 @@ class CONTAGION(object):
             self.log.info('Finished the infection construction')
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
-            # TODO: Measure model
             self.log.info('Starting the measure construction')
-            self.log.info('As of yet not implemented!')
+            self.tracked = CON_measures(self.log, self.config).tracked
+            self.log.info('Finished the measure construction')
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
@@ -154,6 +151,7 @@ class CONTAGION(object):
             self.infected,
             self.pop,
             self.infection,
+            self.tracked,
             self.log,
             self.config
         )
@@ -163,6 +161,11 @@ class CONTAGION(object):
         self.log.info('Finished calculation')
         self.log.info('---------------------------------------------------')
         self.log.info('---------------------------------------------------')
+        # Closing log
+        self.log.removeHandler(self.fh)
+        self.log.removeHandler(self.ch)
+        del self.log, self.fh, self.ch
+        logging.shutdown()
         return self.mc_run.population
 
 
@@ -204,7 +207,7 @@ class CONTAGION(object):
             vel_var,
             distances,
             dist_var,
-            self.population,
+            self.config['population size'],
             self.infected,
             self.world,
             self.log,

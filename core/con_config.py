@@ -19,8 +19,10 @@ config = {
     # Switch to store steps or not
     # This requires a bit more memory
     "save population": True,
+    # The size of the population
+    "population size": 10000,
     # Simulation duration
-    "simulation length": 100,
+    "simulation length": 1000,
     # The probability distribution to use for the movement pdf
     # Currently supported:
     #   - 'gauss':
@@ -59,6 +61,12 @@ config = {
     'infection duration variance': 5,
     # Infection duration pdf
     'infection duration pdf': 'gauss',
+    # Possible measures to take
+    # -'None'
+    # -'contact tracing'
+    'measures': 'none',
+    # fraction of population tracked
+    'tracked': 0.2,
     # Interaction intensity distribution:
     # Available: uniform
     'interaction intensity': 'uniform',
