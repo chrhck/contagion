@@ -12,10 +12,18 @@ of safety measures, such as social distancing and tracking.
 import logging
 import numpy as np
 from time import time
+# -----------------------------------------
 # Package modules
-from con_config import config
+from con_config import config as confi
+# -----------------------------------------
+# Realistic sim imports
+from con_population import CON_population
+# -----------------------------------------
+# The random walk imports
 from con_adamah import con_adamah
-from con_mc_sim import con_mc_sim
+from con_random_walk import CON_random_walk
+from con_infection import CON_infection
+from con_mc_sim import CON_mc_sim
 
 class CONTAGION(object):
     """
@@ -24,20 +32,34 @@ class CONTAGION(object):
     stores all methods required to run the simulation
     of the infection spread
     Parameters:
-        -None
+        -int pop:
+            The population size
+        -int infected:
+                The number of starting infections
+        -optional dic config:
+            The dictionary from the config file
     Returns:
         -None
     """
-    def __init__(self):
+    def __init__(self, pop, infected, config=confi):
         """
         function: __init__
         Initializes the class CONTAGION.
         Here all run parameters are set.
         Parameters:
-            -None
+            -int pop:
+                The population size
+            -int infected:
+                The number of starting infections
+            -optional dic config:
+                The dictionary from the config file
         Returns:
             -None
         """
+        # Inputs
+        self.population = pop
+        self.infected = infected
+        self.config = config
         "Logger"
         # Basic config empty for now
         logging.basicConfig()
@@ -50,7 +72,7 @@ class CONTAGION(object):
         self.fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         self.ch = logging.StreamHandler()
-        self.ch.setLevel(config['debug level'])
+        self.ch.setLevel(self.config['debug level'])
         # Logging formatter
         formatter = logging.Formatter(
             fmt='%(levelname)s: %(message)s'
@@ -64,31 +86,96 @@ class CONTAGION(object):
         self.log.info('---------------------------------------------------')
         self.log.info('Welcome to contagion!')
         self.log.info('This package will help you model the spread of infections')
-        # TODO: Population model
-        self.log.info('---------------------------------------------------')
-        self.log.info('---------------------------------------------------')
-        self.log.info('Creating the world')
-        # TODO: Social circle models for the "world"
-        # TODO: Encounter distribution models
-        #  The volume of interest
-        self.world = con_adamah(self.log)
-        self.log.info('Finished world building')
-        self.log.info('---------------------------------------------------')
-        self.log.info('---------------------------------------------------')
+        # Checking the type of the simulation
+        self.log.info('Simulation type is set to ' + self.config['simulation type'])
+        if self.config['simulation type'] == 'realistic':
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('Starting population construction')
+            self.pop = CON_population(pop, self.log, self.config).population
+            self.log.info('Finished the population')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('Starting the infection construction')
+            self.infection = CON_infection(self.log, self.config)
+            self.log.info('Finished the infection construction')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            # TODO: Measure model
+            self.log.info('Starting the measure construction')
+            self.log.info('As of yet not implemented!')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('Setting the simulation framework')
+            self.sim = self.__sim_realistic
+            self.log.info('Simulation framework set. Please type:')
+            self.log.info('self.sim(parameters) to run the simulation')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+        elif self.config['simulation type'] == 'random walk':
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('Creating the world')
+            self.world = con_adamah(self.log, self.config)
+            self.log.info('Finished world building')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+            self.log.info('Setting the simulation framework')
+            self.sim = self.__sim_random_walk
+            self.log.info('Simulation framework set. Please type:')
+            self.log.info('self.sim(parameters) to run the simulation')
+            self.log.info('---------------------------------------------------')
+            self.log.info('---------------------------------------------------')
+        else:
+            self.log.error('Simulation type unknown: ' + self.config['simulation type'])
+            exit('Please check the config file for valid simulation types.')
+        
 
-    def solve(self, population, velocity,
+    def __sim_realistic(self):
+        """
+        function: __sim_realistic
+        Realistic infection spread simulation
+        Parameters:
+            -None
+        Returns:
+            -np.array infected:
+                The current population
+        """
+        self.log.info('---------------------------------------------------')
+        self.log.info('---------------------------------------------------')
+        dt = self.config['time step']
+        if dt > 1.:
+            self.log.error("Chosen time step too large!")
+            exit("Please run with time steps smaller than 1s!")
+        self.log.debug('Realistic run')
+        self.mc_run = CON_mc_sim(
+            self.infected,
+            self.pop,
+            self.infection,
+            self.log,
+            self.config
+        )
+        self.t = self.mc_run.time_array
+        self.log.info('---------------------------------------------------')
+        self.log.info('---------------------------------------------------')
+        self.log.info('Finished calculation')
+        self.log.info('---------------------------------------------------')
+        self.log.info('---------------------------------------------------')
+        return self.mc_run.population
+
+
+    def __sim_random_walk(self,
+              velocity,
               distances,
               seconds=100,
-              dt=config['time step'],
               vel_var=1.,
-              dist_var=1.,
-              infected=1):
+              dist_var=1.):
         """
-        function: solve
-        Calculates the light yields depending on input
+        function: __sim_random_walk
+        Random walk simulation
         Parameters:
-            -float population:
-                The number of organisms
             -float velocity:
                 The mean velocity of the current in m/s,
                 or the mean "social" velocity 
@@ -98,39 +185,35 @@ class CONTAGION(object):
             -int seconds:
                 Number of seconds to simulate. This is used by
                 the mc routines.
-            -float regen:
-                The regeneration factor
-            -float dt:
-                The time step to use. Needs to be below 1
             -float vel_var:
                 The social velocity variance
             -float dist_var:
                 The social distance variance
-            -int infected:
-                The number of infected people
         Returns:
             -np.array result:
-                The resulting light yields
+                The resulting infection spread
         """
+        dt = self.config['time step']
         if dt > 1.:
             self.log.error("Chosen time step too large!")
             exit("Please run with time steps smaller than 1s!")
-        self.log.debug('Monte-Carlo run')
+        self.log.debug('Random walk run')
         self.t = np.arange(0., seconds, dt)
-        self.mc_run = con_mc_sim(
+        self.mc_run = CON_random_walk(
             velocity,
             vel_var,
             distances,
             dist_var,
-            population,
-            infected,
+            self.population,
+            self.infected,
             self.world,
             self.log,
+            self.config,
             dt=dt,
             t=self.t
         )
-        self.log.debug('---------------------------------------------------')
-        self.log.debug('---------------------------------------------------')
+        self.log.info('---------------------------------------------------')
+        self.log.info('---------------------------------------------------')
         self.log.info('Finished calculation')
         self.log.info('---------------------------------------------------')
         self.log.info('---------------------------------------------------')

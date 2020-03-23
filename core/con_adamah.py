@@ -6,7 +6,6 @@ Constructs the geometry of the system
 
 "Imports"
 from sys import exit
-from con_config import config
 import numpy as np
 from scipy import spatial
 import pickle
@@ -18,42 +17,47 @@ class con_adamah(object):
     Parameters:
         -obj log:
             The logger
+        -dic config:
+            The config dictionary
     Returns:
         -None
     "And a mist was going up from eretz and was watering the whole
      face of adamah."
     """
     # TODO: Organisms will not be evenly distributed in the volume.
-    def __init__(self, log):
+    def __init__(self, log, config):
         """
         function: __init__
         Initializes adamah.
         Parameters:
             -obj log:
                 The logger
+            -dic config:
+                The config dictionary
         Returns:
             -None
         "And a mist was going up from eretz and was watering the whole
         face of adamah."
         """
+        self.__config = config
         self.__log = log
-        if config['geometry'] == 'box':
-            self.__dim = config['dimensions']
+        if self.__config['geometry'] == 'box':
+            self.__dim = self.__config['dimensions']
             if not(self.__dim in [2,3]):
                 log("Dimensions not supported!")
                 exit("Check config file for wrong dimensions!")
             self.__log.debug('Using a box geometry')
             self.__geom_box()
-            self.__bounding_box = config['bounding box']
-        elif config['geometry'] == 'sphere':
-            self.__dim = config['dimensions']
+            self.__bounding_box = self.__config['bounding box']
+        elif self.__config['geometry'] == 'sphere':
+            self.__dim = self.__config['dimensions']
             if not(self.__dim in [2,3]):
                 log("Dimensions not supported!")
                 exit("Check config file for wrong dimensions!")
             self.__log.debug('Using a sphere geometry')
             self.__geom_sphere()
-            self.__bounding_box = config['bounding box']
-        elif config['geometry'] == 'custom':
+            self.__bounding_box = self.__config['bounding box']
+        elif self.__config['geometry'] == 'custom':
             self.__log.debug("Using custom geometry")
             self.__geom_custom()
         else:
@@ -70,7 +74,7 @@ class con_adamah(object):
             -None
         """
         # The side length of the box
-        a = config['box size'] / 2.
+        a = self.__config['box size'] / 2.
         self.__log.debug('The side length is %.1f' %a)
         # The volume of the box
         self.__volume = (a * 2.)**self.__dim
@@ -99,15 +103,15 @@ class con_adamah(object):
             -None
         """
         # The side length of the sphere
-        r = config['sphere diameter'] / 2.
+        r = self.__config['sphere diameter'] / 2.
         self.__log.debug('The radius is %.1f' %r)
         # The volume of the sphere
         if self.__dim == 2:
             self.__volume = r**2 * np.pi
-            points = self.__even_circle(config['sphere samples'])
+            points = self.__even_circle(self.__config['sphere samples'])
         elif self.__dim == 3:
             self.__volume = (r * 2.)**3. * np.pi * 4./3.
-            points = self.__fibonacci_sphere(config['sphere samples'])
+            points = self.__fibonacci_sphere(self.__config['sphere samples'])
         # The corners of the sphere
         points_norm = points / np.linalg.norm(points, axis=1).reshape((len(points), 1))
         points_r = points_norm * r
@@ -127,7 +131,7 @@ class con_adamah(object):
         """
         geom_dic = pickle.load(open(
             "..//data/detector//geometry//" +
-            config['custom geometry'],
+            self.__config['custom geometry'],
             'rb')
         )
         self.__log.debug('Constructing the hull')

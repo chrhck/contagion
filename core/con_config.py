@@ -11,17 +11,64 @@ import numpy as np
 import logging
 
 config = {
+    ###################################################
+    # General
+    ###################################################
     # Output level
-    'debug level': logging.ERROR,
-    # Number of dimensions for the simulation
-    # Current options:
-    #   - 2, 3
-    "dimensions": 2,
+    'debug level': logging.INFO,
+    # Switch to store steps or not
+    # This requires a bit more memory
+    "save population": True,
+    # Simulation duration
+    "simulation length": 100,
     # The probability distribution to use for the movement pdf
     # Currently supported:
     #   - 'gauss':
     #       A gaussian distribution
     'pdf move': 'gauss',
+    # Simulation type:
+    #   -'random walk':
+    #       A simple random walk simulation,
+    #       useful for visualizations
+    #   -'realistic':
+    #       Realistic social and infection modelling
+    'simulation type': 'realistic',
+    ###################################################
+    # 'realistic' options
+    ###################################################
+    # The average size of a person's social circle
+    'average social circle': 20,
+    # The variance of one's social circle
+    'variance social circle': 5,
+    # Social circle pdf:
+    # Available: 'gauss'
+    'social circle pdf': 'gauss',
+    # Average number of interactions per time step in sc
+    'mean social circle interactions': 1,
+    # Variance of sc interactions
+    'variance social circle interactions': 2,
+    # Distribution of the interaction rates
+    # Available: 'gauss'
+    'social circle interactions pdf': 'gauss',
+    # Infection probability pdf
+    # available: 'intensity'
+    'infection probability pdf': 'intensity',
+    # Infection duration mean
+    'infection duration mean': 20,
+    # Infection duration variance
+    'infection duration variance': 5,
+    # Infection duration pdf
+    'infection duration pdf': 'gauss',
+    # Interaction intensity distribution:
+    # Available: uniform
+    'interaction intensity': 'uniform',
+    ###################################################
+    # 'random walk' options
+    ###################################################
+    # Number of dimensions for the simulation
+    # Current options:
+    #   - 2, 3
+    "dimensions": 2,
     # The geometry of the problem.
     #   -'box':
     #       Creates a uniform box of 1m x 1m x 1m evenly filled.
@@ -42,15 +89,10 @@ config = {
     # Size of bounding box
     # This box needs to surround the volume of interest
     # It is used to create a population sample
-    'bounding box': 1.1e2   	,
-    # Switch to store steps or not
-    # This requires a bit more memory
-    "save population": True,
+    'bounding box': 1.1e2,
     ###################################################
     # More advanced
     ###################################################
-    # Pulse shape
-    'pulse shape': 'uniform',
     # Time step to use
     # TODO: Define time steps
     # This should be at maximum 1

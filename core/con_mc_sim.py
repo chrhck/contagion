@@ -9,129 +9,172 @@ for the social interactions.
 from sys import exit
 import numpy as np
 from time import time
-from scipy.stats import binom
-from scipy.stats import norm
 from numpy.random import choice
-from con_config import config
 
-class con_mc_sim(object):
+class CON_mc_sim(object):
     """
-    class: fd_roll_dice_social
+    class: CON_mc_sim
     Monte-carlo simulation for the infection spread.
     Parameters:
-        -mean vel:
-            The mean social velocity
-        -mean r:
-            The mean interaction range
-        -int pop:
-            The population
         -int infected:
-            The number of infected people
+            The starting infected population
+        -np.array population:
+            The population
+        -obj infection:
+            The infection object
         -obj log:
             The logger
-        -float dt:
-            The chosen time step
-        -np.array t:
-            The time array
+        -dic config:
+            Dictionary from the config file
     Returns:
         -None
     "God does not roll dice!"
     """
 
-    def __init__(self, vel, vel_var, r, r_var,
-                 pop, infected, world, log,
-                 dt=1., t=np.arange(0., 100., 1.)):
+    def __init__(self, infected, population, infection, log, config):
         """
         function: __init__
         Initializes the class.
         Parameters:
-            -float vel:
-                The mean social velocity
-            -float vel_var:
-                The velocity variance
-            -float r:
-                The mean interaction range
-            -float r_var:
-                The interaction range variance
-            -int pop:
-                The population
             -int infected:
-                The number of infected people
+                The starting infected population
+            -obj infection:
+                The infection object
+            -np.array population:
+                The population
             -obj log:
                 The logger
-            -float dt:
-                The chosen time step
-            -np.array t:
-                The time array
+            -dic config:
+                Dictionary from the config file
         Returns:
             -None
         """
         self.__log = log
-        self.__vel_mean = vel
-        self.__vel_var = vel_var
-        self.__r_mean = r
-        self.__r_var = r_var
-        if config['pdf move'] == 'gauss':
-            self.__vel = self.__vel_distr_norm
-            self.__r = self.__r_distr_norm
+        self.__config = config
+        self.__infect = infection
+        self.__dt = config['time step']
+        self.__t = np.arange(
+            0., self.__config['simulation length'],
+            step=self.__dt
+        )
+        self.__log.debug('The interaction intensity pdf')
+        if self.__config['interaction intensity'] == 'uniform':
+            self.__intense_pdf = self.__intens_pdf_uniform
         else:
-            self.__log.error('Unrecognized movement distribution!')
-            exit('Check the movement distribution in the config file!')
-        self.__pop = pop
-        self.__world = world
-        self.__dt = dt
-        self.__t = t
-        # An organism is defined to have:
-        #   - dim components for position
-        #   - dim components for velocity
-        #   - 1 component encounter radius
-        #   - 1 interacted or not
-        # Total components: dim*dim + 2
-        self.__dim = self.__world.dimensions
-        self.__dimensions = config['dimensions']*2 + 2
-        self.__population = np.zeros((pop, self.__dimensions))
-        # Random starting position
-        # TODO: Optimize this
-        positions = []
-        while len(positions) < pop:
-            inside = True
-            while inside:
-                point = np.random.uniform(low=-self.__world.bounding_box/2.,
-                                          high=self.__world.bounding_box/2.,
-                                          size=self.__dim)
-                inside = not(self.__world.point_in_wold(point))
-            positions.append(point)
-        positions = np.array(positions)
-        # Random starting velocities
-        veloc = self.__vel(pop).reshape((pop, 1)) * self.__random_direction(pop)
-        # Random encounter radius
-        radii = self.__r(pop)
-        # Sick individuals
-        sick_id = choice(pop, size=infected, replace=False)
-        bool_array = np.array([
-            1
-            if i in sick_id
-            else
-            0
-            for i in range(pop)
+            self.__log.error('Unrecognized intensity pdf! Set to ' +
+                             self.__config['interaction intensity'])
+            exit('Check the interaction intensity in the config file!')
+        self.__log.debug('Constructing simulation population')
+        self.__log.debug('The infected ids and durations...')
+        infect_id = np.random.randint(0, high=len(population)-1, size=infected)
+        infect_dur = np.around(self.__infect.pdf_duration(infected).flatten())
+        # Constructing population array
+        # Every individual has 5 components
+        #   -individual's id
+        #   -ids of individuals in sc
+        #   -The number of interactions per time step
+        #   -infected
+        #   -remaining duration of infection
+        #   -immune
+        self.__log.debug('Filling the population array')
+        self.__population = np.array([
+            [i, population[i][0], population[i][1], False, 0., False]
+            for i in range(len(population))
         ])
-        # Giving the population the properties
-        self.__population[:, 0:self.__dim] = positions
-        self.__population[:, self.__dim:self.__dim*2] = veloc
-        self.__population[:, self.__dim*2] = radii
-        # Infecting
-        self.__population[:, self.__dim*2+1] = bool_array
-        if config['save population']:
-            self.__log.debug("Saving the distribution of organisms")
+        # Adding the infected
+        for i, id_inf in enumerate(infect_id):
+            self.__population[id_inf][3] = True
+            self.__population[id_inf][4] = infect_dur[i]
+        self.__log.info('There will be %d simulation steps' %len(self.__t))
+        if self.__config['save population']:
+            self.__log.debug("Saving the distribution of infected")
             self.__distribution = []
-            self.__distribution.append(np.copy(
-                self.__population
-            ))
+            self.__total_infections = []
+            self.__new_infections = []
+            self.__immune = []
         # Running the simulation
         start = time()
         self.__simulation()
         end = time()
-        self.__log.debug('MC simulation took %f seconds' % (end-start))
+        self.__log.info('MC simulation took %f seconds' % (end-start))
+
+    @property
+    def population(self):
+        """
+        function: population
+        Returns the population
+        Parameters:
+            -None
+        Returns:
+            -np.array population:
+                The current population
+        """
+        return self.__population
+
+    @property
+    def distribution(self):
+        """
+        function: distribution
+        Returns the distribution
+        Parameters:
+            -None
+        Returns:
+            -np.array distribution:
+                The distribution
+        """
+        return self.__distribution
+
+    @property
+    def infections(self):
+        """
+        function: infections
+        Returns the infections
+        Parameters:
+            -None
+        Returns:
+            -np.array infections:
+                The total infections
+        """
+        return np.array(self.__total_infections)
+
+    @property
+    def new_infections(self):
+        """
+        function: new_infections
+        Returns the new_infections
+        Parameters:
+            -None
+        Returns:
+            -np.array new_infections:
+                The total new_infections
+        """
+        return np.array(self.__new_infections)
+
+    @property
+    def immune(self):
+        """
+        function: immune
+        Returns the immune
+        Parameters:
+            -None
+        Returns:
+            -np.array immune:
+                The total immune
+        """
+        return np.array(self.__immune)
+
+    @property
+    def time_array(self):
+        """
+        function: time_array
+        Returns the time array used
+        Parameters:
+            -None
+        Returns:
+            np.array __t:
+                The time array
+        """
+        return self.__t
 
     def __simulation(self):
         """
@@ -143,210 +186,109 @@ class con_mc_sim(object):
             -None
         """
         self.__infections = []
-        for step, _ in enumerate(self.__t):
-            start_pos = time()
-            # Updating position
-            tmp = (
-                self.__population[:, 0:self.__dim] +
-                self.__population[:, self.__dim:self.__dim*2] * self.__dt
-            )
-            # If outside box stay put
-            # TODO: Generalize this
-            self.__population[:, 0:self.__dim] = np.array([
-                tmp[idIt]
-                if self.__world.point_in_wold(tmp[idIt])
-                else
-                tmp[idIt] - self.__population[:, self.__dim:self.__dim*2][idIt] * self.__dt
-                for idIt in range(self.__pop)
-            ])
-            end_pos = time()
-            # Updating velocity
-            start_vel = time()
-            self.__population[:, self.__dim:self.__dim*2] = (
-                self.__vel(self.__pop).reshape((self.__pop, 1)) *
-                self.__random_direction(self.__pop)
-            )
-            end_vel = time()
-            # Creating encounter array
-            start_enc = time()
-            encounter_arr = self.__encounter(self.__population[:, 0:self.__dim],
-                                            self.__population[:, self.__dim*2])
-            # Checking if encounter with infected
-            infection_arr = np.array([
-                1 if np.any(
-                    np.isin(
-                        np.nonzero(encounter_arr[i]),
-                        np.nonzero(self.__population[:, self.__dim*2+1])
+        for _ in self.__t:
+            #TODO: This needs to be optimized to a comprehension
+            new_infections = []
+            for person_id, person in enumerate(self.__population):
+                if person[3]:
+                    # Infected people contacts others
+                    contacts = choice(person[1], size=person[2])
+                    # Intensity of the contacts
+                    # print('Contacts')
+                    # print(contacts)
+                    # print('Pre work')
+                    # print(self.__intense_pdf(len(contacts)))
+                    intens_arr = self.__intense_pdf(len(contacts)).flatten()
+                    # print('The intensities of the contacts')
+                    # print(intens_arr)
+                    # Infection probability
+                    infection_prob = np.array([
+                        self.__infect.pdf(intens)
+                        for intens in intens_arr
+                    ])
+                    # print('The probability')
+                    # print(infection_prob)
+                    # Are they infected?
+                    infection = np.around(infection_prob)
+                    # print('Infected?')
+                    # print(infection)
+                    new_infections.append(
+                        [
+                            contacts[i]
+                            for i in range(len(infection))
+                            if infection[i] > 0.
+                        ]
                     )
-                )
-                else
-                0
-            for i in range(len(encounter_arr))])
-            # Can't re-infect oneself
-            infection_arr = np.array([
-                1 
-                if (
-                    (infection_arr[i] == 1) and
-                    (self.__population[:, self.__dim*2+1][i] == 0)
-                )
-                else
-                0
-            for i in range(len(infection_arr))
-            ])
-            end_enc = time()
-            # Adding to population
-            self.__population[:, self.__dim*2+1] += infection_arr
-            if config['save population']:
+                    # print('New infection ids')
+                    # print(new_infections)
+                    # subtracting 1 from the infection duration
+                    if self.__population[person_id][4] > 0:
+                        self.__population[person_id][4] -= 1
+                        # Person has survived infection
+                        if self.__population[person_id][4] == 0:
+                            self.__population[person_id][3] = False
+                            self.__population[person_id][5] = True
+            # Adding newly infected to the population
+            new_infection_counter = 0
+            for new_infect in new_infections:
+                # The durations
+                tmp_dur = np.around(self.__infect.pdf_duration(len(new_infect)).flatten())
+                for i, id_infect in enumerate(new_infect):
+                    if((not self.__population[id_infect][3]) &
+                       (not self.__population[id_infect][5])):
+                        self.__population[id_infect][3] = True
+                        self.__population[id_infect][4] = tmp_dur[i]
+                        new_infection_counter += 1
+            if self.__config['save population']:
                 self.__distribution.append(np.copy(
-                    self.__population)
-                )
-            # Counting new infections
-            self.__infections.append(infection_arr)
-            if step % (int(len(self.__t)/10)) == 0:
-                self.__log.debug('In step %d' %step)
-                self.__log.debug(
-                    'Position update took %f seconds' %(end_pos-start_pos)
-                )
-                self.__log.debug(
-                    'Velocity update took %f seconds' %(end_vel-start_vel)
-                )
-                self.__log.debug(
-                    'Encounter update took %f seconds' %(end_enc-start_enc)
-                )
-
-    @property
-    def infections(self):
-        """
-        function: infections
-        Fetches the infection count
-        Parameters:
-            -None
-        Returns:
-            -photon_count
-        """
-        return np.array(self.__infections)
-
-    @property
-    def population(self):
-        """
-        function: population
-        Fetches the population
-        Parameters:
-            -None
-        Returns:
-            -photon_count
-        """
-        return np.array(self.__population)
-    
-    @property
-    def distribution(self):
-        """
-        function: distribution
-        Fetches the population distribution
-        Parameters:
-            -None
-        Returns:
-            -photon_count
-        """
-        if config['save population']:
-            return np.array(self.__distribution)
-        else:
-            self.__log.error("Distribution was not saved!")
-            exit("Rerun with 'save population' set to True in config file!")
-
-    def __random_direction(self, pop):
-        """
-        function: __random_direction
-        Generates a random direction for
-        the velocities of the population
-        Parameters:
-            -int pop:
-                Size of the population
-        Returns:
-            -np.array direc:
-                Array of normalized random
-                directions.
-        """
-        # Creating the direction vector
-        # with constraints
-        # Generates samples until criteria are acceptable
-        direc = []
-        # TODO: Optimize this
-        for pop_i in range(pop):
-            # Sample until angle is acceptable
-            angle = (config['angle change'][0] + config['angle change'][1]) / 2.
-            while (angle > config['angle change'][0] and angle < config['angle change'][1]):
-                new_vec = np.random.uniform(low=-1., high=1., size=self.__dim)
-                current_vec = self.__population[pop_i, self.__dim:self.__dim*2]
-                # The argument
-                arg = (
-                    np.dot(new_vec, current_vec) /
-                    (np.linalg.norm(new_vec) * np.linalg.norm(current_vec))
-                )
-                # Making sure parallel and anti-parallel work
-                angle = np.rad2deg(np.arccos(
-                    np.clip(arg , -1.0, 1.0)
+                    self.__population
                 ))
-            direc.append(new_vec)
-        direc = np.array(direc)
-        # Normalizing
-        direc = direc / np.linalg.norm(
-            direc, axis=1
-        ).reshape((pop, 1))
-        return direc
+                self.__total_infections.append(len(self.__fetch_infected()))
+                self.__new_infections.append(new_infection_counter)
+                self.__immune.append(len(self.__fetch_immune()))
 
-    def __encounter(self, population, radii):
+
+    def __intens_pdf_uniform(self, contacts):
         """
-        function: __encounter
-        Checks the number of encounters
+        function: __intens_pdf_uniform
+        The social interaction intensity
+        drawn from a uniform distribution
         Parameters:
-            -np.array population:
-                The positions of the organisms
-            -np.array radii:
-                Their encounter radius
+            -int contacts:
+                Number of contacts
         Returns:
-            -int num_encounter:
-                The number of encounters
+            -np.array res:
+                The contact intensities
         """
-        distances = (
-            np.linalg.norm(
-                population -
-                population[:, None], axis=-1
-                )
-        )
-        encounter_arr = np.array([
-            distances[idLine] < radii[idLine]
-            for idLine in range(0, len(distances))
+        return np.random.uniform(low=0., high=1., size=contacts)
+
+    def __fetch_infected(self):
+        """
+        function: __fetch_infected
+        Helper function to fetch the infected count
+        Parameters:
+            -None
+        Returns:
+            -np.array res:
+                The number of currently infected
+        """
+        return np.array([
+            person for person in self.__population
+            if person[3]
         ])
-        return encounter_arr
 
-    def __vel_distr_norm(self, n):
+    def __fetch_immune(self):
         """
-        function: __vel_distr_norm:
-        Gaussian velocity distribution
+        function: __fetch_immune
+        Helper function to fetch the immune count
         Parameters:
-            -int n:
-                The sample size
+            -None
+        Returns:
+            -np.array res:
+                The number of currently infected
         """
-        return(norm.rvs(size=n,
-                        loc=self.__vel_mean,
-                        scale=self.__vel_var))
-
-    def __r_distr_norm(self, n):
-        """
-        function: __r_distr_norm:
-        Gaussian radii distribution
-        Parameters:
-            -int n:
-                The sample size
-        """
-        encounter_r = []
-        for _ in range(n):
-            res = -1
-            while res <=0:
-                res = norm.rvs(
-                    loc=self.__r_mean,
-                    scale=self.__r_var
-                )
-            encounter_r.append(res)
-        return np.array(encounter_r)
+        return np.array([
+            person for person in self.__population
+            if person[5]
+        ])
+        
