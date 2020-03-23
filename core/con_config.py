@@ -15,7 +15,7 @@ config = {
     # General
     ###################################################
     # Output level
-    'debug level': logging.INFO,
+    'debug level': logging.WARNING,
     # Switch to store steps or not
     # This requires a bit more memory
     "save population": True,

@@ -217,4 +217,9 @@ class CONTAGION(object):
         self.log.info('Finished calculation')
         self.log.info('---------------------------------------------------')
         self.log.info('---------------------------------------------------')
+        # Closing log
+        self.log.removeHandler(self.fh)
+        self.log.removeHandler(self.ch)
+        del self.log, self.fh, self.ch
+        logging.shutdown()
         return self.mc_run.infections
