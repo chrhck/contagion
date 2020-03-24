@@ -14,7 +14,9 @@ Authors:
 
 A python package to simulate the spread of diseases in a population.
 The code is structured modular, allowing for easy extension/change
-of the steps required in modelling the spread.
+of the steps required in modelling the spread. The model is similar to the
+analytic SIR model and it's extensions. Switching between these models
+is done by setting the corresponding parameters for the infection.
 
 ## Model
 
@@ -42,3 +44,12 @@ results = contagion.sim()
 
 On overview of the code structure
 ![Sketch of the model](images/Code_Structure.png)
+
+## TODO
+
+- [] Optimize population calculations
+  - [] Change contact definition
+  - [] Optimize sampling precedure
+- [] Add Incubation
+- [] Add immunity function to infection
+- [] Add a switch between the different models (SIR, SIS, MSIR, MSEIRS...)
