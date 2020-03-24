@@ -22,7 +22,7 @@ config = {
     # The size of the population
     "population size": 10000,
     # Simulation duration
-    "simulation length": 1000,
+    "simulation length": 200,
     # The probability distribution to use for the movement pdf
     # Currently supported:
     #   - 'gauss':
