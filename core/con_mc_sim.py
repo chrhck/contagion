@@ -64,6 +64,11 @@ class CON_mc_sim(object):
         self.__log.debug('The interaction intensity pdf')
         if self.__config['interaction intensity'] == 'uniform':
             self.__intense_pdf = self.__intens_pdf_uniform
+            # The Reproductive Number
+            self.__R = (
+                self.__config['mean social circle interactions'] *
+                self.__config['infection duration mean'] * 0.5
+            )
         else:
             self.__log.error('Unrecognized intensity pdf! Set to ' +
                              self.__config['interaction intensity'])
@@ -183,6 +188,20 @@ class CON_mc_sim(object):
                 The time array
         """
         return self.__t
+
+    @property
+    def R(self):
+        """
+        function: reproductive number
+        Average number of infections due to
+        one patient (not assuming measures were taken)
+        Parameters:
+            -None
+        Returns:
+            -float R:
+                The reproductive number
+        """
+        return self.__R
 
     def __simulation(self):
         """

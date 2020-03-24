@@ -46,7 +46,7 @@ config = {
     # Available: 'gauss'
     'social circle pdf': 'gauss',
     # Average number of interactions per time step in sc
-    'mean social circle interactions': 1,
+    'mean social circle interactions': 0.2,
     # Variance of sc interactions
     'variance social circle interactions': 2,
     # Distribution of the interaction rates

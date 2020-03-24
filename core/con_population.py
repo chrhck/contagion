@@ -40,7 +40,6 @@ class CON_population(object):
         self.__config = config
         self.__log = log
         self.__log.info('Constructing social circles for the population')
-
         self.__log.debug('Number of people in social circles')
         if self.__config['social circle pdf'] == 'gauss':
             self.__social_circles = self.__social_pdf_norm(pop)

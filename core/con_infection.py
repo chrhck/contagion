@@ -32,6 +32,8 @@ class CON_infection(object):
         Returns:
             -None
         """
+        #TODO: Set up standard parameters for different diseases, which
+        #   can be loaded by only setting the disease
         self.__log = log
         self.__config = config
         self.__log.debug('The infection probability pdf')

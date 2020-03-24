@@ -156,6 +156,8 @@ class CONTAGION(object):
             self.config
         )
         self.t = self.mc_run.time_array
+        self.R = self.mc_run.R
+        self.log.info('The reproductive number R0 for the run was %.2f' %self.R)
         self.log.info('---------------------------------------------------')
         self.log.info('---------------------------------------------------')
         self.log.info('Finished calculation')
