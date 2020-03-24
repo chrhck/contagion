@@ -40,7 +40,7 @@ class CONTAGION(object):
     Returns:
         -None
     """
-    def __init__(self, infected, config=confi):
+    def __init__(self, infected, config=confi, rstate=None):
         """
         function: __init__
         Initializes the class CONTAGION.
@@ -56,6 +56,7 @@ class CONTAGION(object):
         # Inputs
         self.infected = infected
         self.config = config
+        self.rstate = rstate
         pop = self.config['population size']
         "Logger"
         # Basic config empty for now
@@ -89,12 +90,12 @@ class CONTAGION(object):
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
             self.log.info('Starting population construction')
-            self.pop = CON_population(pop, self.log, self.config).population
+            self.pop = CON_population(pop, self.log, self.config, rstate=rstate).population
             self.log.info('Finished the population')
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
             self.log.info('Starting the infection construction')
-            self.infection = CON_infection(self.log, self.config)
+            self.infection = CON_infection(self.log, self.config, rstate=rstate)
             self.log.info('Finished the infection construction')
             self.log.info('---------------------------------------------------')
             self.log.info('---------------------------------------------------')
@@ -153,7 +154,8 @@ class CONTAGION(object):
             self.infection,
             self.tracked,
             self.log,
-            self.config
+            self.config,
+            rstate=self.rstate
         )
         self.t = self.mc_run.time_array
         self.R = self.mc_run.R

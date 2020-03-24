@@ -33,7 +33,15 @@ class CON_mc_sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(self, infected, population, infection, tracked, log, config):
+    def __init__(
+            self,
+            infected,
+            population,
+            infection,
+            tracked,
+            log,
+            config,
+            rstate = None):
         """
         function: __init__
         Initializes the class.
@@ -41,7 +49,7 @@ class CON_mc_sim(object):
             -int infected:
                 The starting infected population
             -np.array population:
-                The population
+                The population matrix
             -obj infection:
                 The infection object
             -np.array tracked:
@@ -50,6 +58,7 @@ class CON_mc_sim(object):
                 The logger
             -dic config:
                 Dictionary from the config file
+
         Returns:
             -None
         """
@@ -57,6 +66,7 @@ class CON_mc_sim(object):
         self.__config = config
         self.__infect = infection
         self.__dt = config['time step']
+        self.__pop_matrix = population
         self.__t = np.arange(
             0., self.__config['simulation length'],
             step=self.__dt
@@ -73,32 +83,50 @@ class CON_mc_sim(object):
             self.__log.error('Unrecognized intensity pdf! Set to ' +
                              self.__config['interaction intensity'])
             exit('Check the interaction intensity in the config file!')
+       
+        if rstate is None:          
+            self.__log.warning("No random state given, constructing new state")
+            rstate = np.random.RandomState()
+        self.__rstate = rstate
+
         self.__log.debug('Constructing simulation population')
         self.__log.debug('The infected ids and durations...')
-        infect_id = np.random.choice(range(len(population)), size=infected, replace=False)
-        infect_dur = np.around(self.__infect.pdf_duration(infected).flatten())
+        
+        pop_size = len(population)
+
+        infect_id = self.__rstate.choice(
+            range(pop_size),
+            size=infected,
+            replace=False)
+        infect_dur = np.around(
+            self.__infect.pdf_duration(infected))
         # Constructing population array
         # Every individual has 5 components
         #   -individual's id
-        #   -ids of individuals in sc
-        #   -The number of interactions per time step
         #   -infected
         #   -remaining duration of infection
         #   -immune
         self.__log.debug('Filling the population array')
-        self.__population = np.array([
-            [i, population[i][0], population[i][1], False, 0., False]
-            for i in range(len(population))
-        ])
-        # Adding the infected
-        for i, id_inf in enumerate(infect_id):
-            self.__population[id_inf][3] = True
-            self.__population[id_inf][4] = infect_dur[i]
+        
+        self.__population = np.empty((pop_size, 4))
+        self.__population[:, 0] = np.arange(pop_size)
+        self.__population[:, 1] = 0
+        self.__population[:, 2] = 0
+        self.__population[:, 3] = 0
+        
+         # Adding the infected
+        self.__population[infect_id, 1] = 1
+        self.__population[infect_id, 2] = infect_dur
+
+       
         self.__log.info('There will be %d simulation steps' %len(self.__t))
         # Removing social mobility of tracked people
         if tracked is not None:
-            for i in tracked:
-                self.__population[i][2] = 0
+           # TODO make this configurable
+
+           self.__pop_matrix[tracked] = 0
+
+
         if self.__config['save population']:
             self.__log.debug("Saving the distribution of infected")
             self.__distribution = []
@@ -213,66 +241,80 @@ class CON_mc_sim(object):
             -None
         """
         self.__infections = []
+
+        population_size = len(self.__population)
         for _ in self.__t:
             #TODO: This needs to be optimized to a comprehension
             new_infections = []
-            for person_id, person in enumerate(self.__population):
-                if person[3]:
-                    # Infected people contacts others
-                    contacts = choice(person[1], size=person[2])
-                    # Intensity of the contacts
-                    # print('Contacts')
-                    # print(contacts)
-                    # print('Pre work')
-                    # print(self.__intense_pdf(len(contacts)))
-                    intens_arr = self.__intense_pdf(len(contacts)).flatten()
-                    # print('The intensities of the contacts')
-                    # print(intens_arr)
-                    # Infection probability
-                    infection_prob = np.array([
-                        self.__infect.pdf(intens)
-                        for intens in intens_arr
-                    ])
-                    # print('The probability')
-                    # print(infection_prob)
-                    # Are they infected?
-                    infection = np.around(infection_prob)
-                    # print('Infected?')
-                    # print(infection)
-                    new_infections.append(
-                        [
-                            contacts[i]
-                            for i in range(len(infection))
-                            if infection[i] > 0.
-                        ]
-                    )
-                    # print('New infection ids')
-                    # print(new_infections)
-                    # subtracting 1 from the infection duration
-                    if self.__population[person_id][4] > 0:
-                        self.__population[person_id][4] -= 1
-                        # Person has survived infection
-                        if self.__population[person_id][4] == 0:
-                            self.__population[person_id][3] = False
-                            self.__population[person_id][5] = True
-            # Adding newly infected to the population
-            new_infection_counter = 0
-            for new_infect in new_infections:
-                # The durations
-                tmp_dur = np.around(self.__infect.pdf_duration(len(new_infect)).flatten())
-                for i, id_infect in enumerate(new_infect):
-                    if((not self.__population[id_infect][3]) &
-                       (not self.__population[id_infect][5])):
-                        self.__population[id_infect][3] = True
-                        self.__population[id_infect][4] = tmp_dur[i]
-                        new_infection_counter += 1
+
+
+            infected_mask = self.__population[:, 1] == 1
+            infected_indices = np.nonzero(infected_mask)[0]
+
+            infected = self.__pop_matrix[infected_mask]
+            num_infected = np.sum(infected)
+
+            successful_contacts_mask =(self.__rstate.poisson(
+                infected) >= 1) # len(infected)
+
+            # [len(infected), pop_size]
+
+            successful_contacts_indices = np.nonzero(successful_contacts_mask)
+
+            num_succesful_contacts = np.sum(successful_contacts_mask)
+
+            contact_strength = self.__intense_pdf(num_succesful_contacts)
+            infection_prob = self.__infect.pdf(contact_strength)
+
+            newly_infected_mask = self.__rstate.binomial(1, infection_prob)
+            # length: num_succesful_contacts
+            newly_infected_mask = np.asarray(newly_infected_mask, bool)
+
+            newly_infected_indices = successful_contacts_indices[1][newly_infected_mask]
+            
+            newly_infected_mask_full = np.zeros(population_size, dtype=bool)
+            newly_infected_mask_full[newly_infected_indices] = True
+
+            # recovered and infected people cannot be infected
+            # again
+            newly_infected_mask_full = (
+                newly_infected_mask_full &
+                (~(self.__population[:, 1]==1)) &
+                (~(self.__population[:, 3]==1))
+                )
+
+            num_newly_infected = np.sum(newly_infected_mask_full)
+
+            # adjusting infection duration
+
+
+            self.__population[infected_indices, 2] -= 1
+
+
+            recovered_indices = infected_indices[self.__population[infected_indices, 2] == 0]
+            # Set recovered
+            self.__population[recovered_indices, 1] = 0
+            # Set immune
+            self.__population[recovered_indices, 3] = 1
+
+            # add new infections
+
+            tmp_dur = np.around(
+                self.__infect.pdf_duration(num_newly_infected))
+
+            self.__population[newly_infected_mask_full, 1] = 1
+            self.__population[newly_infected_mask_full, 2] = tmp_dur
+
+
             if self.__config['save population']:
                 self.__distribution.append(np.copy(
                     self.__population
                 ))
-                self.__total_infections.append(len(self.__fetch_infected()))
-                self.__new_infections.append(new_infection_counter)
-                self.__immune.append(len(self.__fetch_immune()))
+                self.__total_infections.append(
+                    np.sum(self.__fetch_infected()))
+                self.__new_infections.append(num_newly_infected)
+                self.__immune.append(
+                    np.sum(self.__fetch_immune()))
 
 
     def __intens_pdf_uniform(self, contacts):
@@ -287,7 +329,7 @@ class CON_mc_sim(object):
             -np.array res:
                 The contact intensities
         """
-        return np.random.uniform(low=0., high=1., size=contacts)
+        return self.__rstate.uniform(low=0., high=1., size=contacts)
 
     def __fetch_infected(self):
         """
@@ -299,10 +341,7 @@ class CON_mc_sim(object):
             -np.array res:
                 The number of currently infected
         """
-        return np.array([
-            person for person in self.__population
-            if person[3]
-        ])
+        return self.__population[:, 1] == 1
 
     def __fetch_immune(self):
         """
@@ -314,8 +353,5 @@ class CON_mc_sim(object):
             -np.array res:
                 The number of currently infected
         """
-        return np.array([
-            person for person in self.__population
-            if person[5]
-        ])
+        return self.__population[:, 3] == 1
         
