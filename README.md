@@ -37,3 +37,8 @@ contagion = CONTAGION(infected, config=config)
 # Runing the simulation
 results = contagion.sim()
 ```
+
+## Code structure
+
+On overview of the code structure
+![Sketch of the model](images/Code_Structure.png)
