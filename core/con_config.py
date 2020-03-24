@@ -6,11 +6,14 @@ It is recommended, that only advanced users change
 the settings here.
 """
 
-"Imports"
 import numpy as np
 import logging
+from typing import Dict, Any
 
-config = {
+import yaml
+
+
+_baseconfig = {
     ###################################################
     # General
     ###################################################
@@ -115,3 +118,36 @@ config = {
     # while reducing efficiency
     'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
+
+
+class ConfigClass(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def from_yaml(self, yaml_file: str) -> None:
+        """
+        Update config with yaml file
+
+        Parameters:
+            yaml_file: str
+                path to yaml file
+        """
+
+        yaml_config = yaml.load(open(yaml_file), Loader=yaml.SafeLoader)
+        self.update(yaml_config)
+
+    def from_dict(self, user_dict: Dict[Any, Any]) -> None:
+        """
+        Creates a config from dictionary
+
+        Parameters:
+            user_dict: dict
+
+        Returns:
+            dict
+        """
+        self.update(user_dict)
+
+config = ConfigClass(_baseconfig)
+
+
