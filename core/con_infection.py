@@ -44,7 +44,7 @@ class CON_infection(object):
                              self.__config['infection probability pdf'])
             exit('Check the infection probability pdf in the config file!')
 
-        self.__log.debug('The infection duration pdf')
+        self.__log.debug('The infection duration and incubation pdf')
         if self.__config['infection duration pdf'] == 'gauss':
             self.__pdf_duration = self.__pdf_duration_norm
         else:
@@ -78,6 +78,21 @@ class CON_infection(object):
                 Takes an int
         """
         return self.__pdf_duration
+
+    @property
+    def immunity_dur(self):
+        """
+        function: immunity_dur
+        Getter function for the immunity
+        duration
+        Parameters:
+            -None
+        Returns:
+            -int length:
+                The duration of immunity
+        """
+        return self.__config['immunity duration']
+
 
     def __pdf_intensity(self, intensity):
         """

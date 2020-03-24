@@ -87,7 +87,13 @@ class CON_mc_sim(object):
         #   -immune
         self.__log.debug('Filling the population array')
         self.__population = np.array([
-            [i, population[i][0], population[i][1], False, 0., False]
+            [i,                 # The person's id
+             population[i][0],  # The social circle
+             population[i][1],  # The encouter rate
+             False,             # Infected?
+             0.,                # Infection duration
+             False              # Immunity?
+            ]
             for i in range(len(population))
         ])
         # Adding the infected
@@ -221,24 +227,13 @@ class CON_mc_sim(object):
                     # Infected people contacts others
                     contacts = choice(person[1], size=person[2])
                     # Intensity of the contacts
-                    # print('Contacts')
-                    # print(contacts)
-                    # print('Pre work')
-                    # print(self.__intense_pdf(len(contacts)))
                     intens_arr = self.__intense_pdf(len(contacts)).flatten()
-                    # print('The intensities of the contacts')
-                    # print(intens_arr)
-                    # Infection probability
                     infection_prob = np.array([
                         self.__infect.pdf(intens)
                         for intens in intens_arr
                     ])
-                    # print('The probability')
-                    # print(infection_prob)
                     # Are they infected?
                     infection = np.around(infection_prob)
-                    # print('Infected?')
-                    # print(infection)
                     new_infections.append(
                         [
                             contacts[i]
@@ -246,8 +241,6 @@ class CON_mc_sim(object):
                             if infection[i] > 0.
                         ]
                     )
-                    # print('New infection ids')
-                    # print(new_infections)
                     # subtracting 1 from the infection duration
                     if self.__population[person_id][4] > 0:
                         self.__population[person_id][4] -= 1
