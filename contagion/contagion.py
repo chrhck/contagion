@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Name: contagion.py
 Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger

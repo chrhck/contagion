@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Name: measures.py
 Authors: Stephan Meighen-Berger

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Name: population.py
 Authors: Christian Haack, Stephan Meighen-Berger
