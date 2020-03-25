@@ -68,44 +68,41 @@ class CON_population(object):
 
         logger.debug('Constructing population')
 
-        # The probability of a person being connected to another person is
-        # given by population size / social circle size
-        # p_contact = self.__social_circles / (pop-1)
-        """
-        interaction_matrix = self.__rstate.binomial(
-            1, p_contact, size=(pop, pop))
-        """
-
+        # LIL sparse matrices are efficient for row-wise construction
         interaction_matrix = sparse.lil_matrix((pop, pop), dtype=np.bool)
-
-        # First set circle_size elements to True for each row
-        # TODO account for self-interaction? Negligible for large
-        # populations though
         indices = np.arange(pop)
-        for i, circle_size in tqdm(enumerate(self.__social_circles), total=pop):
-            """
-            rand_ind = self.__rstate.choice(indices, replace=False,
-                                            size=circle_size)
 
-            interaction_matrix[i, rand_ind] = True
-            """
+        # Here, the interaction matrix stores the connections of every
+        # person, aka their social circle.
+        for i, circle_size in tqdm(enumerate(self.__social_circles), total=pop):
+            # Get the social circle size for this person and randomly
+            # select indices of people they are connected to
             self.__rstate.shuffle(indices)
             sel_indices = indices[:circle_size]
+            # Set the connection
             interaction_matrix[i, sel_indices] = True
 
-        interaction_matrix = interaction_matrix.tolil()
+        # Symmetrize the matrix, such that when A is connected to B,
+        # B is connected to A. This is equivalent of a logical or
+        # of ther upper and lower(tranposed) triangle of the matrix
+
+        # Logical or for the upper triangle
         interaction_matrix = sparse.triu(interaction_matrix, 1) +\
             sparse.triu(interaction_matrix.transpose(), 1)
 
+        # Mirror the upper triangle to the lower triangle
         interaction_matrix = interaction_matrix +\
             interaction_matrix.transpose()
         interaction_matrix = interaction_matrix.tolil()
+
+        # No self-interaction
         interaction_matrix.setdiag(0)
 
-        interaction_matrix = interaction_matrix.asfptype()
+        # Next, instead of boolean connections we want to store the
+        # contact rate. The contact rate is given by the number
+        # of connections per person divided by the interaction number
 
-        # Sample the number of interactions per person
-        # TODO this could be made dependent on the social circle / contact
+        interaction_matrix = interaction_matrix.asfptype()
 
         num_contacts = self.__sc_interactions
         num_connections = (interaction_matrix.sum(axis=1)-1)
@@ -115,15 +112,16 @@ class CON_population(object):
             contact_rate = num_contacts / (num_connections)
         contact_rate[num_connections <= 0] = 0
 
-        # Set the contact rate for each connection
+        # Set the contact rate for each connection by scaling the matrix
+        # with each persons contact rate
         d = sparse.spdiags(contact_rate, 0, pop, pop, format="csr")
 
         interaction_matrix = interaction_matrix.tocsr()
-
         interaction_matrix = d * interaction_matrix
 
         # For each two person encounter (A <-> B) there are now two rates,
         # one from person A and one from B. Pick the max for both.
+        # This re-symmetrizes the matrix
 
         upper_triu = sparse.triu(interaction_matrix, 1)
         upper_triu_transp = sparse.triu(
