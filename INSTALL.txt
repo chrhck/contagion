@@ -1,0 +1,16 @@
+# optional: it is recommended to install contagion into a virtual python environment
+virtualenv -p python3 venv3
+source venv3/bin/activate
+
+# install requirements
+pip install -r requirements.txt
+
+# optional for devs: setup nbstripout for nice interaction of jupyter and git
+# removes ever changing notebook output for git diff and commit
+# keeps cell output if cell metadata contains '"keep_output": true'
+# configurable via: View -> Cell Toolbar -> Edit Metadata
+nbstripout --install
+git config --local filter.nbstripout.extrakeys 'metadata.celltoolbar metadata.language_info.version'
+
+# start jupyter notebook
+jupyter-notebook --port 8888

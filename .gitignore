@@ -1,1 +1,8 @@
+.*.sw*
+
 contagion.log
+
+*.pyc
+.ipynb_checkpoints
+
+venv3
