@@ -6,7 +6,7 @@ Constructs the infection.
 
 # Imports
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import truncnorm
 
 class CON_infection(object):
     """
@@ -20,7 +20,7 @@ class CON_infection(object):
     Returns:
         -None
     """
-    def __init__(self, log, config):
+    def __init__(self, log, config, rstate=None):
         """
         function: __init__
         Initializes the infection object
@@ -36,6 +36,12 @@ class CON_infection(object):
         #   can be loaded by only setting the disease
         self.__log = log
         self.__config = config
+
+        if rstate is None:
+            self.__log.warning("No random state given, constructing new state")
+            rstate = np.random.RandomState()
+        self.__rstate = rstate
+
         self.__log.debug('The infection probability pdf')
         if self.__config['infection probability pdf'] == 'intensity':
             self.__pdf = self.__pdf_intensity
@@ -104,15 +110,17 @@ class CON_infection(object):
             -np.array duration:
                 The length of their infection
         """
-        duration = []
-        # rolling until positive
-        for _ in range(infected):
-            res = -1
-            while res < 0:
-                res = norm.rvs(
-                    size=1,
-                    loc=self.__config['infection duration mean'],
-                    scale=self.__config['infection duration variance']
-                )
-            duration.append(res)
-        return np.array(duration)
+
+        mean = self.__config['infection duration mean']
+        scale = self.__config['infection duration variance']
+
+        # Minimum social circle size is 0
+        a, b = (0 - mean) / scale, (np.inf - mean) / scale
+
+        # could also use binomial here
+        duration = truncnorm.rvs(
+            a, b, loc=mean, scale=scale, size=infected,
+            random_state=self.__rstate)
+        # duration = np.asarray(duration, dtype=int)
+
+        return duration
