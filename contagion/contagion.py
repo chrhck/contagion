@@ -14,11 +14,11 @@ import numpy as np
 from time import time
 # -----------------------------------------
 # Package modules
-from con_config import config as confi
-from con_infection import CON_infection
-from con_mc_sim import CON_mc_sim
-from con_measures import CON_measures
-from con_population import CON_population
+from .con_config import config as confi
+from .con_infection import CON_infection
+from .con_mc_sim import CON_mc_sim
+from .con_measures import CON_measures
+from .con_population import CON_population
 
 
 class CONTAGION(object):
