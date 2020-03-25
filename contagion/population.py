@@ -12,7 +12,7 @@ import scipy.stats
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
-class CON_population(object):
+class Population(object):
     """
     Class to help with the construction of a realistic population
 

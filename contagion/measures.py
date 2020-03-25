@@ -8,9 +8,9 @@ to suppress the spread.
 from sys import exit
 import numpy as np
 
-class CON_measures(object):
+class Measures(object):
     """
-    class: CON_measures
+    class: Measures
     Class to implement different possible
     containment measures.
     Parameters:

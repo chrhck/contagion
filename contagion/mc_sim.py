@@ -13,9 +13,9 @@ from scipy import sparse
 from collections import defaultdict
 
 
-class CON_mc_sim(object):
+class MC_Sim(object):
     """
-    class: CON_mc_sim
+    class: MC_Sim
     Monte-carlo simulation for the infection spread.
     Parameters:
         -scipy.sparse population:

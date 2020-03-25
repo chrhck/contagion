@@ -15,10 +15,10 @@ from time import time
 # -----------------------------------------
 # Package modules
 from .config import config as confi
-from .infection import CON_infection
-from .mc_sim import CON_mc_sim
-from .measures import CON_measures
-from .population import CON_population
+from .infection import Infection
+from .mc_sim import MC_Sim
+from .measures import Measures
+from .population import Population
 
 
 class CONTAGION(object):
@@ -85,17 +85,17 @@ class CONTAGION(object):
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting population construction')
-        self.pop = CON_population(self.__log, self.__config).population
+        self.pop = Population(self.__log, self.__config).population
         self.__log.info('Finished the population')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting the infection construction')
-        self.infection = CON_infection(self.__log, self.__config)
+        self.infection = Infection(self.__log, self.__config)
         self.__log.info('Finished the infection construction')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting the measure construction')
-        self.tracked = CON_measures(self.__log, self.__config).tracked
+        self.tracked = Measures(self.__log, self.__config).tracked
         self.__log.info('Finished the measure construction')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
@@ -167,7 +167,7 @@ class CONTAGION(object):
             self.__log.error("Chosen time step too large!")
             exit("Please run with time steps smaller than 1s!")
         self.__log.debug('Realistic run')
-        self.__mc_run = CON_mc_sim(
+        self.__mc_run = MC_Sim(
             self.pop,
             self.infection,
             self.tracked,

@@ -9,9 +9,9 @@ import numpy as np
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 
-class CON_infection(object):
+class Infection(object):
     """
-    class: CON_infection
+    class: Infection
     Constructs the infection object
     Parameters:
         -obj log:
