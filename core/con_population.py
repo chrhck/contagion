@@ -158,6 +158,12 @@ class CON_population(object):
         # return self.__pop
         return self.__interaction_matrix
 
+    def average_number_of_connections(self):
+        """Return the average number of connections"""
+        mtx = self.__interaction_matrix.tocsr()
+        non_zero_indices = np.split(mtx.indices, mtx.indptr[1:-1])
+        return np.average([len(row) for row in non_zero_indices])
+
     def __social_pdf_norm(self, pop):
         """
         function: __social_pdf_norm
