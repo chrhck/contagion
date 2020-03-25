@@ -71,6 +71,17 @@ config = {
     # Available: uniform
     'interaction intensity': 'uniform',
     ###################################################
+    # Unused
+    ###################################################
+    # Incubation period (mean)
+    # Assumes the same pdf and variance as
+    # the duration
+    # Here during incubation people are not infectious
+    'incubation period': 1,
+    # Immunity duration -1 is infinity,
+    'immunity duration': -1,
+    ###################################################
+    ###################################################
     # 'random walk' options
     ###################################################
     # Number of dimensions for the simulation

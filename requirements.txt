@@ -1,0 +1,6 @@
+jupyter
+nbstripout
+matplotlib
+numpy
+scipy
+tqdm
