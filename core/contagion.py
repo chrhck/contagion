@@ -88,7 +88,7 @@ class CONTAGION(object):
             logger.info('---------------------------------------------------')
             logger.info('---------------------------------------------------')
             logger.info('Starting the infection construction')
-            self.infection = CON_infection(logger, config, rstate=rstate)
+            self.infection = CON_infection(rstate=rstate)
             logger.info('Finished the infection construction')
             logger.info('---------------------------------------------------')
             logger.info('---------------------------------------------------')
