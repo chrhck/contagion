@@ -33,12 +33,12 @@ A basic running example to interface with the package
 import contagion as CONTAGION
 # Importing the config file
 import con_config as config
-# The number of infected
-infected = 10
 # Creating contagion object
-contagion = CONTAGION(infected, config=config)
+contagion = CONTAGION(config=config)
 # Runing the simulation
-results = contagion.sim()
+contagion.sim()
+# Access simulation results using
+results = contagion.statistics
 ```
 
 ## Code structure
