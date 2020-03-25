@@ -1,4 +1,4 @@
-from .contagion import CONTAGION
+from .contagion import Contagion
 from .config import config
 
-__all__ = (CONTAGION, config)
+__all__ = (Contagion, config)

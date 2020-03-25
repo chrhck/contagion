@@ -21,9 +21,9 @@ from .measures import Measures
 from .population import Population
 
 
-class CONTAGION(object):
+class Contagion(object):
     """
-    class: CONTAGION
+    class: Contagion
     Interace to the contagion package. This class
     stores all methods required to run the simulation
     of the infection spread
@@ -36,7 +36,7 @@ class CONTAGION(object):
     def __init__(self, config=confi):
         """
         function: __init__
-        Initializes the class CONTAGION.
+        Initializes the class Contagion.
         Here all run parameters are set.
         Parameters:
             -optional dic config:
