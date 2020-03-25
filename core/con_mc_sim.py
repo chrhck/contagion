@@ -34,7 +34,9 @@ class CON_mc_sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(self, infected, population, infection, tracked, log, config):
+    def __init__(
+        self, infected, population, infection, tracked, distanced, log, config
+    ):
         """
         function: __init__
         Initializes the class.
@@ -47,6 +49,8 @@ class CON_mc_sim(object):
                 The infection object
             -np.array tracked:
                 The tracked population
+            -np.array distanced:
+                The socially distancing population
             -obj log:
                 The logger
             -dic config:
@@ -58,6 +62,12 @@ class CON_mc_sim(object):
             self.__tracked = tracked
         else:
             self.__tracked = None
+
+        if distanced is not None:
+            self.__distanced = distanced
+        else:
+            self.__distanced = None
+
         self.__log = log
         self.__config = config
         self.__infect = infection
@@ -227,6 +237,20 @@ class CON_mc_sim(object):
         self.__infections = []
         for _ in self.__t:
             # TODO: This needs to be optimized to a comprehension
+
+            # Applying social distancing
+            if self.__distanced is not None:
+                for i in self.__distanced:
+                    # Average household size
+                    fam_size = np.random.poisson(3)
+                    # Redefine social circle
+                    if len(self.__population[i][1]) > fam_size:
+                        self.__population[i][1] = choice(
+                            self.__population[i][1], size=fam_size
+                        )
+                        self.__population[i][2] = fam_size
+                    else:
+                        self.__population[i][2] = len(self.__population[i][1])
 
             # Removing social mobility of infected & tracked people
             if self.__tracked is not None:
