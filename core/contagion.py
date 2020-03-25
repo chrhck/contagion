@@ -8,6 +8,7 @@ of safety measures, such as social distancing and tracking.
 """
 
 # Native modules
+import sys
 import logging
 import numpy as np
 from time import time
@@ -46,28 +47,33 @@ class CONTAGION(object):
         # Inputs
         self.__config = config
         self.__infected = self.__config['infected']
+
         # Logger
-        # Basic config empty for now
-        logging.basicConfig()
+        # creating file handler with debug messages
+        fh = logging.FileHandler('../run/contagion.log', mode='w')
+        fh.setLevel(logging.DEBUG)
+        # console logger with a higher log level
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(self.__config['debug level'])
+
+        # Logging formatter
+        fmt = '%(levelname)s: %(message)s'
+        fmt_with_name = '[%(name)s] ' + fmt
+        formatter_with_name = logging.Formatter(fmt=fmt_with_name)
+        fh.setFormatter(formatter_with_name)
+        # add class name to ch only when debugging
+        if self.__config['debug level'] == logging.DEBUG:
+            ch.setFormatter(formatter_with_name)
+        else:
+            formatter = logging.Formatter(fmt=fmt)
+            ch.setFormatter(formatter)
+
+        # Basic config for all loggers
+        logging.basicConfig(handlers=[fh, ch])
         # Creating logger user_info
         self.__log = logging.getLogger(self.__class__.__name__)
         self.__log.setLevel(logging.DEBUG)
-        self.__log.propagate = False
-        # creating file handler with debug messages
-        self.__fh = logging.FileHandler('../run/contagion.log', mode='w')
-        self.__fh.setLevel(logging.DEBUG)
-        # console logger with a higher log level
-        self.__ch = logging.StreamHandler()
-        self.__ch.setLevel(self.__config['debug level'])
-        # Logging formatter
-        formatter = logging.Formatter(
-            fmt='%(levelname)s: %(message)s'
-        )
-        self.__fh.setFormatter(formatter)
-        self.__ch.setFormatter(formatter)
-        # Adding the handlers
-        self.__log.addHandler(self.__fh)
-        self.__log.addHandler(self.__ch)
+
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Welcome to contagion!')
@@ -191,7 +197,4 @@ class CONTAGION(object):
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         # Closing log
-        self.__log.removeHandler(self.__fh)
-        self.__log.removeHandler(self.__ch)
-        del self.__log, self.__fh, self.__ch
         logging.shutdown()

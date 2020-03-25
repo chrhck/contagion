@@ -28,7 +28,7 @@ class CON_population(object):
 
 
         # Inputs
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         self.__pop = config['population size']
         # Checking random state

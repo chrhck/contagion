@@ -33,7 +33,7 @@ class CON_measures(object):
         Returns:
             -None
         """
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         if self.__config['measures'] == 'none':
             self.__log.info('No measure taken')

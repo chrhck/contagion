@@ -59,7 +59,7 @@ class CON_mc_sim(object):
             -None
         """
         # Inputs
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         self.__infected = self.__config['infected']
         self.__infect = infection

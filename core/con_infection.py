@@ -35,7 +35,7 @@ class CON_infection(object):
         """
         # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         if self.__config['random state'] is None:
             self.__log.warning("No random state given, constructing new state")
