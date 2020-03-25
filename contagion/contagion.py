@@ -52,7 +52,7 @@ class Contagion(object):
 
         # Logger
         # creating file handler with debug messages
-        fh = logging.FileHandler('../run/contagion.log', mode='w')
+        fh = logging.FileHandler(self.__config['log file handler'], mode='w')
         fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         ch = logging.StreamHandler(sys.stdout)
@@ -191,8 +191,8 @@ class Contagion(object):
         self.__log.debug('"contacts", "infections", "recovered", "immune", "infectious", "susceptible"')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
-        self.__log.debug('Dumping run settings into ../run/config.txt')
-        with open('../run/config.txt', 'w') as f:
+        self.__log.debug('Dumping run settings into %s', self.__config['config location'])
+        with open(self.__config['config location'], 'w') as f:
             for item in self.__config.keys():
                 print(item + ': ' + str(self.__config[item]), file=f)
         self.__log.debug('Finished dump')

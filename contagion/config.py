@@ -20,6 +20,10 @@ _baseconfig = {
     ###################################################
     # Output level
     'debug level': logging.WARNING,
+    # Location of logging file handler
+    'log file handler': '../run/contagion.log',
+    # Dump experiment config to this location
+    'config location': '../run/config.txt',
     # The size of the population
     "population size": 10000,
     # Simulation duration
