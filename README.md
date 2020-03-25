@@ -4,7 +4,8 @@ Authors:
 
 1. Christian Haack
 2. Stephan Meighen-Berger
-3. Andrea Turcati
+3. Dominik Scholz
+4. Andrea Turcati
 
 ## Table of contents
 
