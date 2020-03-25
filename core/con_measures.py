@@ -21,7 +21,7 @@ class CON_measures(object):
     Returns:
         -None
     """
-    def __init__(self, log, config,):
+    def __init__(self, log, config):
         """
         function: __init__
         Initializes the class

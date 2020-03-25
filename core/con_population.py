@@ -1,6 +1,6 @@
 """
 Name: con_population.py
-Authors: Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the population.
 """
 
@@ -9,72 +9,59 @@ import sys
 import traceback
 import numpy as np
 import scipy.stats
+# A truncated normal continuous random variable
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
-from tqdm.autonotebook import tqdm
-from .con_config import config
-
-import logging
-import warnings
-
-"""
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
-
-    log = file if hasattr(file,'write') else sys.stderr
-    traceback.print_stack(file=log)
-    log.write(warnings.formatwarning(message, category, filename, lineno, line))
-
-warnings.showwarning = warn_with_traceback
-"""
-
-logger = logging.getLogger(__name__)
-
-
 class CON_population(object):
     """
     Class to help with the construction of a realistic population
 
     Paremeters:
-        pop: int
-            The size of the populations
-        rstate: Optional[RandomState]
-            A numpy RandomState object
+        -obj log:
+            The logger
+        -dic config:
+            The configuration dictionary
 
     """
 
-    def __init__(self, pop, rstate=None):
+    def __init__(self, log, config):
 
-        if rstate is None:
-            logger.warning("No random state given, constructing new state")
-            rstate = np.random.RandomState()
-        self.__rstate = rstate
 
-        logger.info('Constructing social circles for the population')
-        logger.debug('Number of people in social circles')
-
-        if config['social circle pdf'] == 'gauss':
-            self.__social_circles = self.__social_pdf_norm(pop)
+        # Inputs
+        self.__log = log
+        self.__config = config
+        self.__pop = config['population size']
+        # Checking random state
+        if self.__config['random state'] is None:
+            self.__log.warning("No random state given, constructing new state")
+            self.__rstate = np.random.RandomState()
         else:
-            logger.error('Unrecognized social pdf! Set to ' + config['social circle pdf'])
+            self.__rstate = self.__config['random state']
+
+        self.__log.info('Constructing social circles for the population')
+        self.__log.debug('Number of people in social circles')
+        if self.__config['social circle pdf'] == 'gauss':
+            self.__social_circles = self.__social_pdf_norm(self.__pop)
+        else:
+            self.__log.error('Unrecognized social pdf! Set to ' + self.__config['social circle pdf'])
             raise RuntimeError('Check the social circle distribution in the config file!')
 
-        logger.debug('The social circle interactions for each person')
-        if config['social circle interactions pdf'] == 'gauss':
-            self.__sc_interactions = self.__sc_interact_norm(pop)
+        self.__log.debug('The social circle interactions for each person')
+        if self.__config['social circle interactions pdf'] == 'gauss':
+            self.__sc_interactions = self.__sc_interact_norm(self.__pop)
         else:
-            logger.error('Unrecognized sc interactions pdf! Set to ' +
-                         config['social circle interactions pdf'])
+            self.__log.error('Unrecognized sc interactions pdf! Set to ' +
+                             self.__config['social circle interactions pdf'])
             raise RuntimeError('Check the social circle interactions distribution in the config file!')
 
-        logger.debug('Constructing population')
-
+        self.__log.debug('Constructing population')
         # LIL sparse matrices are efficient for row-wise construction
-        interaction_matrix = sparse.lil_matrix((pop, pop), dtype=np.bool)
-        indices = np.arange(pop)
+        interaction_matrix = sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
+        indices = np.arange(self.__pop)
 
         # Here, the interaction matrix stores the connections of every
         # person, aka their social circle.
-        for i, circle_size in tqdm(enumerate(self.__social_circles), total=pop):
+        for i, circle_size in enumerate(self.__social_circles):
             # Get the social circle size for this person and randomly
             # select indices of people they are connected to
             self.__rstate.shuffle(indices)
@@ -108,13 +95,14 @@ class CON_population(object):
         num_connections = (interaction_matrix.sum(axis=1)-1)
         num_connections = np.asarray(num_connections).squeeze()
 
+        # Context manager
         with np.errstate(all='ignore'):
             contact_rate = num_contacts / (num_connections)
         contact_rate[num_connections <= 0] = 0
 
         # Set the contact rate for each connection by scaling the matrix
         # with each persons contact rate
-        d = sparse.spdiags(contact_rate, 0, pop, pop, format="csr")
+        d = sparse.spdiags(contact_rate, 0, self.__pop, self.__pop, format="csr")
 
         interaction_matrix = interaction_matrix.tocsr()
         interaction_matrix = d * interaction_matrix
@@ -133,8 +121,6 @@ class CON_population(object):
 
         self.__interaction_matrix = interaction_matrix
 
-        print("Done constructing population")
-
 
     @property
     def population(self):
@@ -144,7 +130,7 @@ class CON_population(object):
         Parameters:
             -None
         Returns:
-            -np.array population:
+            -scipy.sparse population:
                 The constructed population
         """
         # return self.__pop
@@ -164,8 +150,8 @@ class CON_population(object):
                 The size of the social circles for every individual
         """
 
-        mean = config['average social circle']
-        scale = config['variance social circle']
+        mean = self.__config['average social circle']
+        scale = self.__config['variance social circle']
 
         # Minimum social circle size is 0
         a, b = (0 - mean) / scale, (pop - mean) / scale
@@ -200,8 +186,8 @@ class CON_population(object):
                 The number of interactions within the social circle
         """
 
-        mean = config['mean social circle interactions']
-        scale = config['variance social circle interactions']
+        mean = self.__config['mean social circle interactions']
+        scale = self.__config['variance social circle interactions']
 
         a, b = (0 - mean) / scale, (self.__social_circles - mean) / scale
 

@@ -9,7 +9,6 @@ the settings here.
 import numpy as np
 import logging
 from typing import Dict, Any
-
 import yaml
 
 
@@ -19,25 +18,19 @@ _baseconfig = {
     ###################################################
     # Output level
     'debug level': logging.WARNING,
-    # Switch to store steps or not
-    # This requires a bit more memory
-    "save population": True,
     # The size of the population
     "population size": 10000,
     # Simulation duration
     "simulation length": 200,
+    # The number of starting infections
+    "infected": 10,
     # The probability distribution to use for the movement pdf
     # Currently supported:
     #   - 'gauss':
     #       A gaussian distribution
     'pdf move': 'gauss',
-    # Simulation type:
-    #   -'random walk':
-    #       A simple random walk simulation,
-    #       useful for visualizations
-    #   -'realistic':
-    #       Realistic social and infection modelling
-    'simulation type': 'realistic',
+    # random state to use
+    'random state': np.random.RandomState(1337),
     ###################################################
     # 'realistic' options
     ###################################################
@@ -130,7 +123,8 @@ _baseconfig = {
     'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
 
-
+# TODO: Explain this to idiot Stephan
+# Why is a class required?
 class ConfigClass(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
