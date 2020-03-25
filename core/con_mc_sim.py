@@ -31,8 +31,6 @@ class CON_mc_sim(object):
             The infection object
         -np.array tracked:
             The tracked population
-        -dic config:
-            Dictionary from the config file
     Returns:
         -None
     "God does not roll dice!"
@@ -57,11 +55,6 @@ class CON_mc_sim(object):
                 The infection object
             -np.array tracked:
                 The tracked population
-            -obj log:
-                The logger
-            -dic config:
-                Dictionary from the config file
-
         Returns:
             -None
         """
@@ -98,12 +91,6 @@ class CON_mc_sim(object):
 
         self.pop_size = population.shape[0]
 
-        infect_id = self.__rstate.choice(
-            range(self.pop_size),
-            size=infected,
-            replace=False)
-        infect_dur = np.around(
-            self.__infect.pdf_duration(infected))
         # Constructing population array
         # Every individual has 5 components
         #   -individual's id
@@ -119,6 +106,14 @@ class CON_mc_sim(object):
         self.__population[:, 3] = 0
 
         # Adding the infected
+        infect_id = self.__rstate.choice(
+            range(self.pop_size),
+            size=infected,
+            replace=False)
+
+        infect_dur = np.around(
+            self.__infect.pdf_duration(infected))
+
         self.__population[infect_id, 1] = 1
         self.__population[infect_id, 2] = infect_dur
 
@@ -126,6 +121,8 @@ class CON_mc_sim(object):
         # Removing social mobility of tracked people
         if tracked is not None:
             # TODO make this configurable
+            # The current implementation disables all contacts
+            # of tracked persons
 
             self.__pop_matrix = self.__pop_matrix.tolil()
             self.__pop_matrix[tracked] = 0
@@ -157,57 +154,6 @@ class CON_mc_sim(object):
         """
         return self.__population
 
-    @property
-    def distribution(self):
-        """
-        function: distribution
-        Returns the distribution
-        Parameters:
-            -None
-        Returns:
-            -np.array distribution:
-                The distribution
-        """
-        return self.__distribution
-
-    @property
-    def infections(self):
-        """
-        function: infections
-        Returns the infections
-        Parameters:
-            -None
-        Returns:
-            -np.array infections:
-                The total infections
-        """
-        return np.array(self.__total_infections)
-
-    @property
-    def new_infections(self):
-        """
-        function: new_infections
-        Returns the new_infections
-        Parameters:
-            -None
-        Returns:
-            -np.array new_infections:
-                The total new_infections
-        """
-        return np.array(self.__new_infections)
-
-    @property
-    def immune(self):
-        """
-        function: immune
-        Returns the immune
-        Parameters:
-            -None
-        Returns:
-            -np.array immune:
-                The total immune
-        """
-        return np.array(self.__immune)
 
     @property
     def time_array(self):
@@ -245,7 +191,6 @@ class CON_mc_sim(object):
         Returns:
             -None
         """
-        self.__infections = []
 
         self.statistics = defaultdict(list)
 
@@ -256,36 +201,49 @@ class CON_mc_sim(object):
             infected_mask = self.__population[:, 1] == 1
             infected_indices = np.nonzero(infected_mask)[0]
 
+            # Find all non-zero connections of the infected
+            # rows are the ids / indices of the infected
+            # columns are the people they have contact with
+
             contact_rows, contact_cols, contact_strengths =\
                 sparse.find(pop_csr[infected_indices])
+
+            # Based on the contact rate, sample a poisson rvs
+            # for the number of interactions per timestep.
+            # A contact is sucessful if the rv is > 1, ie.
+            # more than one contact per timestep
 
             successful_contacts_mask = self.__rstate.poisson(
                 contact_strengths) >= 1
 
-            # we are just interested in the columns, ie. only the id's 
-            # of the contacted people
+            # we are just interested in the columns, ie. only the 
+            # ids of the people contacted by the infected.
+            # Note, that contacted ids can appear multiple times
+            # if a person is successfully contacted by multiple people.
 
             successful_contacts_indices = contact_cols[successful_contacts_mask]
-
-            # successful_contacts_indices = np.unique(successful_contacts_indices)
-
             num_succesful_contacts = len(successful_contacts_indices)
 
             self.statistics["succesful_contacts"].append(
                 num_succesful_contacts)
 
+            # Calculate infection probability for all contacts
             contact_strength = self.__intense_pdf(num_succesful_contacts)
             infection_prob = self.__infect.pdf(contact_strength)
+
+            # An infection is successful if the bernoulli outcome
+            # based on the infection probability is 1
 
             newly_infected_mask = self.__rstate.binomial(1, infection_prob)
             newly_infected_mask = np.asarray(newly_infected_mask, bool)
 
+            # Get the indices for the newly infected
             newly_infected_indices = successful_contacts_indices[
                 newly_infected_mask]
 
             # There might be multiple successfull infections per person 
             # from different infected people
-
+            
             newly_infected_indices = np.unique(newly_infected_indices)
 
             # check if people are already infected or aleady immune

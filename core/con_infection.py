@@ -8,6 +8,11 @@ Constructs the infection.
 import numpy as np
 from scipy.stats import truncnorm
 
+from .con_config import config
+import logging
+logger = logging.getLogger(__name__)
+
+
 class CON_infection(object):
     """
     class: CON_infection
@@ -20,7 +25,7 @@ class CON_infection(object):
     Returns:
         -None
     """
-    def __init__(self, log, config, rstate=None):
+    def __init__(self, rstate=None):
         """
         function: __init__
         Initializes the infection object
@@ -32,30 +37,28 @@ class CON_infection(object):
         Returns:
             -None
         """
-        #TODO: Set up standard parameters for different diseases, which
+        # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
-        self.__log = log
-        self.__config = config
 
         if rstate is None:
-            self.__log.warning("No random state given, constructing new state")
+            logger.warning("No random state given, constructing new state")
             rstate = np.random.RandomState()
         self.__rstate = rstate
 
-        self.__log.debug('The infection probability pdf')
-        if self.__config['infection probability pdf'] == 'intensity':
+        logger.debug('The infection probability pdf')
+        if config['infection probability pdf'] == 'intensity':
             self.__pdf = self.__pdf_intensity
         else:
-            self.__log.error('Unrecognized infection pdf! Set to ' +
-                             self.__config['infection probability pdf'])
+            logger.error('Unrecognized infection pdf! Set to ' +
+                         config['infection probability pdf'])
             exit('Check the infection probability pdf in the config file!')
 
-        self.__log.debug('The infection duration pdf')
-        if self.__config['infection duration pdf'] == 'gauss':
+        logger.debug('The infection duration pdf')
+        if config['infection duration pdf'] == 'gauss':
             self.__pdf_duration = self.__pdf_duration_norm
         else:
-            self.__log.error('Unrecognized infection duration pdf! Set to ' +
-                             self.__config['infection duration pdf'])
+            logger.error('Unrecognized infection duration pdf! Set to ' +
+                         config['infection duration pdf'])
             exit('Check the infection duration pdf in the config file!')
 
     @property
@@ -111,8 +114,8 @@ class CON_infection(object):
                 The length of their infection
         """
 
-        mean = self.__config['infection duration mean']
-        scale = self.__config['infection duration variance']
+        mean = config['infection duration mean']
+        scale = config['infection duration variance']
 
         # Minimum social circle size is 0
         a, b = (0 - mean) / scale, (np.inf - mean) / scale
