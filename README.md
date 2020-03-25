@@ -3,9 +3,10 @@
 Authors:
 
 1. Christian Haack
-2. Stephan Meighen-Berger
-3. Dominik Scholz
-4. Andrea Turcati
+2. Martina Karl
+3. Stephan Meighen-Berger
+4. Dominik Scholz
+5. Andrea Turcati
 
 ## Table of contents
 
