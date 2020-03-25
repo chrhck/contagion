@@ -1,5 +1,5 @@
 """
-Name: con_infection.py
+Name: infection.py
 Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the infection.
 """

@@ -1,5 +1,5 @@
 """
-Name: con_config.py
+Name: config.py
 Authors: Stephan Meighen-Berger
 Config file for the contagion package.
 It is recommended, that only advanced users change
@@ -154,5 +154,3 @@ class ConfigClass(dict):
         self.update(user_dict)
 
 config = ConfigClass(_baseconfig)
-
-

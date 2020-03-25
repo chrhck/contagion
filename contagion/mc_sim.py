@@ -1,5 +1,5 @@
 """
-Name: fd_roll_dice_social.py
+Name: mc_sim.py
 Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger
 Runs a monte-carlo (random walk) simulation
 for the social interactions.

@@ -1,5 +1,5 @@
 """
-Name: con_population.py
+Name: population.py
 Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the population.
 """
