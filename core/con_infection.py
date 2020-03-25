@@ -1,12 +1,13 @@
 """
 Name: con_infection.py
-Authors: Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the infection.
 """
 
 # Imports
 import numpy as np
-from scipy.stats import norm
+# A truncated normal continuous random variable
+from scipy.stats import truncnorm
 
 class CON_infection(object):
     """
@@ -32,12 +33,18 @@ class CON_infection(object):
         Returns:
             -None
         """
-        #TODO: Set up standard parameters for different diseases, which
+        # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
         self.__log = log
         self.__config = config
+        if self.__config['random state'] is None:
+            self.__log.warning("No random state given, constructing new state")
+            self.__rstate = np.random.RandomState()
+        else:
+            self.__rstate = config['random state']
+
         self.__log.debug('The infection probability pdf')
-        if self.__config['infection probability pdf'] == 'intensity':
+        if config['infection probability pdf'] == 'intensity':
             self.__pdf = self.__pdf_intensity
         else:
             self.__log.error('Unrecognized infection pdf! Set to ' +
@@ -119,15 +126,17 @@ class CON_infection(object):
             -np.array duration:
                 The length of their infection
         """
-        duration = []
-        # rolling until positive
-        for _ in range(infected):
-            res = -1
-            while res < 0:
-                res = norm.rvs(
-                    size=1,
-                    loc=self.__config['infection duration mean'],
-                    scale=self.__config['infection duration variance']
-                )
-            duration.append(res)
-        return np.array(duration)
+
+        mean = self.__config['infection duration mean']
+        scale = self.__config['infection duration variance']
+
+        # Minimum social circle size is 0
+        a, b = (0 - mean) / scale, (np.inf - mean) / scale
+
+        # could also use binomial here
+        duration = truncnorm.rvs(
+            a, b, loc=mean, scale=scale, size=infected,
+            random_state=self.__rstate)
+        # duration = np.asarray(duration, dtype=int)
+
+        return duration
