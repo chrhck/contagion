@@ -77,8 +77,16 @@ class CON_population(object):
         for i, circle_size in tqdm(enumerate(self.__social_circles), total=pop):
             # Get the social circle size for this person and randomly
             # select indices of people they are connected to
-            self.__rstate.shuffle(indices)
-            sel_indices = indices[:circle_size]
+
+            # This code below ensures that the social circle size
+            # is what we simulated before
+            # self.__rstate.shuffle(indices)
+            # sel_indices = indices[:circle_size]
+
+            # This code will be biased to smaller social circle sizes
+            # use with care if average_social_circle_size / population
+            # > 0.1%
+            sel_indices = self.__rstate.randint(0, pop, size=circle_size)
             # Set the connection
             interaction_matrix[i, sel_indices] = True
 
