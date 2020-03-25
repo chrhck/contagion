@@ -54,6 +54,10 @@ class CON_mc_sim(object):
         Returns:
             -None
         """
+        if tracked is not None:
+            self.__tracked = tracked
+        else:
+            self.__tracked = None
         self.__log = log
         self.__config = config
         self.__infect = infection
@@ -107,10 +111,6 @@ class CON_mc_sim(object):
             self.__population[id_inf][3] = True
             self.__population[id_inf][4] = infect_dur[i]
         self.__log.info("There will be %d simulation steps" % len(self.__t))
-        # Removing social mobility of tracked people
-        if tracked is not None:
-            for i in tracked:
-                self.__population[i][2] = 0
         if self.__config["save population"]:
             self.__log.debug("Saving the distribution of infected")
             self.__distribution = []
@@ -227,6 +227,14 @@ class CON_mc_sim(object):
         self.__infections = []
         for _ in self.__t:
             # TODO: This needs to be optimized to a comprehension
+
+            # Removing social mobility of infected & tracked people
+            if self.__tracked is not None:
+                for i in self.__tracked:
+                    if self.__population[i][3]:
+                        # print("Removing social connections")
+                        self.__population[i][2] = 0
+
             new_infections = []
             for person_id, person in enumerate(self.__population):
                 # If infected
