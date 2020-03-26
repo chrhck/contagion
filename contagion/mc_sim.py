@@ -99,8 +99,7 @@ class MC_Sim(object):
         self.__log.debug('Constructing the population array')
 
         self.__population = pd.DataFrame(
-            {"id": np.arange(self.__pop_size),
-             "infected": False,
+            {"infected": False,
              "in_incubation": False,
              "is_infectious": False,
              "incubation_duration": 0,
@@ -108,7 +107,7 @@ class MC_Sim(object):
              "is_removed": False,
              "is_critical": False,
              "has_died": False},
-            index="id")
+            index=np.arange(self.__pop_size))
 
         # Choosing the infected
         infect_id = self.__rstate.choice(
@@ -123,6 +122,7 @@ class MC_Sim(object):
 
         # Filling the array
         self.__population.loc[infect_id, "infected"] = True
+        self.__population.loc[infect_id, "is_infectious"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
         self.__log.info('There will be %d simulation steps' %len(self.__t))
@@ -289,10 +289,13 @@ class MC_Sim(object):
 
             # Change state to infected if passed incubration duration
             # Check only old cases
-            passed_incubation = self.__population.loc[
-                in_incubation_mask, "incubation_duration"] <= 0
-
-            self.__population.loc[passed_incubation, "in_incubation"] = False
+            passed_incubation_index = self.__population.loc[in_incubation_mask].index
+            passed_incubation = passed_incubation_index[
+                self.__population.loc[
+                    in_incubation_mask, "incubation_duration"] <= 0
+                ]
+            if len(passed_incubation) > 0:
+                self.__population.loc[passed_incubation, "in_incubation"] = False
 
             """
             Infectious
@@ -302,7 +305,7 @@ class MC_Sim(object):
             """
 
             # Number of people who became infectious this timestep
-            num_newly_infectious = passed_incubation.sum(axis=0)
+            num_newly_infectious = len(passed_incubation)
             # Old cases
             is_infectious_mask = self.__population.loc[:, "is_infectious"]
 
@@ -313,18 +316,22 @@ class MC_Sim(object):
             tmp_dur = np.around(
                 self.__infect.infectious_duration(num_newly_infectious))
 
-            self.__population.loc[passed_incubation, "is_infectious"] = True
-            self.__population.loc[passed_incubation, "infectious_duration"] = tmp_dur
+            if len(passed_incubation) > 0:
+                self.__population.loc[passed_incubation, "is_infectious"] = True
+                self.__population.loc[passed_incubation, "infectious_duration"] = tmp_dur
 
             # Change state to removed if passed infectious duration
             # Check only old cases
-            
-            passed_infectious = self.__population.loc[
-                is_infectious_mask, "infectious_duration"] <= 0
+            passed_infectious_index = self.__population.loc[is_infectious_mask].index
+            passed_infectious = passed_infectious_index[
+                self.__population.loc[
+                    is_infectious_mask, "infectious_duration"] <= 0
+                ]
 
-            self.__population.loc[passed_infectious, "is_infectious"] = False
-            self.__population.loc[passed_infectious, "is_removed"] = True
-            self.__population.loc[passed_infectious, "is_infected"] = False
+            if len(passed_infectious) > 0:
+                self.__population.loc[passed_infectious, "is_infectious"] = False
+                self.__population.loc[passed_infectious, "is_removed"] = True
+                self.__population.loc[passed_infectious, "is_infected"] = False
 
             # Storing statistics
             is_removed = self.__population.loc[:, "is_removed"]
