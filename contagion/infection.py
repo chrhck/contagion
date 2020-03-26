@@ -59,12 +59,42 @@ class Infection(object):
                 config['infection duration mean'],
                 config['infection duration variance']
                 )
-            self.__pdf_duration = dur_pdf.rvs
+            self._pdf = dur_pdf.rvs
 
         else:
             self.__log.error('Unrecognized infection duration pdf! Set to ' +
                              config['infection duration pdf'])
             exit('Check the infection duration pdf in the config file!')
+
+        if config['infectious duration pdf'] == 'gauss':
+
+            dur_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['infectious duration mean'],
+                config['infectious duration variance']
+                )
+            self._infectious_duration = dur_pdf.rvs
+
+        else:
+            self.__log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+
+        if config['incubation duration pdf'] == 'gauss':
+
+            dur_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['incubation duration mean'],
+                config['incubation duration variance']
+                )
+            self._incubation_duration = dur_pdf.rvs
+
+        else:
+            self.__log.error('Unrecognized incubation duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the incubation duration pdf in the config file!')
 
     @property
     def pdf_infection_prob(self):
@@ -105,4 +135,12 @@ class Infection(object):
             -int length:
                 The duration of immunity
         """
+
+    @property
+    def incubation_duration(self):
+        return self._incubation_duration
+
+    @property
+    def infectious_duration(self):
+        return self._infectious_duration
 
