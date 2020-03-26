@@ -107,6 +107,7 @@ class MC_Sim(object):
              "is_removed": False,
              "is_critical": False,
              "is_hospitalized": False,
+             "is_recovering": False,
              "time_until_hospitalization": 0,
              "hospitalization_duration": 0,
              "recovery_time": 0,
@@ -211,6 +212,70 @@ class MC_Sim(object):
 
         start = time()
         for step, _ in enumerate(self.__t):
+
+            """
+            Death
+
+            TODO: Remove on death / hospitalization
+            """
+
+            will_die = self.__population.loc[:, "will_die"] == True
+            self.__population.loc[will_die, "time_until_death"] -= 1
+
+            will_die_indices = self.__population.loc[will_die].index
+
+            has_died = self.__population.loc[will_die_indices, "time_until_death"] <= 0
+            has_died_indices = will_die_indices[has_died]
+            num_has_died = len(has_died_indices)
+
+            if num_has_died > 0:
+                self.__population.loc[has_died_indices, "has_died"] = True
+                self.__population.loc[has_died_indices, "will_die"] = False
+                self.__population.loc[has_died_indices, "is_infectious"] = False
+                self.__population.loc[has_died_indices, "is_infected"] = False
+
+            """
+            Hospitalization
+            """
+
+            will_be_hospitalized = self.__population.loc[:, "will_be_hospitalized"] == True
+            self.__population.loc[will_be_hospitalized, "time_until_hospitalization"] -= 1
+
+            will_be_hospitalized_indices = self.__population.loc[will_be_hospitalized].index
+
+            is_hospitalized = self.__population.loc[will_be_hospitalized_indices, "time_until_hospitalization"] <= 0
+            is_hospitalized_indices = will_be_hospitalized_indices[is_hospitalized]
+
+            num_is_hospitalized = len(is_hospitalized_indices)
+
+            if num_is_hospitalized > 0:
+                self.__population.loc[is_hospitalized_indices, "is_hospitalized"] = True
+                self.__population.loc[is_hospitalized_indices, "will_be_hospitalized"] = False
+                # TODO: could reduce contact rate instead??
+                self.__population.loc[is_hospitalized_indices, "is_infectious"] = False
+
+            """
+            Recovery
+            """
+
+            is_recovering_mask = self.__population.loc[:, "is_recovering"] == True
+            is_recovering_indices = self.__population.index[is_recovering_mask]
+
+            self.__population.loc[is_recovering_indices, "recovery_time"] -= 1
+
+            has_recovered_mask = self.__population.loc[is_recovering_indices, "recovery_time"] <= 0
+            has_recovered_indices = is_recovering_indices[has_recovered_mask]
+
+            num_newly_recovered = len(has_recovered_indices)
+
+            if num_newly_recovered > 0:
+                self.__population.loc[has_recovered_indices, "is_recovering"] = False
+                self.__population.loc[has_recovered_indices, "has_recovered"] = True
+                self.__population.loc[has_recovered_indices, "is_infected"] = False
+
+            """
+            New infections
+            """
 
             infected_mask = self.__population.loc[:, "is_infectious"]
             infected_indices = self.__population.index[infected_mask]
@@ -360,7 +425,9 @@ class MC_Sim(object):
                 self.__population.loc[
                     in_incubation_mask, "incubation_duration"] <= 0
                 ]
-            if len(passed_incubation) > 0:
+
+            num_newly_infectious = len(passed_incubation)
+            if num_newly_infectious > 0:
                 self.__population.loc[passed_incubation, "in_incubation"] = False
 
             """
@@ -371,7 +438,7 @@ class MC_Sim(object):
             """
 
             # Number of people who became infectious this timestep
-            num_newly_infectious = len(passed_incubation)
+
             # Old cases
             is_infectious_mask = self.__population.loc[:, "is_infectious"]
 
@@ -398,27 +465,11 @@ class MC_Sim(object):
             if num_newly_removed > 0:
                 self.__population.loc[passed_infectious, "is_infectious"] = False
                 self.__population.loc[passed_infectious, "is_removed"] = True
-                self.__population.loc[passed_infectious, "is_infected"] = False
+                recovery_time = self.__infect.recovery_time(
+                    num_newly_removed)
 
-            """
-            Death
-
-            TODO: Remove on death / hospitalization
-            """
-
-            will_die = self.__population.loc[:, "will_die"] == True
-            self.__population.loc[will_die, "time_until_death"] -= 1
-
-            will_die_indices = self.__population.loc[will_die].index
-
-            has_died = self.__population.loc[will_die_indices, "time_until_death"] <= 0
-            has_died_indices = will_die_indices[has_died]
-            num_has_died = len(has_died_indices)
-
-            if num_has_died > 0:
-                self.__population.loc[has_died_indices, "has_died"] = True
-                self.__population.loc[has_died_indices, "will_die"] = False
-
+                self.__population.loc[passed_infectious, "recovery_time"] = recovery_time
+                self.__population.loc[passed_infectious, "is_recovering"] = True
 
             # Storing statistics
             is_removed = self.__population.loc[:, "is_removed"]
@@ -427,10 +478,14 @@ class MC_Sim(object):
             self.__statistics["incubation"].append(in_incubation.sum(axis=0))
             is_infectious = self.__population.loc[:, "is_infectious"]
             self.__statistics["infectious"].append(is_infectious.sum(axis=0))
+            has_recovered = self.__population.loc[:, "has_recovered"]
+            self.__statistics["recovered"].append(has_recovered.sum(axis=0))
             is_infected = self.__population.loc[:, "is_infected"]
             self.__statistics["infected"].append(is_infected.sum(axis=0))
+
             self.__statistics["new infections"].append(num_newly_infected)
             self.__statistics["newly infectious"].append(num_newly_infectious)
+            self.__statistics["newly recovered"].append(num_newly_recovered)
             self.__statistics["newly removed"].append(num_newly_removed)
             self.__statistics["will be hospitalized"].append(num_hospitalized)
             self.__statistics["will die"].append(num_will_die)
