@@ -2,20 +2,23 @@
 
 """
 Name: mc_sim.py
-Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger
+Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger, Andrea Turcati
 Runs a monte-carlo (random walk) simulation
 for the social interactions.
 """
-
-from sys import exit
-import numpy as np
-from time import time
-from numpy.random import choice
-from scipy import sparse
 from collections import defaultdict
+from sys import exit
+from time import time
+
+import numpy as np
+import pandas as pd
+from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform
+
+from .config import config
+from .pdf import Uniform
 
 
 class MC_Sim(object):
@@ -43,7 +46,7 @@ class MC_Sim(object):
             population,
             infection,
             tracked,
-            log            
+            log
             ):
         """
         function: __init__
@@ -97,15 +100,17 @@ class MC_Sim(object):
         self.__pop_size = population.shape[0]
 
         self.__log.debug('Constructing the population array')
-        # 4 components
-        #   - The population
-        #   - Infected?
-        #   - The infection duration
-        self.__population = np.empty((self.__pop_size, 4))
-        self.__population[:, 0] = np.arange(self.__pop_size)
-        self.__population[:, 1] = 0
-        self.__population[:, 2] = 0
-        self.__population[:, 3] = 0
+
+        self.__population = pd.DataFrame(
+            {"is_infected": False,
+             "in_incubation": False,
+             "is_infectious": False,
+             "incubation_duration": 0,
+             "infectious_duration": 0,
+             "is_removed": False,
+             "is_critical": False,
+             "has_died": False},
+            index=np.arange(self.__pop_size))
 
         # Choosing the infected
         infect_id = self.__rstate.choice(
@@ -115,12 +120,13 @@ class MC_Sim(object):
 
         # Their infection duration
         infect_dur = np.around(
-            self.__infect.pdf_duration(self.__infected)
+            self.__infect.infectious_duration(self.__infected)
         )
 
         # Filling the array
-        self.__population[infect_id, 1] = 1
-        self.__population[infect_id, 2] = infect_dur
+        self.__population.loc[infect_id, "is_infected"] = True
+        self.__population.loc[infect_id, "is_infectious"] = True
+        self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
         self.__log.info('There will be %d simulation steps' %len(self.__t))
         # Removing social mobility of tracked people
@@ -159,7 +165,6 @@ class MC_Sim(object):
                 Stores the results from the simulation
         """
         return self.__statistics
-
 
     @property
     def time_array(self):
@@ -202,8 +207,8 @@ class MC_Sim(object):
         start = time()
         for step, _ in enumerate(self.__t):
 
-            infected_mask = self.__population[:, 1] == 1
-            infected_indices = np.nonzero(infected_mask)[0]
+            infected_mask = self.__population.loc[:, "is_infectious"]
+            infected_indices = self.__population.index[infected_mask]
 
             # Find all non-zero connections of the infected
             # rows are the ids / indices of the infected
@@ -248,47 +253,99 @@ class MC_Sim(object):
             newly_infected_indices = np.unique(newly_infected_indices)
 
             # check if people are already infected or aleady immune
-            already_infected = self.__population[newly_infected_indices, 1] == 1
-            already_immune = self.__population[newly_infected_indices, 3] == 1
+            already_infected = (
+                (self.__population.loc[
+                    newly_infected_indices, "in_incubation"] == True) |
+                (self.__population.loc[
+                    newly_infected_indices, "is_infectious"] == True)
+                )
 
-            newly_infected_indices = newly_infected_indices[
-                ~(already_infected | already_immune)]
+            already_immune = self.__population.loc[
+                    newly_infected_indices, "is_removed"] == True
+
+            newly_infected_indices = self.__population.index[
+                newly_infected_indices[~(already_infected | already_immune)]]
 
             num_newly_infected = len(newly_infected_indices)
             # Store new infections
-            self.__statistics["infections"].append(
-                len(newly_infected_indices)
-            )
+            self.__statistics["infections"].append(num_newly_infected)
 
-            # adjusting infection duration
-            self.__population[infected_indices, 2] -= 1
+            """
+            Incubation
 
-            recovered_indices = infected_indices[self.__population[infected_indices, 2] <= 0]
-            # Set recovered
-            self.__population[recovered_indices, 1] = 0
-            # Set immune
-            self.__population[recovered_indices, 3] = 1
+            First update incubation duration of old cases. Then add new cases.
+            Finally check cases that passes incubation peroid
+            """
+            # Old cases
+            in_incubation_mask = self.__population.loc[:, "in_incubation"]
 
-            # Storing recovered
-            self.__statistics["recovered"].append(len(recovered_indices))
-            # add new infections
+            # adjusting incubation duration
+            self.__population.loc[in_incubation_mask, "incubation_duration"] -= 1
+
+            # add new incubations
             tmp_dur = np.around(
-                self.__infect.pdf_duration(num_newly_infected))
-            self.__population[newly_infected_indices, 1] = 1
-            self.__population[newly_infected_indices, 2] = tmp_dur
+                self.__infect.incubation_duration(num_newly_infected))
 
-            # Storing immune
-            self.__statistics["immune"].append(
-                np.sum(self.__population[:, 3] == 1))
+            self.__population.loc[newly_infected_indices, "in_incubation"] = True
+            self.__population.loc[newly_infected_indices, "is_infected"] = True
+            self.__population.loc[newly_infected_indices, "incubation_duration"] = tmp_dur
 
-            self.__statistics["infectious"].append(
-                np.sum(self.__population[:, 1] == 1))
+            # Change state to infected if passed incubration duration
+            # Check only old cases
+            passed_incubation_index = self.__population.loc[in_incubation_mask].index
+            passed_incubation = passed_incubation_index[
+                self.__population.loc[
+                    in_incubation_mask, "incubation_duration"] <= 0
+                ]
+            if len(passed_incubation) > 0:
+                self.__population.loc[passed_incubation, "in_incubation"] = False
 
-            self.__statistics["susceptible"].append(
-                np.sum(
-                    (self.__population[:, 1] == 0) &
-                    (self.__population[:, 3] == 0) )
-                )
+            """
+            Infectious
+
+            First update infectious duration of old cases. Then add new cases.
+            Finally check cases that passes infectious peroid
+            """
+
+            # Number of people who became infectious this timestep
+            num_newly_infectious = len(passed_incubation)
+            # Old cases
+            is_infectious_mask = self.__population.loc[:, "is_infectious"]
+
+            # adjusting infectious duration
+            self.__population.loc[is_infectious_mask, "infectious_duration"] -= 1
+
+            # add new infectious
+            tmp_dur = np.around(
+                self.__infect.infectious_duration(num_newly_infectious))
+
+            if len(passed_incubation) > 0:
+                self.__population.loc[passed_incubation, "is_infectious"] = True
+                self.__population.loc[passed_incubation, "infectious_duration"] = tmp_dur
+
+            # Change state to removed if passed infectious duration
+            # Check only old cases
+            passed_infectious_index = self.__population.loc[is_infectious_mask].index
+            passed_infectious = passed_infectious_index[
+                self.__population.loc[
+                    is_infectious_mask, "infectious_duration"] <= 0
+                ]
+
+            if len(passed_infectious) > 0:
+                self.__population.loc[passed_infectious, "is_infectious"] = False
+                self.__population.loc[passed_infectious, "is_removed"] = True
+                self.__population.loc[passed_infectious, "is_infected"] = False
+
+            # Storing statistics
+            is_removed = self.__population.loc[:, "is_removed"]
+            self.__statistics["removed"].append(is_removed.sum(axis=0))
+            in_incubation = self.__population.loc[:, "in_incubation"]
+            self.__statistics["incubation"].append(in_incubation.sum(axis=0))
+            is_infectious = self.__population.loc[:, "is_infectious"]
+            self.__statistics["infectious"].append(is_infectious.sum(axis=0))
+            is_infected = self.__population.loc[:, "is_infected"]
+            self.__statistics["infected"].append(is_infected.sum(axis=0))
+
             if step % (int(len(self.__t)/10)) == 0:
                 end = time()
                 self.__log.debug('In step %d' %step)
