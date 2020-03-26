@@ -318,6 +318,7 @@ class MC_Sim(object):
 
             # Change state to removed if passed infectious duration
             # Check only old cases
+            
             passed_infectious = self.__population.loc[
                 is_infectious_mask, "infectious_duration"] <= 0
 
