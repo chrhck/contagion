@@ -111,19 +111,6 @@ class Infection(object):
         return self.__pdf_infection_prob
 
     @property
-    def pdf_duration(self):
-        """
-        function: pdf_duration
-        The duration of the infection
-        Parameters:
-            -None
-        Returns:
-            -function pdf_duration
-                Takes an int
-        """
-        return self.__pdf_duration
-
-    @property
     def immunity_dur(self):
         """
         function: immunity_dur

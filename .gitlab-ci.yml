@@ -1,0 +1,41 @@
+image: python:3.6
+
+services:
+  - postgres:9.6
+  - redis:3.2
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POSTGRES_DB: myproject
+
+cache:
+  untracked: true
+  key: "test"
+  paths:
+    - .cache/pip
+    - venv/
+
+before_script:
+  - python --version
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install -r requirements.txt
+
+stages:
+  - pep8
+  - test
+
+pep8:
+  stage: pep8
+  artifacts:
+    paths:
+      - .cache/pip
+      - venv
+  script:
+    - flake8 --exclude='.git,venv,*migrations*,static/lib' .
+
+test:
+  stage: test
+  script:
+    - python3
