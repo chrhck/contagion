@@ -18,7 +18,7 @@ class Infection(object):
     Constructs the infection object
     Parameters:
         -obj log:
-            The logger       
+            The logger
     Returns:
         -None
     """
@@ -143,4 +143,3 @@ class Infection(object):
     @property
     def infectious_duration(self):
         return self._infectious_duration
-
