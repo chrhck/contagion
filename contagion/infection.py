@@ -105,4 +105,4 @@ class Infection(object):
             -int length:
                 The duration of immunity
         """
-        return config['immunity duration']
+
