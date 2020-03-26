@@ -9,6 +9,8 @@ to suppress the spread.
 #imports
 from sys import exit
 import numpy as np
+import logging
+_log = logging.getLogger(__name__)
 
 from .config import config
 
@@ -18,30 +20,27 @@ class Measures(object):
     Class to implement different possible
     containment measures.
     Parameters:
-        -obj log:
-            The logger
+        -None
     Returns:
         -None
     """
-    def __init__(self, log):
+    def __init__(self):
         """
         function: __init__
         Initializes the class
         Parameters:
-            -obj log:
-                The logger
+            -None
         Returns:
             -None
         """
-        self.__log = log.getChild(self.__class__.__name__)
         if config['measures'] == 'none':
-            self.__log.info('No measure taken')
+            _log.info('No measure taken')
             self.__tracked = None
         elif config['measures'] == 'contact tracing':
-            self.__log.info('Using contact tracing')
+            _log.info('Using contact tracing')
             contact_tracing()
         else:
-            self.__log.error('measure not implemented! Set to ' +
+            _log.error('measure not implemented! Set to ' +
                              config['measures'])
             exit('Please check the config file what measures are allowed')
 
@@ -72,7 +71,7 @@ class Measures(object):
             config['population size'] *
             config['tracked']
         )
-        self.__log.debug('Number of people tracked is %d' % tracked_pop)
+        _log.debug('Number of people tracked is %d' % tracked_pop)
         self.__tracked = np.random.choice(
             range(config['population size']),
             size=tracked_pop,

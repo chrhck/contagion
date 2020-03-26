@@ -12,6 +12,8 @@ import scipy.stats
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
+import logging
+_log = logging.getLogger(__name__)
 
 
 from .pdfs import TruncatedNormal
@@ -23,25 +25,23 @@ class Population(object):
     Class to help with the construction of a realistic population
 
     Paremeters:
-        -obj log:
-            The logger
+        -None
 
     """
 
-    def __init__(self, log):
+    def __init__(self):
 
         # Inputs
-        self.__log = log.getChild(self.__class__.__name__)
         self.__pop = config['population size']
         # Checking random state
         if config['random state'] is None:
-            self.__log.warning("No random state given, constructing new state")
+            _log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
 
-        self.__log.info('Constructing social circles for the population')
-        self.__log.debug('Number of people in social circles')
+        _log.info('Constructing social circles for the population')
+        _log.debug('Number of people in social circles')
         if config['social circle pdf'] == 'gauss':
 
             soc_circ_pdf = TruncatedNormal(
@@ -53,10 +53,10 @@ class Population(object):
 
             self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
         else:
-            self.__log.error('Unrecognized social pdf! Set to ' + config['social circle pdf'])
+            _log.error('Unrecognized social pdf! Set to ' + config['social circle pdf'])
             raise RuntimeError('Check the social circle distribution in the config file!')
 
-        self.__log.debug('The social circle interactions for each person')
+        _log.debug('The social circle interactions for each person')
         if config['social circle interactions pdf'] == 'gauss':
 
             upper = self.__social_circles
@@ -77,11 +77,11 @@ class Population(object):
             # Set the interactions to zero for all people with zero contacts
             self.__sc_interactions[zero_contacts_mask] = 0
         else:
-            self.__log.error('Unrecognized sc interactions pdf! Set to ' +
+            _log.error('Unrecognized sc interactions pdf! Set to ' +
                              config['social circle interactions pdf'])
             raise RuntimeError('Check the social circle interactions distribution in the config file!')
 
-        self.__log.debug('Constructing population')
+        _log.debug('Constructing population')
         # LIL sparse matrices are efficient for row-wise construction
         interaction_matrix = sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
         indices = np.arange(self.__pop)

@@ -9,6 +9,8 @@ for the social interactions.
 from collections import defaultdict
 from sys import exit
 from time import time
+import logging
+_log = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -29,8 +31,6 @@ class MC_Sim(object):
             The infection object
         -np.array tracked:
             The tracked population
-        -obj log:
-            The logger
         -dic config:
             The config file
     Returns:
@@ -42,8 +42,7 @@ class MC_Sim(object):
             self,
             population,
             infection,
-            tracked,
-            log
+            tracked
             ):
         """
         function: __init__
@@ -55,13 +54,10 @@ class MC_Sim(object):
                 The infection object
             -np.array tracked:
                 The tracked population
-            -obj log:
-                The logger
         Returns:
             -None
         """
         # Inputs
-        self.__log = log.getChild(self.__class__.__name__)
         self.__infected = config['infected']
         self.__infect = infection
         self.__dt = config['time step']
@@ -71,7 +67,7 @@ class MC_Sim(object):
             step=self.__dt
         )
 
-        self.__log.debug('The interaction intensity pdf')
+        _log.debug('The interaction intensity pdf')
         if config['interaction intensity'] == 'uniform':
             self.__intense_pdf = Uniform(0, 1).rvs
             # The Reproductive Number
@@ -80,23 +76,23 @@ class MC_Sim(object):
                 config['infection duration mean'] * 0.5
             )
         else:
-            self.__log.error('Unrecognized intensity pdf! Set to ' +
+            _log.error('Unrecognized intensity pdf! Set to ' +
                              config['interaction intensity'])
             exit('Check the interaction intensity in the config file!')
 
         # Checking random state
         if config['random state'] is None:
-            self.__log.warning("No random state given, constructing new state")
+            _log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
 
-        self.__log.debug('Constructing simulation population')
-        self.__log.debug('The infected ids and durations...')
+        _log.debug('Constructing simulation population')
+        _log.debug('The infected ids and durations...')
 
         self.__pop_size = population.shape[0]
 
-        self.__log.debug('Constructing the population array')
+        _log.debug('Constructing the population array')
 
         self.__population = pd.DataFrame(
             {"is_infected": False,
@@ -125,7 +121,7 @@ class MC_Sim(object):
         self.__population.loc[infect_id, "is_infectious"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
-        self.__log.info('There will be %d simulation steps' %len(self.__t))
+        _log.info('There will be %d simulation steps' %len(self.__t))
         # Removing social mobility of tracked people
         if tracked is not None:
             # TODO make this configurable
@@ -147,7 +143,7 @@ class MC_Sim(object):
         start = time()
         self.__simulation()
         end = time()
-        self.__log.info('MC simulation took %f seconds' % (end-start))
+        _log.info('MC simulation took %f seconds' % (end-start))
 
     @property
     def statistics(self):
@@ -345,8 +341,8 @@ class MC_Sim(object):
 
             if step % (int(len(self.__t)/10)) == 0:
                 end = time()
-                self.__log.debug('In step %d' %step)
-                self.__log.debug(
+                _log.debug('In step %d' %step)
+                _log.debug(
                     'Last round of simulations took %f seconds' %(end-start)
                 )
                 start = time()
