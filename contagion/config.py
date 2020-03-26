@@ -63,6 +63,21 @@ _baseconfig = {
     'infection duration variance': 5,
     # Infection duration pdf
     'infection duration pdf': 'gauss',
+
+    # Infectious duration mean
+    'infectious duration mean': 3,
+    # Infectious duration variance
+    'infectious duration variance': 5,
+    # Infectious duration pdf
+    'infectious duration pdf': 'gauss',
+
+    # Incubation duration mean
+    'incubation duration mean': 5,
+    # Incubation duration variance
+    'incubation duration variance': 2,
+    # Incubation duration pdf
+    'incubation duration pdf': 'gauss',
+
     # Possible measures to take
     # -'None'
     # -'contact tracing'
