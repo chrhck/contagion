@@ -10,6 +10,8 @@ to suppress the spread.
 from sys import exit
 import numpy as np
 
+from .config import config
+
 class Measures(object):
     """
     class: Measures
@@ -18,34 +20,29 @@ class Measures(object):
     Parameters:
         -obj log:
             The logger
-        -dic config:
-            The configuration of the module
     Returns:
         -None
     """
-    def __init__(self, log, config):
+    def __init__(self, log):
         """
         function: __init__
         Initializes the class
         Parameters:
             -obj log:
                 The logger
-            -dic config:
-                The configuration of the module
         Returns:
             -None
         """
         self.__log = log.getChild(self.__class__.__name__)
-        self.__config = config
-        if self.__config['measures'] == 'none':
+        if config['measures'] == 'none':
             self.__log.info('No measure taken')
             self.__tracked = None
-        elif self.__config['measures'] == 'contact tracing':
+        elif config['measures'] == 'contact tracing':
             self.__log.info('Using contact tracing')
-            self.__contact_tracing()
+            contact_tracing()
         else:
             self.__log.error('measure not implemented! Set to ' +
-                             self.__config['measures'])
+                             config['measures'])
             exit('Please check the config file what measures are allowed')
 
     @property
@@ -72,12 +69,12 @@ class Measures(object):
             -None
         """
         tracked_pop = int(
-            self.__config['population size'] *
-            self.__config['tracked']
+            config['population size'] *
+            config['tracked']
         )
         self.__log.debug('Number of people tracked is %d' % tracked_pop)
         self.__tracked = np.random.choice(
-            range(self.__config['population size']),
+            range(config['population size']),
             size=tracked_pop,
             replace=False
         ).flatten()

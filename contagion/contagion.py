@@ -93,7 +93,7 @@ class Contagion(object):
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting the measure construction')
-        self.tracked = Measures(self.__log, config).tracked
+        self.tracked = Measures(self.__log).tracked
         self.__log.info('Finished the measure construction')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
