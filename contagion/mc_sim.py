@@ -101,6 +101,8 @@ class MC_Sim(object):
         #   - The population
         #   - Infected?
         #   - The infection duration
+        #   - Incubation period
+        #   - Infectuous duration
         self.__population = np.empty((self.__pop_size, 4))
         self.__population[:, 0] = np.arange(self.__pop_size)
         self.__population[:, 1] = 0
