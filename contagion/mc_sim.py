@@ -264,8 +264,7 @@ class MC_Sim(object):
                 newly_infected_indices[~(already_infected | already_immune)]]
 
             num_newly_infected = len(newly_infected_indices)
-            # Store new infections
-            self.__statistics["infections"].append(num_newly_infected)
+
 
             """
             Incubation
@@ -328,7 +327,8 @@ class MC_Sim(object):
                     is_infectious_mask, "infectious_duration"] <= 0
                 ]
 
-            if len(passed_infectious) > 0:
+            num_newly_removed = len(passed_infectious)
+            if num_newly_removed > 0:
                 self.__population.loc[passed_infectious, "is_infectious"] = False
                 self.__population.loc[passed_infectious, "is_removed"] = True
                 self.__population.loc[passed_infectious, "is_infected"] = False
@@ -342,7 +342,9 @@ class MC_Sim(object):
             self.__statistics["infectious"].append(is_infectious.sum(axis=0))
             is_infected = self.__population.loc[:, "is_infected"]
             self.__statistics["infected"].append(is_infected.sum(axis=0))
-
+            self.__statistics["new infections"].append(num_newly_infected)
+            self.__statistics["newly infectious"].append(num_newly_infectious)
+            self.__statistics["newly removed"].append(num_newly_removed)
             if step % (int(len(self.__t)/10)) == 0:
                 end = time()
                 self.__log.debug('In step %d' %step)
