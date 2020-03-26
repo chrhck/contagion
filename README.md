@@ -56,3 +56,4 @@ On overview of the code structure
 - [] Add immunity function to infection
 - [] Add a switch between the different models (SIR, SIS, MSIR, MSEIRS...)
 - [] Fix that tracked person currently can't meet infected (only passive)
+- [] Finish packaging using setuptools
