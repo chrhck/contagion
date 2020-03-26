@@ -8,3 +8,6 @@ ignore =
 exclude =
     .git
     *venv*
+
+per-file-ignores =
+    tests/performance.py: E402

@@ -40,4 +40,4 @@ pep8:
 test:
   stage: test
   script:
-    - python3
+    - python3 tests/performance.py
