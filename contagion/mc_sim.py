@@ -17,9 +17,6 @@ from scipy import sparse
 from .config import config
 from .pdfs import Uniform
 
-from .config import config
-from .pdf import Uniform
-
 
 class MC_Sim(object):
     """

@@ -31,11 +31,11 @@ A basic running example to interface with the package
 
 ```python
 # Importing the package
-import contagion as CONTAGION
-# Importing the config file
-import con_config as config
+from contagion import Contagion, config
 # Creating contagion object
-contagion = CONTAGION(config=config)
+contagion = Contagion()
+# Optional: Some settings
+config['population size'] = 1000
 # Runing the simulation
 contagion.sim()
 # Access simulation results using
