@@ -183,10 +183,10 @@ class Contagion(object):
         self.__log.info('Finished calculation')
         self.__log.debug('The results are stored in a dictionary self.statistics')
         self.__log.debug('Available keys are:')
-        self.__log.debug('"contacts", "infections", "recovered", "immune", "infectious", "susceptible"')
+        self.__log.debug(self.statistics.keys())
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
-        self.__log.debug('Dumping run settings into %s', config['config location'])
+        self.__log.debug('Dumping run settings into %s' %config['config location'])
         with open(config['config location'], 'w') as f:
             for item in config.keys():
                 print(item + ': ' + str(config[item]), file=f)

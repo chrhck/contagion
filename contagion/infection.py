@@ -50,22 +50,7 @@ class Infection(object):
                              config['infection probability pdf'])
             exit('Check the infection probability pdf in the config file!')
 
-        self.__log.debug('The infection duration and incubation pdf')
-        if config['infection duration pdf'] == 'gauss':
-
-            dur_pdf = TruncatedNormal(
-                0,
-                np.inf,
-                config['infection duration mean'],
-                config['infection duration variance']
-                )
-            self._pdf = dur_pdf.rvs
-
-        else:
-            self.__log.error('Unrecognized infection duration pdf! Set to ' +
-                             config['infection duration pdf'])
-            exit('Check the infection duration pdf in the config file!')
-
+        self.__log.debug('The infectious and incubation duration pdfs')
         if config['infectious duration pdf'] == 'gauss':
 
             dur_pdf = TruncatedNormal(
@@ -74,7 +59,7 @@ class Infection(object):
                 config['infectious duration mean'],
                 config['infectious duration variance']
                 )
-            self._infectious_duration = dur_pdf.rvs
+            self.__infectious_duration = dur_pdf.rvs
 
         else:
             self.__log.error('Unrecognized infectious duration pdf! Set to ' +
@@ -89,7 +74,7 @@ class Infection(object):
                 config['incubation duration mean'],
                 config['incubation duration variance']
                 )
-            self._incubation_duration = dur_pdf.rvs
+            self.__incubation_duration = dur_pdf.rvs
 
         else:
             self.__log.error('Unrecognized incubation duration pdf! Set to ' +
@@ -125,8 +110,28 @@ class Infection(object):
 
     @property
     def incubation_duration(self):
-        return self._incubation_duration
+        """
+        function: incubation_duration
+        Getter function for the incubation duration
+        duration
+        Parameters:
+            -None
+        Returns:
+            -int incubation_duration:
+                The duration of incubation
+        """
+        return self.__incubation_duration
 
     @property
     def infectious_duration(self):
-        return self._infectious_duration
+        """
+        function: infectious_duration
+        Getter function for the incubation duration
+        duration
+        Parameters:
+            -None
+        Returns:
+            -int infectious_duration:
+                The duration of infection
+        """
+        return self.__infectious_duration
