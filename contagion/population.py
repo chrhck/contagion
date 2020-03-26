@@ -13,11 +13,11 @@ import scipy.stats
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
 import logging
-_log = logging.getLogger(__name__)
-
 
 from .pdfs import TruncatedNormal
 from .config import config
+
+_log = logging.getLogger(__name__)
 
 
 class Population(object):

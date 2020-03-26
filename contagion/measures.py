@@ -6,13 +6,16 @@ Authors: Stephan Meighen-Berger
 The different measures one can take
 to suppress the spread.
 """
-#imports
+
+# imports
 from sys import exit
 import numpy as np
 import logging
-_log = logging.getLogger(__name__)
 
 from .config import config
+
+_log = logging.getLogger(__name__)
+
 
 class Measures(object):
     """

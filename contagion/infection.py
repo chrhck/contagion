@@ -9,10 +9,11 @@ Constructs the infection.
 # Imports
 import numpy as np  # type: ignore
 import logging
-_log = logging.getLogger(__name__)
 
 from .pdfs import TruncatedNormal, NormalizedProbability
 from .config import config
+
+_log = logging.getLogger(__name__)
 
 
 class Infection(object):

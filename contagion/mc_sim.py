@@ -10,14 +10,14 @@ from collections import defaultdict
 from sys import exit
 from time import time
 import logging
-_log = logging.getLogger(__name__)
-
 import numpy as np
 import pandas as pd
 from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform
+
+_log = logging.getLogger(__name__)
 
 
 class MC_Sim(object):

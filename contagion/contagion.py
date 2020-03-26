@@ -11,10 +11,7 @@ of safety measures, such as social distancing and tracking.
 
 # Native modules
 import sys
-import numpy as np
 import logging
-# unless we put this class in __init__, __name__ will be contagion.contagion
-_log = logging.getLogger('contagion')
 
 # -----------------------------------------
 # Package modules
@@ -23,6 +20,9 @@ from .infection import Infection
 from .mc_sim import MC_Sim
 from .measures import Measures
 from .population import Population
+
+# unless we put this class in __init__, __name__ will be contagion.contagion
+_log = logging.getLogger('contagion')
 
 
 class Contagion(object):
