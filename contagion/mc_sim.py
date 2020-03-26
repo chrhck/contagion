@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """
-Name: fd_roll_dice_social.py
+Name: mc_sim.py
 Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger
 Runs a monte-carlo (random walk) simulation
 for the social interactions.
@@ -13,9 +15,9 @@ from scipy import sparse
 from collections import defaultdict
 
 
-class CON_mc_sim(object):
+class MC_Sim(object):
     """
-    class: CON_mc_sim
+    class: MC_Sim
     Monte-carlo simulation for the infection spread.
     Parameters:
         -scipy.sparse population:
@@ -59,7 +61,7 @@ class CON_mc_sim(object):
             -None
         """
         # Inputs
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         self.__infected = self.__config['infected']
         self.__infect = infection

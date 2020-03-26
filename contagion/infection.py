@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """
-Name: con_infection.py
+Name: infection.py
 Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the infection.
 """
@@ -9,9 +11,9 @@ import numpy as np
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 
-class CON_infection(object):
+class Infection(object):
     """
-    class: CON_infection
+    class: Infection
     Constructs the infection object
     Parameters:
         -obj log:
@@ -35,7 +37,7 @@ class CON_infection(object):
         """
         # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         if self.__config['random state'] is None:
             self.__log.warning("No random state given, constructing new state")

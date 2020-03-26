@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """
-Name: con_measures.py
+Name: measures.py
 Authors: Stephan Meighen-Berger
 The different measures one can take
 to suppress the spread.
@@ -8,9 +10,9 @@ to suppress the spread.
 from sys import exit
 import numpy as np
 
-class CON_measures(object):
+class Measures(object):
     """
-    class: CON_measures
+    class: Measures
     Class to implement different possible
     containment measures.
     Parameters:
@@ -33,7 +35,7 @@ class CON_measures(object):
         Returns:
             -None
         """
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         if self.__config['measures'] == 'none':
             self.__log.info('No measure taken')

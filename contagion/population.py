@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """
-Name: con_population.py
+Name: population.py
 Authors: Christian Haack, Stephan Meighen-Berger
 Constructs the population.
 """
@@ -12,7 +14,7 @@ import scipy.stats
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
-class CON_population(object):
+class Population(object):
     """
     Class to help with the construction of a realistic population
 
@@ -28,7 +30,7 @@ class CON_population(object):
 
 
         # Inputs
-        self.__log = log
+        self.__log = log.getChild(self.__class__.__name__)
         self.__config = config
         self.__pop = config['population size']
         # Checking random state
