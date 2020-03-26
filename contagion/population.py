@@ -7,13 +7,17 @@ Constructs the population.
 """
 
 
-import sys
-import traceback
 import numpy as np
 import scipy.stats
 # A truncated normal continuous random variable
 from scipy.stats import truncnorm
 import scipy.sparse as sparse
+
+
+from .pdfs import TruncatedNormal
+from .config import config
+
+
 class Population(object):
     """
     Class to help with the construction of a realistic population
@@ -21,39 +25,60 @@ class Population(object):
     Paremeters:
         -obj log:
             The logger
-        -dic config:
-            The configuration dictionary
 
     """
 
-    def __init__(self, log, config):
-
+    def __init__(self, log):
 
         # Inputs
         self.__log = log.getChild(self.__class__.__name__)
-        self.__config = config
         self.__pop = config['population size']
         # Checking random state
-        if self.__config['random state'] is None:
+        if config['random state'] is None:
             self.__log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
-            self.__rstate = self.__config['random state']
+            self.__rstate = config['random state']
 
         self.__log.info('Constructing social circles for the population')
         self.__log.debug('Number of people in social circles')
-        if self.__config['social circle pdf'] == 'gauss':
-            self.__social_circles = self.__social_pdf_norm(self.__pop)
+        if config['social circle pdf'] == 'gauss':
+
+            soc_circ_pdf = TruncatedNormal(
+                0,
+                config['population size'],
+                config['average social circle'],
+                config['infection duration variance']
+                )
+
+            self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
         else:
-            self.__log.error('Unrecognized social pdf! Set to ' + self.__config['social circle pdf'])
+            self.__log.error('Unrecognized social pdf! Set to ' + config['social circle pdf'])
             raise RuntimeError('Check the social circle distribution in the config file!')
 
         self.__log.debug('The social circle interactions for each person')
-        if self.__config['social circle interactions pdf'] == 'gauss':
-            self.__sc_interactions = self.__sc_interact_norm(self.__pop)
+        if config['social circle interactions pdf'] == 'gauss':
+
+            upper = self.__social_circles
+            # Check if there are people with zero contacts and set them to
+            # 1 for the time being
+            zero_contacts_mask = upper == 0
+            upper[zero_contacts_mask] = 1
+
+            soc_circ_interact_pdf = TruncatedNormal(
+                0,
+                upper,
+                config['mean social circle interactions'],
+                config['variance social circle interactions']
+                )
+
+            self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
+
+            # Set the interactions to zero for all people with zero contacts
+            self.__sc_interactions[zero_contacts_mask] = 0
         else:
             self.__log.error('Unrecognized sc interactions pdf! Set to ' +
-                             self.__config['social circle interactions pdf'])
+                             config['social circle interactions pdf'])
             raise RuntimeError('Check the social circle interactions distribution in the config file!')
 
         self.__log.debug('Constructing population')
@@ -123,7 +148,6 @@ class Population(object):
 
         self.__interaction_matrix = interaction_matrix
 
-
     @property
     def population(self):
         """
@@ -137,69 +161,3 @@ class Population(object):
         """
         # return self.__pop
         return self.__interaction_matrix
-
-    def __social_pdf_norm(self, pop):
-        """
-        function: __social_pdf_norm
-        Constructs the number of people in each person's circle
-        Parameters:
-            -int pop:
-                The population size
-            -np.array circles:
-                The number of people in each circle
-        Returns:
-            -np.array circles:
-                The size of the social circles for every individual
-        """
-
-        mean = self.__config['average social circle']
-        scale = self.__config['variance social circle']
-
-        # Minimum social circle size is 0
-        a, b = (0 - mean) / scale, (pop - mean) / scale
-
-        # could also use binomial here
-        circles = truncnorm.rvs(
-            a, b, loc=mean, scale=scale, size=pop, random_state=self.__rstate)
-        circles = np.asarray(circles, dtype=int)
-
-        """
-        for _ in range(pop):
-            res = -1
-            while res < 0:
-                res = int(norm.rvs(
-                    size=1,
-                    loc=config['average social circle'],
-                    scale=config['variance social circle']))
-            circles.append(res)
-        circles = np.array(circles)
-        """
-        return circles
-
-    def __sc_interact_norm(self, pop):
-        """
-        function: __sc_interact_norm
-        The number of interactions within each person's circle
-        Parameters:
-            -int pop:
-                The size of the population
-        Returns:
-            -np.array interact:
-                The number of interactions within the social circle
-        """
-
-        mean = self.__config['mean social circle interactions']
-        scale = self.__config['variance social circle interactions']
-
-        a, b = (0 - mean) / scale, (self.__social_circles - mean) / scale
-
-        zero_friends = b <= a
-        b[zero_friends] = (1 - mean) / scale
-        # could also use binomial here
-
-        interactions = truncnorm.rvs(
-            a, b, loc=mean, scale=scale, size=pop, random_state=self.__rstate)
-        interactions = np.asarray(interactions, dtype=int)
-
-        interactions[zero_friends] = 0
-        return interactions
