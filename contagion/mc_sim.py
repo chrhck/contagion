@@ -272,7 +272,6 @@ class MC_Sim(object):
 
             # Storing recovered
             self.__statistics["recovered"].append(len(recovered_indices))
-            print(len(recovered_indices))
             # add new infections
             tmp_dur = np.around(
                 self.__infect.pdf_duration(num_newly_infected))
