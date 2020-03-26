@@ -2,7 +2,7 @@
 
 """
 Name: contagion.py
-Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger
+Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger, Dominik Scholz
 Main interface to the contagion module.
 This package calculates the spread of an infection in
 a given population. It allows for the introduction

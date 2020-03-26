@@ -2,7 +2,7 @@
 
 """
 Name: mc_sim.py
-Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger
+Authors: Christian Haack, Martina Karl, Stephan Meighen-Berger, Andrea Turcati
 Runs a monte-carlo (random walk) simulation
 for the social interactions.
 """

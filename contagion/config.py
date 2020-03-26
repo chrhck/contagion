@@ -2,7 +2,7 @@
 
 """
 Name: config.py
-Authors: Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger
 Config file for the contagion package.
 It is recommended, that only advanced users change
 the settings here.
