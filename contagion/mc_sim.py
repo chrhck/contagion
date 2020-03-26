@@ -14,6 +14,9 @@ from numpy.random import choice
 from scipy import sparse
 from collections import defaultdict
 
+from .config import config
+from .pdfs import Uniform
+
 
 class MC_Sim(object):
     """
@@ -40,8 +43,7 @@ class MC_Sim(object):
             population,
             infection,
             tracked,
-            log,
-            config
+            log            
             ):
         """
         function: __init__
@@ -55,42 +57,39 @@ class MC_Sim(object):
                 The tracked population
             -obj log:
                 The logger
-            -dic config:
-                The config file
         Returns:
             -None
         """
         # Inputs
         self.__log = log.getChild(self.__class__.__name__)
-        self.__config = config
-        self.__infected = self.__config['infected']
+        self.__infected = config['infected']
         self.__infect = infection
         self.__dt = config['time step']
         self.__pop_matrix = population
         self.__t = np.arange(
-            0., self.__config['simulation length'],
+            0., config['simulation length'],
             step=self.__dt
         )
 
         self.__log.debug('The interaction intensity pdf')
-        if self.__config['interaction intensity'] == 'uniform':
-            self.__intense_pdf = self.__intens_pdf_uniform
+        if config['interaction intensity'] == 'uniform':
+            self.__intense_pdf = Uniform(0, 1).rvs
             # The Reproductive Number
             self.__R0 = (
-                self.__config['mean social circle interactions'] *
-                self.__config['infection duration mean'] * 0.5
+                config['mean social circle interactions'] *
+                config['infection duration mean'] * 0.5
             )
         else:
             self.__log.error('Unrecognized intensity pdf! Set to ' +
-                             self.__config['interaction intensity'])
+                             config['interaction intensity'])
             exit('Check the interaction intensity in the config file!')
 
         # Checking random state
-        if self.__config['random state'] is None:
+        if config['random state'] is None:
             self.__log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
-            self.__rstate = self.__config['random state']
+            self.__rstate = config['random state']
 
         self.__log.debug('Constructing simulation population')
         self.__log.debug('The infected ids and durations...')
@@ -232,7 +231,7 @@ class MC_Sim(object):
 
             # Calculate infection probability for all contacts
             contact_strength = self.__intense_pdf(num_succesful_contacts)
-            infection_prob = self.__infect.pdf(contact_strength)
+            infection_prob = self.__infect.pdf_infection_prob(contact_strength)
 
             # An infection is successful if the bernoulli outcome
             # based on the infection probability is 1
@@ -297,17 +296,3 @@ class MC_Sim(object):
                     'Last round of simulations took %f seconds' %(end-start)
                 )
                 start = time()
-
-    def __intens_pdf_uniform(self, contacts):
-        """
-        function: __intens_pdf_uniform
-        The social interaction intensity
-        drawn from a uniform distribution
-        Parameters:
-            -int contacts:
-                Number of contacts
-        Returns:
-            -np.array res:
-                The contact intensities
-        """
-        return self.__rstate.uniform(low=0., high=1., size=contacts)

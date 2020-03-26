@@ -13,10 +13,10 @@ of safety measures, such as social distancing and tracking.
 import sys
 import logging
 import numpy as np
-from time import time
+
 # -----------------------------------------
 # Package modules
-from .config import config as confi
+from .config import config
 from .infection import Infection
 from .mc_sim import MC_Sim
 from .measures import Measures
@@ -35,28 +35,26 @@ class Contagion(object):
     Returns:
         -None
     """
-    def __init__(self, config=confi):
+    def __init__(self, ):
         """
         function: __init__
         Initializes the class Contagion.
         Here all run parameters are set.
-        Parameters:
-            -optional dic config:
-                The dictionary from the config file
+
         Returns:
             -None
         """
         # Inputs
-        self.__config = config
-        self.__infected = self.__config['infected']
+
+        self.__infected = config['infected']
 
         # Logger
         # creating file handler with debug messages
-        fh = logging.FileHandler(self.__config['log file handler'], mode='w')
+        fh = logging.FileHandler(config['log file handler'], mode='w')
         fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(self.__config['debug level'])
+        ch.setLevel(config['debug level'])
 
         # Logging formatter
         fmt = '%(levelname)s: %(message)s'
@@ -64,7 +62,7 @@ class Contagion(object):
         formatter_with_name = logging.Formatter(fmt=fmt_with_name)
         fh.setFormatter(formatter_with_name)
         # add class name to ch only when debugging
-        if self.__config['debug level'] == logging.DEBUG:
+        if config['debug level'] == logging.DEBUG:
             ch.setFormatter(formatter_with_name)
         else:
             formatter = logging.Formatter(fmt=fmt)
@@ -81,23 +79,21 @@ class Contagion(object):
         self.__log.info('Welcome to contagion!')
         self.__log.info('This package will help you model the spread of infections')
         self.__log.debug('Trying to catch some errors in the config')
-        if not(self.__config.keys() == confi.keys()):
-            self.__log.error('Error in config!')
-            exit('Please check your input')
+
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting population construction')
-        self.pop = Population(self.__log, self.__config).population
+        self.pop = Population(self.__log).population
         self.__log.info('Finished the population')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting the infection construction')
-        self.infection = Infection(self.__log, self.__config)
+        self.infection = Infection(self.__log)
         self.__log.info('Finished the infection construction')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
         self.__log.info('Starting the measure construction')
-        self.tracked = Measures(self.__log, self.__config).tracked
+        self.tracked = Measures(self.__log, config).tracked
         self.__log.info('Finished the measure construction')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
@@ -164,7 +160,7 @@ class Contagion(object):
         """
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
-        dt = self.__config['time step']
+        dt = config['time step']
         if dt > 1.:
             self.__log.error("Chosen time step too large!")
             exit("Please run with time steps smaller than 1s!")
@@ -174,7 +170,6 @@ class Contagion(object):
             self.infection,
             self.tracked,
             self.__log,
-            self.__config
         )
         self.__log.info('Structure of dictionray:')
         self.__log.info('["t", "total", "encounter", "shear", "history"]')
@@ -191,10 +186,10 @@ class Contagion(object):
         self.__log.debug('"contacts", "infections", "recovered", "immune", "infectious", "susceptible"')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
-        self.__log.debug('Dumping run settings into %s', self.__config['config location'])
-        with open(self.__config['config location'], 'w') as f:
-            for item in self.__config.keys():
-                print(item + ': ' + str(self.__config[item]), file=f)
+        self.__log.debug('Dumping run settings into %s', config['config location'])
+        with open(config['config location'], 'w') as f:
+            for item in config.keys():
+                print(item + ': ' + str(config[item]), file=f)
         self.__log.debug('Finished dump')
         self.__log.info('---------------------------------------------------')
         self.__log.info('---------------------------------------------------')
