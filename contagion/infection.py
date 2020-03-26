@@ -8,7 +8,7 @@ Constructs the infection.
 
 # Imports
 import numpy as np  # type: ignore
-from .pdfs import TruncatedNormal, NormalizedProbability
+from .pdfs import TruncatedNormal, NormalizedProbability, Beta
 from .config import config
 
 
@@ -46,9 +46,9 @@ class Infection(object):
         if config['infection probability pdf'] == 'intensity':
             self.__pdf_infection_prob = NormalizedProbability(0, 1)
         else:
-            self.__log.error('Unrecognized infection pdf! Set to ' +
-                             config['infection probability pdf'])
-            exit('Check the infection probability pdf in the config file!')
+            self.log_and_error(
+                "Unknown infection probability pdf. Configured: {}".format(
+                    config['infection probability pdf']))
 
         self.__log.debug('The infection duration and incubation pdf')
         if config['infection duration pdf'] == 'gauss':
@@ -62,9 +62,9 @@ class Infection(object):
             self._pdf = dur_pdf.rvs
 
         else:
-            self.__log.error('Unrecognized infection duration pdf! Set to ' +
-                             config['infection duration pdf'])
-            exit('Check the infection duration pdf in the config file!')
+            self.log_and_error(
+                "Unknown infection duration pdf. Configured: {}".format(
+                    config['infection duration pdf']))
 
         if config['infectious duration pdf'] == 'gauss':
 
@@ -77,12 +77,11 @@ class Infection(object):
             self._infectious_duration = dur_pdf.rvs
 
         else:
-            self.__log.error('Unrecognized infectious duration pdf! Set to ' +
-                             config['infection duration pdf'])
-            exit('Check the infectious duration pdf in the config file!')
+            self.log_and_error(
+                "Unknown infectious duration pdf. Configured: {}".format(
+                    config['infectious duration pdf']))
 
         if config['incubation duration pdf'] == 'gauss':
-
             dur_pdf = TruncatedNormal(
                 0,
                 np.inf,
@@ -90,11 +89,88 @@ class Infection(object):
                 config['incubation duration variance']
                 )
             self._incubation_duration = dur_pdf.rvs
-
         else:
-            self.__log.error('Unrecognized incubation duration pdf! Set to ' +
-                             config['infection duration pdf'])
-            exit('Check the incubation duration pdf in the config file!')
+            self.log_and_error(
+                "Unknown incubation duration pdf. Configured: {}".format(
+                    config['incubation duration pdf']))
+
+        if config['recovery time pdf'] == 'gauss':
+            recovery_time_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['recovery time mean'],
+                config['recovery time sd']
+                )
+            self._recovery_time = recovery_time_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown incubation duration pdf. Configured: {}".format(
+                    config['incubation duration pdf']))
+
+        if config['hospitalization probability pdf'] == 'beta':
+            hospit_prob_pdf = Beta(
+                config['hospitalization probability mean'],
+                config['hospitalization probability sd']
+                )
+            self._hospitalization_prob = hospit_prob_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown hospitalization probability pdf. Configured: {}".format(
+                    config['hospitalization probability pdf']))
+
+        if config['hospitalization duration pdf'] == 'gauss':
+            hospit_dur_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['hospitalization duration mean'],
+                config['hospitalization duration sd']
+                )
+            self._hostpitalization_duration = hospit_dur_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown hospitalization duration pdf. Configured: {}".format(
+                    config['hospitalization duration pdf']))
+
+        if config['time until hospitalization pdf'] == 'gauss':
+            hospit_dur_until_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['time until hospitalization mean'],
+                config['time until hospitalization sd']
+                )
+            self._time_until_hospitalization = hospit_dur_until_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown hospitalization duration pdf. Configured: {}".format(
+                    config['hospitalization duration pdf']))
+
+        if config['time incubation death pdf'] == 'gauss':
+            time_till_death_pdf = TruncatedNormal(
+                0,
+                np.inf,
+                config['time incubation death mean'],
+                config['time incubation death sd']
+                )
+            self._time_incubation_death = time_till_death_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown hospitalization duration pdf. Configured: {}".format(
+                    config['hospitalization duration pdf']))
+
+        if config['mortality prob pdf'] == 'beta':
+            death_prob_pdf = Beta(
+                config['mortality rate mean'],
+                config['mortality rate sd']
+                )
+            self._death_prob = death_prob_pdf.rvs
+        else:
+            self.log_and_error(
+                "Unknown hospitalization duration pdf. Configured: {}".format(
+                    config['hospitalization duration pdf']))
+
+    def log_and_error(self, msg):
+        self.__log.error(msg)
+        raise RuntimeError(msg)
 
     @property
     def pdf_infection_prob(self):
@@ -143,3 +219,27 @@ class Infection(object):
     @property
     def infectious_duration(self):
         return self._infectious_duration
+
+    @property
+    def hospitalization_prob(self):
+        return self._hospitalization_prob
+
+    @property
+    def time_until_hospitalization(self):
+        return self._time_until_hospitalization
+
+    @property
+    def hostpitalization_duration(self):
+        return self._hostpitalization_duration
+
+    @property
+    def recovery_time(self):
+        return self._recovery_time
+
+    @property
+    def death_prob(self):
+        return self._death_prob
+
+    @property
+    def time_incubation_death(self):
+        return self._time_incubation_death

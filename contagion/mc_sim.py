@@ -106,6 +106,14 @@ class MC_Sim(object):
              "infectious_duration": 0,
              "is_removed": False,
              "is_critical": False,
+             "is_hospitalized": False,
+             "time_until_hospitalization": 0,
+             "hospitalization_duration": 0,
+             "recovery_time": 0,
+             "has_recovered": 0,
+             "time_until_death": 0,
+             "will_die": False,
+             "will_be_hospitalized": False,
              "has_died": False},
             index=np.arange(self.__pop_size))
 
@@ -221,7 +229,7 @@ class MC_Sim(object):
             successful_contacts_mask = self.__rstate.poisson(
                 contact_strengths) >= 1
 
-            # we are just interested in the columns, ie. only the 
+            # we are just interested in the columns, ie. only the
             # ids of the people contacted by the infected.
             # Note, that contacted ids can appear multiple times
             # if a person is successfully contacted by multiple people.
@@ -265,6 +273,59 @@ class MC_Sim(object):
 
             num_newly_infected = len(newly_infected_indices)
 
+            """
+            For newly infected determine whether they will be hospitalized
+            and die
+            """
+
+            will_be_hospitalized_prob = self.__infect.hospitalization_prob(
+                num_newly_infected)
+
+            # roll the dice
+            will_be_hospitalized = self.__rstate.binomial(
+                1, will_be_hospitalized_prob, size=num_newly_infected) == 1
+
+            num_hospitalized = np.sum(will_be_hospitalized)
+
+            will_be_hospitalized_indices = newly_infected_indices[
+                will_be_hospitalized]
+
+            time_until_hospit = self.__infect.time_until_hospitalization(
+                num_hospitalized)
+
+            # Same for mortality
+
+            will_die_prob = self.__infect.death_prob(
+                num_hospitalized)
+
+            will_die = self.__rstate.binomial(
+                1, will_die_prob, size=num_hospitalized) == 1
+
+            will_die_indices = will_be_hospitalized_indices[will_die]
+            num_will_die = np.sum(will_die)
+
+            # Time until death is relative to end of incubation perdiod
+            # Thus add after calculating incubation time
+            time_until_death = self.__infect.time_incubation_death(
+                num_will_die)
+
+            # Add info to dataframe
+
+            self.__population.loc[
+                will_be_hospitalized_indices,
+                "will_be_hospitalized"] = True
+
+            self.__population.loc[
+                will_be_hospitalized_indices,
+                "time_until_hospitalization"] = time_until_hospit
+
+            self.__population.loc[
+                will_die_indices,
+                "will_die"] = True
+
+            """
+            Status updates
+            """
 
             """
             Incubation
@@ -285,6 +346,12 @@ class MC_Sim(object):
             self.__population.loc[newly_infected_indices, "in_incubation"] = True
             self.__population.loc[newly_infected_indices, "is_infected"] = True
             self.__population.loc[newly_infected_indices, "incubation_duration"] = tmp_dur
+
+            # For those who will day, calculate time until death
+
+            self.__population.loc[will_die_indices, "time_until_death"] = (
+                self.__population.loc[will_die_indices, "incubation_duration"] 
+                + time_until_death)
 
             # Change state to infected if passed incubration duration
             # Check only old cases
@@ -333,6 +400,26 @@ class MC_Sim(object):
                 self.__population.loc[passed_infectious, "is_removed"] = True
                 self.__population.loc[passed_infectious, "is_infected"] = False
 
+            """
+            Death
+
+            TODO: Remove on death / hospitalization
+            """
+
+            will_die = self.__population.loc[:, "will_die"] == True
+            self.__population.loc[will_die, "time_until_death"] -= 1
+
+            will_die_indices = self.__population.loc[will_die].index
+
+            has_died = self.__population.loc[will_die_indices, "time_until_death"] <= 0
+            has_died_indices = will_die_indices[has_died]
+            num_has_died = len(has_died_indices)
+
+            if num_has_died > 0:
+                self.__population.loc[has_died_indices, "has_died"] = True
+                self.__population.loc[has_died_indices, "will_die"] = False
+
+
             # Storing statistics
             is_removed = self.__population.loc[:, "is_removed"]
             self.__statistics["removed"].append(is_removed.sum(axis=0))
@@ -345,6 +432,11 @@ class MC_Sim(object):
             self.__statistics["new infections"].append(num_newly_infected)
             self.__statistics["newly infectious"].append(num_newly_infectious)
             self.__statistics["newly removed"].append(num_newly_removed)
+            self.__statistics["will be hospitalized"].append(num_hospitalized)
+            self.__statistics["will die"].append(num_will_die)
+            self.__statistics["new deaths"].append(num_has_died)
+            is_dead = self.__population.loc[:, "has_died"]
+            self.__statistics["total_deaths"].append(is_dead.sum(axis=0))
             if step % (int(len(self.__t)/10)) == 0:
                 end = time()
                 self.__log.debug('In step %d' %step)

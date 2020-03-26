@@ -78,6 +78,31 @@ _baseconfig = {
     # Incubation duration pdf
     'incubation duration pdf': 'gauss',
 
+    'hospitalization probability pdf': 'beta',
+    'hospitalization probability mean': 0.2,
+    'hospitalization probability sd': 0.1,
+
+    'hospitalization duration pdf' : 'gauss',
+    'hospitalization duration mean': 28,
+    'hospitalization duration sd': 10,
+
+    'time until hospitalization pdf': 'gauss',
+    'time until hospitalization mean': 5,
+    'time until hospitalization sd': 2,
+
+    'time incubation death pdf': 'gauss',
+    'time incubation death mean': 32,
+    'time incubation death sd': 5,
+
+    'recovery time pdf': 'gauss',
+    'recovery time mean': 11,
+    'recovery time sd': 5,
+
+    # Mortalitiy rate relative to hospitalization prob
+    'mortality prob pdf': 'beta',
+    'mortality rate mean': 0.1,
+    'mortality rate sd': 0.1,
+
     # Possible measures to take
     # -'None'
     # -'contact tracing'
