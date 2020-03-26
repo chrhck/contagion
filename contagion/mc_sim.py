@@ -99,7 +99,7 @@ class MC_Sim(object):
         self.__log.debug('Constructing the population array')
 
         self.__population = pd.DataFrame(
-            {"infected": False,
+            {"is_infected": False,
              "in_incubation": False,
              "is_infectious": False,
              "incubation_duration": 0,
@@ -121,7 +121,7 @@ class MC_Sim(object):
         )
 
         # Filling the array
-        self.__population.loc[infect_id, "infected"] = True
+        self.__population.loc[infect_id, "is_infected"] = True
         self.__population.loc[infect_id, "is_infectious"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
@@ -340,6 +340,8 @@ class MC_Sim(object):
             self.__statistics["incubation"].append(in_incubation.sum(axis=0))
             is_infectious = self.__population.loc[:, "is_infectious"]
             self.__statistics["infectious"].append(is_infectious.sum(axis=0))
+            is_infected = self.__population.loc[:, "is_infected"]
+            self.__statistics["infected"].append(is_infected.sum(axis=0))
 
             if step % (int(len(self.__t)/10)) == 0:
                 end = time()
