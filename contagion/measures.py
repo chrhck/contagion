@@ -41,7 +41,7 @@ class Measures(object):
             self.__tracked = None
         elif config['measures'] == 'contact tracing':
             _log.info('Using contact tracing')
-            contact_tracing()
+            self.__contact_tracing()
         else:
             _log.error('measure not implemented! Set to ' +
                              config['measures'])
