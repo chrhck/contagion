@@ -9,7 +9,10 @@ Constructs the infection.
 # Imports
 import numpy as np  # type: ignore
 from .pdfs import TruncatedNormal, NormalizedProbability, Beta
+import logging
 from .config import config
+
+_log = logging.getLogger(__name__)
 
 
 class Infection(object):
@@ -17,40 +20,37 @@ class Infection(object):
     class: Infection
     Constructs the infection object
     Parameters:
-        -obj log:
-            The logger
+        -None
     Returns:
         -None
     """
-    def __init__(self, log):
+    def __init__(self):
         """
         function: __init__
         Initializes the infection object
         Parameters:
-            -obj log:
-                The logger
+            -None
         Returns:
             -None
         """
         # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
-        self.__log = log.getChild(self.__class__.__name__)
 
         if config['random state'] is None:
-            self.__log.warning("No random state given, constructing new state")
+            _log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
 
-        self.__log.debug('The infection probability pdf')
+        _log.debug('The infection probability pdf')
         if config['infection probability pdf'] == 'intensity':
             self.__pdf_infection_prob = NormalizedProbability(0, 1)
         else:
-            self.__log_and_error(
-                "Unknown infection probability pdf. Configured: {}".format(
-                    config['infection probability pdf']))
+            _log.error('Unrecognized infection pdf! Set to ' +
+                             config['infection probability pdf'])
+            exit('Check the infection probability pdf in the config file!')
 
-        self.__log.debug('The infection duration and incubation pdf')
+        _log.debug('The infection duration and incubation pdf')
         if config['infection duration pdf'] == 'gauss':
 
             dur_pdf = TruncatedNormal(
@@ -62,9 +62,9 @@ class Infection(object):
             self.__pdf = dur_pdf.rvs
 
         else:
-            self.__log_and_error(
-                "Unknown infection duration pdf. Configured: {}".format(
-                    config['infection duration pdf']))
+            _log.error('Unrecognized infection duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infection duration pdf in the config file!')
 
         if config['infectious duration pdf'] == 'gauss':
 
@@ -77,10 +77,10 @@ class Infection(object):
             self.__infectious_duration = dur_pdf.rvs
 
         else:
-            self.__log_and_error(
-                "Unknown infectious duration pdf. Configured: {}".format(
-                    config['infectious duration pdf']))
-
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+# TODO: Update logger messages
         if config['incubation duration pdf'] == 'gauss':
             dur_pdf = TruncatedNormal(
                 0,
@@ -90,10 +90,10 @@ class Infection(object):
                 )
             self.__incubation_duration = dur_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown incubation duration pdf. Configured: {}".format(
-                    config['incubation duration pdf']))
-
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+# TODO: Update logger messages
         if config['recovery time pdf'] == 'gauss':
             recovery_time_pdf = TruncatedNormal(
                 0,
@@ -103,11 +103,11 @@ class Infection(object):
                 )
             self.__recovery_time = recovery_time_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown recovery time pdf. Configured: {}".format(
-                    config['recovery time pdf']))
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
 
-
+# TODO: Update logger messages
         if config['hospitalization probability pdf'] == 'beta':
             hospit_prob_pdf = Beta(
                 config['hospitalization probability mean'],
@@ -115,9 +115,9 @@ class Infection(object):
                 )
             self._hospitalization_prob = hospit_prob_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown hospitalization probability pdf. Configured: {}".format(
-                    config['hospitalization probability pdf']))
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
 
         if config['hospitalization duration pdf'] == 'gauss':
             hospit_dur_pdf = TruncatedNormal(
@@ -128,10 +128,10 @@ class Infection(object):
                 )
             self.__hospitalization_duration = hospit_dur_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown hospitalization duration pdf. Configured: {}".format(
-                    config['hospitalization duration pdf']))
-
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+# TODO: Update logger messages
         if config['time until hospitalization pdf'] == 'gauss':
             hospit_dur_until_pdf = TruncatedNormal(
                 0,
@@ -141,10 +141,10 @@ class Infection(object):
                 )
             self.__time_until_hospitalization = hospit_dur_until_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown hospitalization duration pdf. Configured: {}".format(
-                    config['hospitalization duration pdf']))
-
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+# TODO: Update logger messages
         if config['time incubation death pdf'] == 'gauss':
             time_till_death_pdf = TruncatedNormal(
                 0,
@@ -154,10 +154,10 @@ class Infection(object):
                 )
             self.__time_incubation_death = time_till_death_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown hospitalization duration pdf. Configured: {}".format(
-                    config['hospitalization duration pdf']))
-
+            _log.error('Unrecognized infectious duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the infectious duration pdf in the config file!')
+# TODO: Update logger messages
         if config['mortality prob pdf'] == 'beta':
             death_prob_pdf = Beta(
                 config['mortality rate mean'],
@@ -165,23 +165,9 @@ class Infection(object):
                 )
             self.__death_prob = death_prob_pdf.rvs
         else:
-            self.__log_and_error(
-                "Unknown hospitalization duration pdf. Configured: {}".format(
-                    config['hospitalization duration pdf']))
-
-    # TODO: Remove this
-    def __log_and_error(self, msg):
-        """
-        function: __log_and_error
-        Custom log error message for this file
-        Parameters:
-            -str msg:
-                The error message
-        Returns:
-            -RuntimeError with the message
-        """
-        self.__log.error(msg)
-        raise RuntimeError(msg)
+            _log.error('Unrecognized incubation duration pdf! Set to ' +
+                             config['infection duration pdf'])
+            exit('Check the incubation duration pdf in the config file!')
 
     @property
     def pdf_infection_prob(self):

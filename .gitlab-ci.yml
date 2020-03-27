@@ -29,13 +29,15 @@ stages:
 pep8:
   stage: pep8
   artifacts:
+    when: on_failure
     paths:
-      - .cache/pip
-      - venv
+      - flake8-report.txt
   script:
-    - flake8 --exclude='.git,venv,*migrations*,static/lib' .
+    - rm flake8-report.txt || true
+    - flake8 --statistics --output-file flake8-report.txt
+  allow_failure: true
 
 test:
   stage: test
   script:
-    - python3
+    - python3 tests/performance.py

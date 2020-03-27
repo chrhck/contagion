@@ -169,6 +169,7 @@ _baseconfig = {
     'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
 
+
 # TODO: Explain this to idiot Stephan
 # Why is a class required?
 class ConfigClass(dict):
@@ -221,5 +222,6 @@ class ConfigClass(dict):
             -None
         """
         self.update(user_dict)
+
 
 config = ConfigClass(_baseconfig)

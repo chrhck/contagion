@@ -6,9 +6,16 @@ Authors: Stephan Meighen-Berger
 The different measures one can take
 to suppress the spread.
 """
-#imports
+
+# imports
 from sys import exit
 import numpy as np
+import logging
+
+from .config import config
+
+_log = logging.getLogger(__name__)
+
 
 class Measures(object):
     """
@@ -16,36 +23,28 @@ class Measures(object):
     Class to implement different possible
     containment measures.
     Parameters:
-        -obj log:
-            The logger
-        -dic config:
-            The configuration of the module
+        -None
     Returns:
         -None
     """
-    def __init__(self, log, config):
+    def __init__(self):
         """
         function: __init__
         Initializes the class
         Parameters:
-            -obj log:
-                The logger
-            -dic config:
-                The configuration of the module
+            -None
         Returns:
             -None
         """
-        self.__log = log.getChild(self.__class__.__name__)
-        self.__config = config
-        if self.__config['measures'] == 'none':
-            self.__log.info('No measure taken')
+        if config['measures'] == 'none':
+            _log.info('No measure taken')
             self.__tracked = None
-        elif self.__config['measures'] == 'contact tracing':
-            self.__log.info('Using contact tracing')
-            self.__contact_tracing()
+        elif config['measures'] == 'contact tracing':
+            _log.info('Using contact tracing')
+            contact_tracing()
         else:
-            self.__log.error('measure not implemented! Set to ' +
-                             self.__config['measures'])
+            _log.error('measure not implemented! Set to ' +
+                             config['measures'])
             exit('Please check the config file what measures are allowed')
 
     @property
@@ -72,12 +71,12 @@ class Measures(object):
             -None
         """
         tracked_pop = int(
-            self.__config['population size'] *
-            self.__config['tracked']
+            config['population size'] *
+            config['tracked']
         )
-        self.__log.debug('Number of people tracked is %d' % tracked_pop)
+        _log.debug('Number of people tracked is %d' % tracked_pop)
         self.__tracked = np.random.choice(
-            range(self.__config['population size']),
+            range(config['population size']),
             size=tracked_pop,
             replace=False
         ).flatten()
