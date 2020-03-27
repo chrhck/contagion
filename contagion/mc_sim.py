@@ -198,6 +198,11 @@ class MC_Sim(object):
         """
         return self.__R0
 
+    @property
+    def population(self):
+        return self.__population
+    
+
     def __simulation(self):
         """
         function: __simulation
