@@ -1,5 +1,6 @@
 jupyter
 nbstripout
+nbconvert
 matplotlib
 numpy
 scipy
@@ -7,3 +8,4 @@ tqdm
 pyyaml
 pandas
 flake8
+seaborn
