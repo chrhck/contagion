@@ -71,8 +71,6 @@ class Measures(object):
         """
         return self.__tracked
 
-<<<<<<< Updated upstream
-=======
     @property
     def distanced(self):
         """
@@ -86,7 +84,6 @@ class Measures(object):
         """
         return self.__distanced
 
->>>>>>> Stashed changes
     # TODO: Not 100% of participants will report correctly
     def __contact_tracing(self):
         """
