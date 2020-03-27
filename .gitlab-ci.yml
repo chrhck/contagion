@@ -70,3 +70,9 @@ con_parameter_scan:
     NOTEBOOK: con_parameter_scan
     FIGURE: Contagion_Contact_Rate_Scan.png
   <<: *test_notebook
+
+con_distribution_comparison:
+  variables:
+    NOTEBOOK: con_distribution_comparison
+    FIGURE: Contagion_Distribution.png
+  <<: *test_notebook
