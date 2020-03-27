@@ -8,7 +8,7 @@ import numpy as np  # type: ignore
 
 from .config import config
 
-# TODO: Upate formatting
+
 class Probability(object, metaclass=abc.ABCMeta):
     """
     class: Probability
@@ -136,7 +136,9 @@ class TruncatedNormal(ScipyPDF):
         self._sd = sd
 
         # Calculate parameter a and b.
-        # See: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.truncnorm.html
+        # See:
+        #  https://docs.scipy.org/doc/scipy/
+        #  reference/generated/scipy.stats.truncnorm.html
         self._a = (self._lower - self._mean) / self._sd
         self._b = (self._upper - self._mean) / self._sd
 
@@ -215,6 +217,7 @@ class Uniform(ScipyPDF):
         self._upper = upper
         self._pdf = scipy.stats.uniform(self._lower, self._upper)
 
+
 class Gamma(ScipyPDF):
     """
     class: Gamma
@@ -248,6 +251,7 @@ class Gamma(ScipyPDF):
         self._mean = mean
         loc = self._mean - self._sd
         self._pdf = scipy.stats.gamma(self._sd, loc=loc)
+
 
 class NormalizedProbability(Probability):
     """

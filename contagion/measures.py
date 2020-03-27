@@ -60,7 +60,7 @@ class Measures(object):
         """
         return self.__tracked
 
-    #TODO: Not 100% of participants will report correctly
+    # TODO: Not 100% of participants will report correctly
     def __contact_tracing(self):
         """
         function: __contact_tracing

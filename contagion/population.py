@@ -8,9 +8,7 @@ Constructs the population.
 
 
 import numpy as np
-import scipy.stats
 # A truncated normal continuous random variable
-from scipy.stats import truncnorm
 import scipy.sparse as sparse
 import logging
 
@@ -62,8 +60,10 @@ class Population(object):
 
             self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
         else:
-            _log.error('Unrecognized social pdf! Set to ' + config['social circle pdf'])
-            raise RuntimeError('Check the social circle distribution in the config file!')
+            _log.error('Unrecognized social pdf! Set to ' +
+                       config['social circle pdf'])
+            raise RuntimeError('Check the social circle distribution' +
+                               ' in the config file!')
 
         _log.debug('The social circle interactions for each person')
         if config['social circle interactions pdf'] == 'gauss':
@@ -87,11 +87,14 @@ class Population(object):
         else:
             _log.error('Unrecognized sc interactions pdf! Set to ' +
                              config['social circle interactions pdf'])
-            raise RuntimeError('Check the social circle interactions distribution in the config file!')
+            raise RuntimeError('Check the social circle interactions' +
+                               ' distribution in the config file!')
 
         _log.debug('Constructing population')
         # LIL sparse matrices are efficient for row-wise construction
-        interaction_matrix = sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
+        interaction_matrix = (
+            sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
+        )
         indices = np.arange(self.__pop)
 
         # Here, the interaction matrix stores the connections of every
@@ -137,7 +140,8 @@ class Population(object):
 
         # Set the contact rate for each connection by scaling the matrix
         # with each persons contact rate
-        d = sparse.spdiags(contact_rate, 0, self.__pop, self.__pop, format="csr")
+        d = sparse.spdiags(contact_rate, 0,
+                           self.__pop, self.__pop, format="csr")
 
         interaction_matrix = interaction_matrix.tocsr()
         interaction_matrix = d * interaction_matrix
