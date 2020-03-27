@@ -128,7 +128,7 @@ class MC_Sim(object):
 
         # Set tracking
         if tracked is not None:
-            self.__log.debug("Constructiong tracked people ids")
+            _log.debug("Constructiong tracked people ids")
             self.__tracked = True
             tracked_df = pd.DataFrame(
                 {"is_tracked": False}, index=np.arange(self.__pop_size)
@@ -136,7 +136,7 @@ class MC_Sim(object):
             tracked_df.loc[tracked, "is_tracked"] = True
             self.__population = pd.concat([self.__population, tracked_df], axis=1)
         else:
-            self.__log.debug("Population is not tracked")
+            _log.debug("Population is not tracked")
             self.__tracked = False
 
         # Some additional storage
