@@ -38,7 +38,7 @@ class MC_Sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(self, population, infection, tracked):
+    def __init__(self, population, infection, tracked, distanced):
         """
         function: __init__
         Initializes the class.
@@ -129,9 +129,9 @@ class MC_Sim(object):
 
         _log.info("There will be %d simulation steps" % len(self.__t))
 
-        # Set tracking
+        # Set Contact Tracing
         if tracked is not None:
-            _log.debug("Constructiong tracked people ids")
+            _log.debug("Constructing tracked people ids")
             self.__tracked = True
             tracked_df = pd.DataFrame(
                 {"is_tracked": False}, index=np.arange(self.__pop_size)
@@ -142,6 +142,20 @@ class MC_Sim(object):
         else:
             _log.debug("Population is not tracked")
             self.__tracked = False
+
+        # Set Social Distancing
+        if distanced is not None:
+            _log.debug("Constructiong social distancing people ids")
+            self.__distanced = True
+            distanced_df = pd.DataFrame(
+                {"is_distanced": False}, index=np.arange(self.__pop_size)
+            )
+            distanced_df.loc[distanced, "is_tracked"] = True
+            self.__population = pd.concat([self.__population, distanced_df], axis=1)
+            self._distanced_size = int(self.__pop_size * config["distanced"])
+        else:
+            _log.debug("Population is not Social Distancing")
+            self.__distanced = False
 
         # Some additional storage
         self.__distribution = []
@@ -220,9 +234,6 @@ class MC_Sim(object):
 
             # Removing social mobility of tracked people if they are infected
             if self.__tracked:
-                # TODO make this configurable
-                # The current implementation disables all contacts
-                # of tracked persons
                 tracked_mask = self.__population.loc[:, "is_tracked"]
 
                 tracked_and_infected_mask = np.logical_and(infected_mask,
@@ -252,6 +263,15 @@ class MC_Sim(object):
                 matrix[:, contact_cols] = 0
 
                 self.__pop_matrix = matrix
+
+            # Redefining Social Structure to include social distancing
+            if self.__distanced:
+                distanced_mask = self.__population.loc[:, "is_distanced"]
+
+                # Average household size
+                h_size = np.random.poisson(3, size=self._distanced_size)
+
+                matrix = self.__pop_matrix.tolil()
 
             pop_csr = self.__pop_matrix.tocsr()
 
