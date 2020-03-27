@@ -38,13 +38,7 @@ class MC_Sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(
-            self,
-            population,
-            infection,
-            tracked,
-            log
-            ):
+    def __init__(self, population, infection, tracked, log):
         """
         function: __init__
         Initializes the class.
@@ -62,78 +56,82 @@ class MC_Sim(object):
         """
         # Inputs
         self.__log = log.getChild(self.__class__.__name__)
-        self.__infected = config['infected']
+        self.__infected = config["infected"]
         self.__infect = infection
-        self.__dt = config['time step']
+        self.__dt = config["time step"]
         self.__pop_matrix = population
-        self.__t = np.arange(
-            0., config['simulation length'],
-            step=self.__dt
-        )
+        self.__t = np.arange(0.0, config["simulation length"], step=self.__dt)
 
-        self.__log.debug('The interaction intensity pdf')
-        if config['interaction intensity'] == 'uniform':
+        self.__log.debug("The interaction intensity pdf")
+        if config["interaction intensity"] == "uniform":
             self.__intense_pdf = Uniform(0, 1).rvs
             # The Reproductive Number
             self.__R0 = (
-                config['mean social circle interactions'] *
-                config['infection duration mean'] * 0.5
+                config["mean social circle interactions"]
+                * config["infection duration mean"]
+                * 0.5
             )
         else:
-            self.__log.error('Unrecognized intensity pdf! Set to ' +
-                             config['interaction intensity'])
-            exit('Check the interaction intensity in the config file!')
+            self.__log.error(
+                "Unrecognized intensity pdf! Set to " + config["interaction intensity"]
+            )
+            exit("Check the interaction intensity in the config file!")
 
         # Checking random state
-        if config['random state'] is None:
+        if config["random state"] is None:
             self.__log.warning("No random state given, constructing new state")
             self.__rstate = np.random.RandomState()
         else:
-            self.__rstate = config['random state']
+            self.__rstate = config["random state"]
 
-        self.__log.debug('Constructing simulation population')
-        self.__log.debug('The infected ids and durations...')
+        self.__log.debug("Constructing simulation population")
+        self.__log.debug("The infected ids and durations...")
 
         self.__pop_size = population.shape[0]
 
-        self.__log.debug('Constructing the population array')
+        self.__log.debug("Constructing the population array")
 
         self.__population = pd.DataFrame(
-            {"is_infected": False,
-             "in_incubation": False,
-             "is_infectious": False,
-             "incubation_duration": 0,
-             "infectious_duration": 0,
-             "is_removed": False,
-             "is_critical": False,
-             "has_died": False},
-            index=np.arange(self.__pop_size))
+            {
+                "is_infected": False,
+                "in_incubation": False,
+                "is_infectious": False,
+                "incubation_duration": 0,
+                "infectious_duration": 0,
+                "is_removed": False,
+                "is_critical": False,
+                "has_died": False,
+            },
+            index=np.arange(self.__pop_size),
+        )
 
         # Choosing the infected
         infect_id = self.__rstate.choice(
-            range(self.__pop_size),
-            size=self.__infected,
-            replace=False)
+            range(self.__pop_size), size=self.__infected, replace=False
+        )
 
         # Their infection duration
-        infect_dur = np.around(
-            self.__infect.infectious_duration(self.__infected)
-        )
+        infect_dur = np.around(self.__infect.infectious_duration(self.__infected))
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
         self.__population.loc[infect_id, "is_infectious"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
-        self.__log.info('There will be %d simulation steps' %len(self.__t))
-        # Removing social mobility of tracked people
-        if tracked is not None:
-            # TODO make this configurable
-            # The current implementation disables all contacts
-            # of tracked persons
+        self.__log.info("There will be %d simulation steps" % len(self.__t))
 
-            self.__pop_matrix = self.__pop_matrix.tolil()
-            self.__pop_matrix[tracked] = 0
+        # Set tracking
+        if tracked is not None:
+            self.__log.debug("Constructiong tracked people ids")
+            self.__tracked = True
+            tracked_df = pd.DataFrame(
+                {"is_tracked": False}, index=np.arange(self.__pop_size)
+            )
+            tracked_df.loc[tracked, "is_tracked"] = True
+            self.__population = pd.concat([self.__population, tracked_df], axis=1)
+        else:
+            self.__log.debug("Population is not tracked")
+            self.__tracked = False
 
         # Some additional storage
         self.__distribution = []
@@ -147,7 +145,7 @@ class MC_Sim(object):
         start = time()
         self.__simulation()
         end = time()
-        self.__log.info('MC simulation took %f seconds' % (end-start))
+        self.__log.info("MC simulation took %f seconds" % (end - start))
 
     @property
     def statistics(self):
@@ -199,7 +197,6 @@ class MC_Sim(object):
         Returns:
             -None
         """
-        pop_csr = self.__pop_matrix.tocsr()
 
         start = time()
         for step, _ in enumerate(self.__t):
@@ -207,29 +204,62 @@ class MC_Sim(object):
             infected_mask = self.__population.loc[:, "is_infectious"]
             infected_indices = self.__population.index[infected_mask]
 
+            # Removing social mobility of tracked people if they are infected
+            if self.__tracked:
+                # TODO make this configurable
+                # The current implementation disables all contacts
+                # of tracked persons
+                tracked_mask = self.__population.loc[:, "is_tracked"]
+
+                tracked_and_infected_mask = np.logical_and(infected_mask, tracked_mask)
+                tracked_and_infected_indices = self.__population.index[
+                    tracked_and_infected_mask
+                ]
+
+                matrix = self.__pop_matrix.tolil()
+
+                # Set connections of infected and tracked people to zero
+                matrix[tracked_and_infected_indices, :] = 0
+                matrix[:, tracked_and_infected_indices] = 0
+
+                # Find all the people in the social circles of tracked
+                # and infected people
+                contact_cols = sparse.find(
+                    self.__pop_matrix.tocsr()[tracked_and_infected_indices]
+                )[1]
+
+                # Mark the people mention above as tracked
+                self.__population.loc[contact_cols, "is_tracked"] = True
+
+                # Set the social connections of all the people in the social
+                # circles of tracked and infected people to zero
+                matrix[contact_cols, :] = 0
+                matrix[:, contact_cols] = 0
+
+                self.__pop_matrix = matrix
+
+            pop_csr = self.__pop_matrix.tocsr()
+
             # Find all non-zero connections of the infected
             # rows are the ids / indices of the infected
             # columns are the people they have contact with
 
-            _, contact_cols, contact_strengths =\
-                sparse.find(pop_csr[infected_indices])
+            _, contact_cols, contact_strengths = sparse.find(pop_csr[infected_indices])
 
             # Based on the contact rate, sample a poisson rvs
             # for the number of interactions per timestep.
             # A contact is sucessful if the rv is > 1, ie.
             # more than one contact per timestep
-            successful_contacts_mask = self.__rstate.poisson(
-                contact_strengths) >= 1
+            successful_contacts_mask = self.__rstate.poisson(contact_strengths) >= 1
 
-            # we are just interested in the columns, ie. only the 
+            # we are just interested in the columns, ie. only the
             # ids of the people contacted by the infected.
             # Note, that contacted ids can appear multiple times
             # if a person is successfully contacted by multiple people.
             successful_contacts_indices = contact_cols[successful_contacts_mask]
             num_succesful_contacts = len(successful_contacts_indices)
 
-            self.__statistics["contacts"].append(
-                num_succesful_contacts)
+            self.__statistics["contacts"].append(num_succesful_contacts)
 
             # Calculate infection probability for all contacts
             contact_strength = self.__intense_pdf(num_succesful_contacts)
@@ -242,26 +272,24 @@ class MC_Sim(object):
             newly_infected_mask = np.asarray(newly_infected_mask, bool)
 
             # Get the indices for the newly infected
-            newly_infected_indices = successful_contacts_indices[
-                newly_infected_mask]
+            newly_infected_indices = successful_contacts_indices[newly_infected_mask]
 
-            # There might be multiple successfull infections per person 
+            # There might be multiple successfull infections per person
             # from different infected people
             newly_infected_indices = np.unique(newly_infected_indices)
 
             # check if people are already infected or aleady immune
             already_infected = (
-                (self.__population.loc[
-                    newly_infected_indices, "in_incubation"] == True) |
-                (self.__population.loc[
-                    newly_infected_indices, "is_infectious"] == True)
-                )
+                self.__population.loc[newly_infected_indices, "in_incubation"] == True
+            ) | (self.__population.loc[newly_infected_indices, "is_infectious"] == True)
 
-            already_immune = self.__population.loc[
-                    newly_infected_indices, "is_removed"] == True
+            already_immune = (
+                self.__population.loc[newly_infected_indices, "is_removed"] == True
+            )
 
             newly_infected_indices = self.__population.index[
-                newly_infected_indices[~(already_infected | already_immune)]]
+                newly_infected_indices[~(already_infected | already_immune)]
+            ]
 
             num_newly_infected = len(newly_infected_indices)
             # Store new infections
@@ -280,20 +308,20 @@ class MC_Sim(object):
             self.__population.loc[in_incubation_mask, "incubation_duration"] -= 1
 
             # add new incubations
-            tmp_dur = np.around(
-                self.__infect.incubation_duration(num_newly_infected))
+            tmp_dur = np.around(self.__infect.incubation_duration(num_newly_infected))
 
             self.__population.loc[newly_infected_indices, "in_incubation"] = True
             self.__population.loc[newly_infected_indices, "is_infected"] = True
-            self.__population.loc[newly_infected_indices, "incubation_duration"] = tmp_dur
+            self.__population.loc[
+                newly_infected_indices, "incubation_duration"
+            ] = tmp_dur
 
             # Change state to infected if passed incubration duration
             # Check only old cases
             passed_incubation_index = self.__population.loc[in_incubation_mask].index
             passed_incubation = passed_incubation_index[
-                self.__population.loc[
-                    in_incubation_mask, "incubation_duration"] <= 0
-                ]
+                self.__population.loc[in_incubation_mask, "incubation_duration"] <= 0
+            ]
             if len(passed_incubation) > 0:
                 self.__population.loc[passed_incubation, "in_incubation"] = False
 
@@ -313,20 +341,20 @@ class MC_Sim(object):
             self.__population.loc[is_infectious_mask, "infectious_duration"] -= 1
 
             # add new infectious
-            tmp_dur = np.around(
-                self.__infect.infectious_duration(num_newly_infectious))
+            tmp_dur = np.around(self.__infect.infectious_duration(num_newly_infectious))
 
             if len(passed_incubation) > 0:
                 self.__population.loc[passed_incubation, "is_infectious"] = True
-                self.__population.loc[passed_incubation, "infectious_duration"] = tmp_dur
+                self.__population.loc[
+                    passed_incubation, "infectious_duration"
+                ] = tmp_dur
 
             # Change state to removed if passed infectious duration
             # Check only old cases
             passed_infectious_index = self.__population.loc[is_infectious_mask].index
             passed_infectious = passed_infectious_index[
-                self.__population.loc[
-                    is_infectious_mask, "infectious_duration"] <= 0
-                ]
+                self.__population.loc[is_infectious_mask, "infectious_duration"] <= 0
+            ]
 
             if len(passed_infectious) > 0:
                 self.__population.loc[passed_infectious, "is_infectious"] = False
@@ -343,10 +371,10 @@ class MC_Sim(object):
             is_infected = self.__population.loc[:, "is_infected"]
             self.__statistics["infected"].append(is_infected.sum(axis=0))
 
-            if step % (int(len(self.__t)/10)) == 0:
+            if step % (int(len(self.__t) / 10)) == 0:
                 end = time()
-                self.__log.debug('In step %d' %step)
+                self.__log.debug("In step %d" % step)
                 self.__log.debug(
-                    'Last round of simulations took %f seconds' %(end-start)
+                    "Last round of simulations took %f seconds" % (end - start)
                 )
                 start = time()
