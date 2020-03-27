@@ -82,9 +82,9 @@ _baseconfig = {
     'hospitalization probability mean': 0.2,
     'hospitalization probability sd': 0.1,
 
-    'hospitalization duration pdf' : 'gauss',
+    'hospitalization duration pdf': 'gauss',
     'hospitalization duration mean': 28,
-    'hospitalization duration sd': 10,
+    'hospitalization duration sd': 5,
 
     'time until hospitalization pdf': 'gauss',
     'time until hospitalization mean': 5,

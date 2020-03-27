@@ -104,8 +104,9 @@ class Infection(object):
             self._recovery_time = recovery_time_pdf.rvs
         else:
             self.log_and_error(
-                "Unknown incubation duration pdf. Configured: {}".format(
-                    config['incubation duration pdf']))
+                "Unknown recovery time pdf. Configured: {}".format(
+                    config['recovery time pdf']))
+
 
         if config['hospitalization probability pdf'] == 'beta':
             hospit_prob_pdf = Beta(
@@ -125,7 +126,7 @@ class Infection(object):
                 config['hospitalization duration mean'],
                 config['hospitalization duration sd']
                 )
-            self._hostpitalization_duration = hospit_dur_pdf.rvs
+            self._hospitalization_duration = hospit_dur_pdf.rvs
         else:
             self.log_and_error(
                 "Unknown hospitalization duration pdf. Configured: {}".format(
@@ -229,8 +230,8 @@ class Infection(object):
         return self._time_until_hospitalization
 
     @property
-    def hostpitalization_duration(self):
-        return self._hostpitalization_duration
+    def hospitalization_duration(self):
+        return self._hospitalization_duration
 
     @property
     def recovery_time(self):
