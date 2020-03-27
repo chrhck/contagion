@@ -12,7 +12,6 @@ of safety measures, such as social distancing and tracking.
 # Native modules
 import sys
 import logging
-import numpy as np
 
 # -----------------------------------------
 # Package modules
@@ -22,6 +21,9 @@ from .mc_sim import MC_Sim
 from .measures import Measures
 from .population import Population
 
+# unless we put this class in __init__, __name__ will be contagion.contagion
+_log = logging.getLogger('contagion')
+
 
 class Contagion(object):
     """
@@ -30,22 +32,21 @@ class Contagion(object):
     stores all methods required to run the simulation
     of the infection spread
     Parameters:
-        -optional dic config:
-            The dictionary from the config file
+        -None
     Returns:
         -None
     """
-    def __init__(self, ):
+    def __init__(self):
         """
         function: __init__
         Initializes the class Contagion.
         Here all run parameters are set.
-
+        Parameters:
+            -None
         Returns:
             -None
         """
         # Inputs
-
         self.__infected = config['infected']
 
         # Logger
@@ -68,43 +69,41 @@ class Contagion(object):
             formatter = logging.Formatter(fmt=fmt)
             ch.setFormatter(formatter)
 
-        # Basic config for all loggers
-        logging.basicConfig(handlers=[fh, ch])
-        # Creating logger user_info
-        self.__log = logging.getLogger(self.__class__.__name__)
-        self.__log.setLevel(logging.DEBUG)
+        _log.addHandler(fh)
+        _log.addHandler(ch)
+        _log.setLevel(logging.DEBUG)
 
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Welcome to contagion!')
-        self.__log.info('This package will help you model the spread of infections')
-        self.__log.debug('Trying to catch some errors in the config')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Welcome to contagion!')
+        _log.info('This package will help you model the spread of infections')
+        _log.debug('Trying to catch some errors in the config')
 
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Starting population construction')
-        self.pop = Population(self.__log).population
-        self.__log.info('Finished the population')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Starting the infection construction')
-        self.infection = Infection(self.__log)
-        self.__log.info('Finished the infection construction')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Starting the measure construction')
-        self.tracked = Measures(self.__log, config).tracked
-        self.__log.info('Finished the measure construction')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Setting the simulation framework')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Starting population construction')
+        self.pop = Population().population
+        _log.info('Finished the population')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Starting the infection construction')
+        self.infection = Infection()
+        _log.info('Finished the infection construction')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Starting the measure construction')
+        self.tracked = Measures().tracked
+        _log.info('Finished the measure construction')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Setting the simulation framework')
         self.sim = self.__sim_realistic
-        self.__log.info('Simulation framework set. Please type:')
-        self.__log.info('self.sim(parameters) to run the simulation')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
+        _log.info('Simulation framework set. Please type:')
+        _log.info('self.sim(parameters) to run the simulation')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
 
     @property
     def statistics(self):
@@ -158,40 +157,39 @@ class Contagion(object):
             -np.array infected:
                 The current population
         """
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
         dt = config['time step']
         if dt > 1.:
-            self.__log.error("Chosen time step too large!")
+            _log.error("Chosen time step too large!")
             exit("Please run with time steps smaller than 1s!")
-        self.__log.debug('Realistic run')
+        _log.debug('Realistic run')
         self.__mc_run = MC_Sim(
             self.pop,
             self.infection,
-            self.tracked,
-            self.__log,
+            self.tracked
         )
-        self.__log.info('Structure of dictionray:')
-        self.__log.info('["t", "total", "encounter", "shear", "history"]')
-        self.__log.debug('    t: The time array')
-        self.__log.debug('    total: The total emissions at each point in time')
-        self.__log.debug('    encounter: The encounter emissions at each point in time')
-        self.__log.debug('    shear: The shear emissions at each point in time')
-        self.__log.debug('    history: The population at every point in time')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('Finished calculation')
-        self.__log.debug('The results are stored in a dictionary self.statistics')
-        self.__log.debug('Available keys are:')
-        self.__log.debug('"contacts", "infections", "recovered", "immune", "infectious", "susceptible"')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
-        self.__log.debug('Dumping run settings into %s', config['config location'])
+        _log.info('Structure of dictionray:')
+        _log.info('["t", "total", "encounter", "shear", "history"]')
+        _log.debug('    t: The time array')
+        _log.debug('    total: The total emissions at each point in time')
+        _log.debug('    encounter: The encounter emissions at each point in time')
+        _log.debug('    shear: The shear emissions at each point in time')
+        _log.debug('    history: The population at every point in time')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.info('Finished calculation')
+        _log.debug('The results are stored in a dictionary self.statistics')
+        _log.debug('Available keys are:')
+        _log.debug('"contacts", "infections", "recovered", "immune", "infectious", "susceptible"')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
+        _log.debug('Dumping run settings into %s', config['config location'])
         with open(config['config location'], 'w') as f:
             for item in config.keys():
                 print(item + ': ' + str(config[item]), file=f)
-        self.__log.debug('Finished dump')
-        self.__log.info('---------------------------------------------------')
-        self.__log.info('---------------------------------------------------')
+        _log.debug('Finished dump')
+        _log.info('---------------------------------------------------')
+        _log.info('---------------------------------------------------')
         # Closing log
         logging.shutdown()
