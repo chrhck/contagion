@@ -67,7 +67,6 @@ class Population(object):
 
         _log.debug('The social circle interactions for each person')
         if config['social circle interactions pdf'] == 'gauss':
-
             upper = self.__social_circles
             # Check if there are people with zero contacts and set them to
             # 1 for the time being

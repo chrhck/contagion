@@ -215,6 +215,39 @@ class Uniform(ScipyPDF):
         self._upper = upper
         self._pdf = scipy.stats.uniform(self._lower, self._upper)
 
+class Gamma(ScipyPDF):
+    """
+    class: Gamma
+    Class for the scaled gamma distribution
+    Parameters:
+        -Union[float, np.array] mean:
+            The mean value
+        -Union[float, np.array] sd:
+            Standard deviation
+    Returns:
+        -None
+    """
+
+    def __init__(
+            self,
+            mean: Union[float, np.ndarray],
+            sd: Union[float, np.ndarray]
+            ) -> None:
+        """
+        function: __init__
+        Initializes the Gamma class
+        Parameters:
+            -Union[float, np.array] mean:
+                The mean value
+            -Union[float, np.array] sd:
+                Standard deviation
+        Returns:
+            -None
+        """
+        self._sd = sd
+        self._mean = mean
+        loc = self._mean - self._sd
+        self._pdf = scipy.stats.gamma(self._sd, loc=loc)
 
 class NormalizedProbability(Probability):
     """
