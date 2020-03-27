@@ -23,8 +23,9 @@ before_script:
   - pip install -r requirements.txt
 
 stages:
+  - test_functionality
   - pep8
-  - test
+  - test_notebooks
 
 pep8:
   stage: pep8
@@ -37,7 +38,36 @@ pep8:
     - flake8 --statistics --output-file flake8-report.txt
   allow_failure: true
 
-test:
-  stage: test
+default_simulation:
+  stage: test_functionality
   script:
     - python3 tests/performance.py
+
+.test_notebook: &test_notebook
+  stage: test_notebooks
+  script:
+    - rm pics/${FIGURE} || true
+    - cd examples
+    - jupyter nbconvert --to script ${NOTEBOOK}.ipynb
+    - ipython3 ${NOTEBOOK}.py
+  artifacts:
+    paths:
+      - pics/${FIGURE}
+
+con_contact:
+  variables:
+    NOTEBOOK: con_contact
+    FIGURE: Contagion_Contact_Tracing.png
+  <<: *test_notebook
+
+con_example:
+  variables:
+    NOTEBOOK: con_example
+    FIGURE: none
+  <<: *test_notebook
+
+con_parameter_scan:
+  variables:
+    NOTEBOOK: con_parameter_scan
+    FIGURE: Contagion_Contact_Rate_Scan.png
+  <<: *test_notebook

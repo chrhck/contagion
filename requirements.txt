@@ -1,5 +1,6 @@
 jupyter
 nbstripout
+nbconvert
 matplotlib
 numpy
 scipy
