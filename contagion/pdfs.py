@@ -145,16 +145,30 @@ class TruncatedNormal(ScipyPDF):
 
 
 class Beta(ScipyPDF):
-    """Beta distribution
-
+    """
+    class: Beta
+    Class for the beta distribution
     Parameters:
-        mean: Union[float, np.ndarray]
+        -mean: Union[float, np.ndarray]
             Mean of the distribution
-        sd: Union[float, np.ndarray]
-            Standard deviation (has to be smaller than sqrt(mean(1-mean)))
+        -sd: Union[float, np.ndarray]
+             Standard deviation (has to be smaller than sqrt(mean(1-mean)))
+    Returns:
+        -None
     """
 
     def __init__(self, mean, sd):
+        """
+        function: __init__
+        Initializes the Beta class
+        Parameters:
+            -mean: Union[float, np.ndarray]
+                Mean of the distribution
+            -sd: Union[float, np.ndarray]
+                Standard deviation (has to be smaller than sqrt(mean(1-mean)))
+        Returns:
+            -None
+        """
         self._mean = np.atleast_1d(mean)
         self._sd = np.atleast_1d(sd)
 
@@ -186,9 +200,20 @@ class Uniform(ScipyPDF):
             lower: Union[float, np.ndarray],
             upper: Union[float, np.ndarray]
             ) -> None:
-        self.__lower = lower
-        self.__upper = upper
-        self.__pdf = scipy.stats.uniform(self.__lower, self.__upper)
+            """
+            function: __init__
+            Initializes the Uniform class
+            Parameters:
+                -lower: Union[float, np.ndarray]
+                     Lower bound
+                -upper: Union[float, np.ndarray]
+                     Upper bound
+            Returns:
+                -None
+            """
+            self.__lower = lower
+            self.__upper = upper
+            self.__pdf = scipy.stats.uniform(self.__lower, self.__upper)
 
 
 class NormalizedProbability(Probability):
@@ -232,7 +257,6 @@ class NormalizedProbability(Probability):
         Returns:
             -None
         """
-
         values = np.atleast_1d(values)
         if ~np.all((values <= self._upper) &
                    (values >= self._lower)):

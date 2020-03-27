@@ -30,22 +30,21 @@ class Contagion(object):
     stores all methods required to run the simulation
     of the infection spread
     Parameters:
-        -optional dic config:
-            The dictionary from the config file
+        -None
     Returns:
         -None
     """
-    def __init__(self, ):
+    def __init__(self):
         """
         function: __init__
         Initializes the class Contagion.
         Here all run parameters are set.
-
+        Parameters:
+            -None
         Returns:
             -None
         """
         # Inputs
-
         self.__infected = config['infected']
 
         # Logger

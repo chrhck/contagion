@@ -20,16 +20,25 @@ from .config import config
 
 class Population(object):
     """
+    class: Population
     Class to help with the construction of a realistic population
-
     Paremeters:
         -obj log:
             The logger
-
+    Returns:
+        -None
     """
 
     def __init__(self, log):
-
+        """
+        function: __init__
+        Initializes the class Population
+        Paremeters:
+            -obj log:
+                The logger
+        Returns:
+            -None
+        """
         # Inputs
         self.__log = log.getChild(self.__class__.__name__)
         self.__pop = config['population size']

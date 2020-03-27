@@ -172,30 +172,53 @@ _baseconfig = {
 # TODO: Explain this to idiot Stephan
 # Why is a class required?
 class ConfigClass(dict):
+    """
+    class: ConfigClass
+    The configuration class. This is used
+    by the package for all parameter settings
+    Parameters:
+        -dic config:
+            The config dictionary
+    Returns:
+        -None
+    """
     def __init__(self, *args, **kwargs):
+        """
+        function: __init__
+        initializes the configuration class. This is used
+        by the package for all parameter settings
+        Parameters:
+            -dic config:
+                The config dictionary
+        Returns:
+            -None
+        """
         super().__init__(*args, **kwargs)
 
+    # TODO: Update this
     def from_yaml(self, yaml_file: str) -> None:
         """
+        function: from_yaml
         Update config with yaml file
-
         Parameters:
-            yaml_file: str
+            -str yaml_file:
                 path to yaml file
+        Returns:
+            -None
         """
-
         yaml_config = yaml.load(open(yaml_file), Loader=yaml.SafeLoader)
         self.update(yaml_config)
 
+    # TODO: Update this
     def from_dict(self, user_dict: Dict[Any, Any]) -> None:
         """
+        function: from_yaml
         Creates a config from dictionary
-
         Parameters:
-            user_dict: dict
-
+            -dic user_dict:
+                The user dictionary
         Returns:
-            dict
+            -None
         """
         self.update(user_dict)
 
