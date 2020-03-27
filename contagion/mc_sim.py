@@ -275,7 +275,9 @@ class MC_Sim(object):
             # ids of the people contacted by the infected.
             # Note, that contacted ids can appear multiple times
             # if a person is successfully contacted by multiple people.
-            successful_contacts_indices = contact_cols[successful_contacts_mask]
+            successful_contacts_indices = (
+                contact_cols[successful_contacts_mask]
+            )
             num_succesful_contacts = len(successful_contacts_indices)
 
             self.__statistics["contacts"].append(num_succesful_contacts)
@@ -358,7 +360,9 @@ class MC_Sim(object):
 
             # Time until death is relative to end of incubation perdiod
             # Thus add after calculating incubation time
-            time_until_death = self.__infect.time_incubation_death(num_will_die)
+            time_until_death = (
+                self.__infect.time_incubation_death(num_will_die)
+            )
 
             # Add info to dataframe
 
@@ -391,7 +395,9 @@ class MC_Sim(object):
 
             # add new incubations
             tmp_dur = (
-                np.around(self.__infect.incubation_duration(num_newly_infected))
+                np.around(
+                    self.__infect.incubation_duration(num_newly_infected)
+                )
             )
 
             self.__population.loc[newly_infected_indices,
@@ -445,7 +451,8 @@ class MC_Sim(object):
                 self.__population.loc[has_died_indices,
                                       "is_hospitalized"] = False
                 self.__population.loc[has_died_indices, "will_die"] = False
-                self.__population.loc[has_died_indices, "is_infectious"] = False
+                self.__population.loc[has_died_indices,
+                                      "is_infectious"] = False
                 self.__population.loc[has_died_indices, "is_infected"] = False
 
             """
@@ -497,7 +504,9 @@ class MC_Sim(object):
                 ]
                 <= 0
             )
-            is_hospitalized_indices = will_be_hospitalized_indices[is_hospitalized]
+            is_hospitalized_indices = (
+                will_be_hospitalized_indices[is_hospitalized]
+            )
 
             num_is_hospitalized = len(is_hospitalized_indices)
 
@@ -570,7 +579,8 @@ class MC_Sim(object):
             )
 
             if len(passed_incubation) > 0:
-                self.__population.loc[passed_incubation, "is_infectious"] = True
+                self.__population.loc[passed_incubation,
+                                      "is_infectious"] = True
                 self.__population.loc[
                     passed_incubation, "infectious_duration"
                 ] = tmp_dur
@@ -595,7 +605,8 @@ class MC_Sim(object):
                 self.__population.loc[
                     passed_infectious, "recovery_time"
                 ] = recovery_time
-                self.__population.loc[passed_infectious, "is_recovering"] = True
+                self.__population.loc[passed_infectious,
+                                      "is_recovering"] = True
 
             # Storing statistics
             is_removed = self.__population.loc[:, "is_removed"]

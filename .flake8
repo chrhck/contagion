@@ -13,3 +13,4 @@ exclude =
 
 per-file-ignores =
     tests/performance.py: E402
+    contagion/mc_sim.py: E712
