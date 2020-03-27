@@ -9,7 +9,6 @@ variables:
   POSTGRES_DB: myproject
 
 cache:
-  untracked: true
   key: "test"
   paths:
     - .cache/pip
@@ -34,7 +33,6 @@ pep8:
     paths:
       - flake8-report.txt
   script:
-    - rm flake8-report.txt || true
     - flake8 --statistics --output-file flake8-report.txt
   allow_failure: true
 
@@ -46,7 +44,6 @@ default_simulation:
 .test_notebook: &test_notebook
   stage: test_notebooks
   script:
-    - rm pics/${FIGURE} || true
     - cd examples
     - jupyter nbconvert --to script ${NOTEBOOK}.ipynb
     - ipython3 ${NOTEBOOK}.py
