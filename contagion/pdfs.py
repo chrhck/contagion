@@ -144,6 +144,30 @@ class TruncatedNormal(ScipyPDF):
             self.__a, self.__b, loc=self.__mean, scale=self.__sd)
 
 
+class Beta(ScipyPDF):
+    """Beta distribution
+
+    Parameters:
+        mean: Union[float, np.ndarray]
+            Mean of the distribution
+        sd: Union[float, np.ndarray]
+            Standard deviation (has to be smaller than sqrt(mean(1-mean)))
+    """
+
+    def __init__(self, mean, sd):
+        self._mean = np.atleast_1d(mean)
+        self._sd = np.atleast_1d(sd)
+
+        varmax = self._mean * (1-self._mean)
+        if np.any(self._sd > np.sqrt(varmax)):
+            raise ValueError("SD has to be < sqrt(mean(1-mean))")
+
+        self._alpha = self._mean * (varmax / self._sd**2 - 1)
+        self._beta = self._alpha * (1/self._mean-1)
+
+        self._pdf = scipy.stats.beta(self._alpha, self._beta)
+
+
 class Uniform(ScipyPDF):
     """
     class: Uniform
