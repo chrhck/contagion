@@ -30,11 +30,6 @@ _baseconfig = {
     "simulation length": 200,
     # The number of starting infections
     "infected": 10,
-    # The probability distribution to use for the movement pdf
-    # Currently supported:
-    #   - 'gauss':
-    #       A gaussian distribution
-    'pdf move': 'gauss',
     # random state to use
     'random state': np.random.RandomState(1337),
     ###################################################
@@ -49,7 +44,7 @@ _baseconfig = {
     'social circle pdf': 'gauss',
     # Average number of interactions per time step in sc
     'mean social circle interactions': 0.2,
-    # Variance of sc interactions
+    # sd of sc interactions
     'variance social circle interactions': 2,
     # Distribution of the interaction rates
     # Available: 'gauss'
@@ -59,41 +54,48 @@ _baseconfig = {
     'infection probability pdf': 'intensity',
     # Infection duration mean
     'infection duration mean': 20,
-    # Infection duration variance
+    # Infection duration sd
     'infection duration variance': 5,
     # Infection duration pdf
+    # Available: 'gauss', 'gamma'
     'infection duration pdf': 'gauss',
-
     # Infectious duration mean
     'infectious duration mean': 3,
-    # Infectious duration variance
+    # Infectious duration sd
     'infectious duration variance': 5,
     # Infectious duration pdf
+    # Available: 'gauss', 'gamma'
     'infectious duration pdf': 'gauss',
 
     # Incubation duration mean
     'incubation duration mean': 5,
-    # Incubation duration variance
+    # Incubation duration sd
     'incubation duration variance': 2,
     # Incubation duration pdf
+    # Available: 'gauss', 'gamma'
     'incubation duration pdf': 'gauss',
 
+    # Hospitalization / death and recovery pdfs
     'hospitalization probability pdf': 'beta',
     'hospitalization probability mean': 0.2,
     'hospitalization probability sd': 0.1,
 
+    # Available: 'gauss', 'gamma'
     'hospitalization duration pdf': 'gauss',
     'hospitalization duration mean': 28,
     'hospitalization duration sd': 5,
 
+    # Available: 'gauss', 'gamma'
     'time until hospitalization pdf': 'gauss',
     'time until hospitalization mean': 5,
     'time until hospitalization sd': 2,
 
+    # Available: 'gauss', 'gamma'
     'time incubation death pdf': 'gauss',
     'time incubation death mean': 32,
     'time incubation death sd': 5,
 
+    # Available: 'gauss', 'gamma'
     'recovery time pdf': 'gauss',
     'recovery time mean': 11,
     'recovery time sd': 5,
@@ -112,45 +114,6 @@ _baseconfig = {
     # Interaction intensity distribution:
     # Available: uniform
     'interaction intensity': 'uniform',
-    ###################################################
-    # Unused
-    ###################################################
-    # Incubation period (mean)
-    # Assumes the same pdf and variance as
-    # the duration
-    # Here during incubation people are not infectious
-    'incubation period': 1,
-    # Immunity duration -1 is infinity,
-    'immunity duration': -1,
-    ###################################################
-    ###################################################
-    # 'random walk' options
-    ###################################################
-    # Number of dimensions for the simulation
-    # Current options:
-    #   - 2, 3
-    "dimensions": 2,
-    # The geometry of the problem.
-    #   -'box':
-    #       Creates a uniform box of 1m x 1m x 1m evenly filled.
-    #   -'sphere':
-    #       Creates a uniform sphere
-    #   -'custom':
-    #       Use a custom geometry defined in a pkl file.
-    #       Place file in data/detector/geometry which needs to be a
-    #       dumped library with:
-    #           {'dimensions': d,  # dimensions as int
-    #            'bounding box': a,  # bounding box as float
-    #            'volume': v,  # The volume
-    #            'points': np.array  # point cloud as 2d array with e.g. [x,y,z]
-    'geometry': 'box',
-    'box size': 1e2,  # Side length in mm of box
-    'sphere diameter': 1e2,  # Radius of the sphere
-    'custom geometry': 'example_tetrahedron.pkl',  # File for custom geometry
-    # Size of bounding box
-    # This box needs to surround the volume of interest
-    # It is used to create a population sample
-    'bounding box': 1.1e2,
     ###################################################
     # More advanced
     ###################################################
