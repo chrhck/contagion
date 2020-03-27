@@ -8,7 +8,7 @@ import numpy as np  # type: ignore
 
 from .config import config
 
-
+# TODO: Upate formatting
 class Probability(object, metaclass=abc.ABCMeta):
     """
     class: Probability
@@ -19,6 +19,7 @@ class Probability(object, metaclass=abc.ABCMeta):
     Returns:
         -None
     """
+
     @abc.abstractmethod
     def __call__(self, values: np.ndarray):
         """
@@ -73,7 +74,6 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     Returns:
         -None
     """
-
     def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
         function: rvs
@@ -87,7 +87,7 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
             -np.array rvs:
                 The drawn samples
         """
-        rvs = self.__pdf.rvs(
+        rvs = self._pdf.rvs(
             size=num, random_state=config['random state'])
 
         if dtype is not None:
@@ -130,18 +130,18 @@ class TruncatedNormal(ScipyPDF):
             -None
         """
         super().__init__()
-        self.__lower = lower
-        self.__upper = upper
-        self.__mean = mean
-        self.__sd = sd
+        self._lower = lower
+        self._upper = upper
+        self._mean = mean
+        self._sd = sd
 
         # Calculate parameter a and b.
         # See: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.truncnorm.html
-        self.__a = (self.__lower - self.__mean) / self.__sd
-        self.__b = (self.__upper - self.__mean) / self.__sd
+        self._a = (self._lower - self._mean) / self._sd
+        self._b = (self._upper - self._mean) / self._sd
 
-        self.__pdf = scipy.stats.truncnorm(
-            self.__a, self.__b, loc=self.__mean, scale=self.__sd)
+        self._pdf = scipy.stats.truncnorm(
+            self._a, self._b, loc=self._mean, scale=self._sd)
 
 
 class Beta(ScipyPDF):
@@ -200,20 +200,20 @@ class Uniform(ScipyPDF):
             lower: Union[float, np.ndarray],
             upper: Union[float, np.ndarray]
             ) -> None:
-            """
-            function: __init__
-            Initializes the Uniform class
-            Parameters:
-                -lower: Union[float, np.ndarray]
-                     Lower bound
-                -upper: Union[float, np.ndarray]
-                     Upper bound
-            Returns:
-                -None
-            """
-            self.__lower = lower
-            self.__upper = upper
-            self.__pdf = scipy.stats.uniform(self.__lower, self.__upper)
+        """
+        function: __init__
+        Initializes the Uniform class
+        Parameters:
+            -lower: Union[float, np.ndarray]
+                    Lower bound
+            -upper: Union[float, np.ndarray]
+                    Upper bound
+        Returns:
+            -None
+        """
+        self._lower = lower
+        self._upper = upper
+        self._pdf = scipy.stats.uniform(self._lower, self._upper)
 
 
 class NormalizedProbability(Probability):
@@ -257,6 +257,7 @@ class NormalizedProbability(Probability):
         Returns:
             -None
         """
+
         values = np.atleast_1d(values)
         if ~np.all((values <= self._upper) &
                    (values >= self._lower)):
