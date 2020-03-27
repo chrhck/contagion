@@ -35,7 +35,6 @@ pep8:
     expire_in: 1 week
   script:
     - flake8 --statistics --output-file flake8-report.txt
-  allow_failure: true
 
 default_simulation:
   stage: test_functionality
