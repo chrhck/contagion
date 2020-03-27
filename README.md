@@ -22,8 +22,10 @@ is done by setting the corresponding parameters for the infection.
 
 ## Model
 
-The Model is structed as
+The scial model is structed as
 ![Sketch of the model](images/Model_Basic.png)
+
+The epidemiological model is based on a SEIR model.
 
 ## Code Example
 
@@ -44,15 +46,5 @@ results = contagion.statistics
 
 ## Code structure
 
-On overview of the code structure
+On overview of the code structure UPDATE THIS!!!
 ![Sketch of the model](images/Code_Structure.png)
-
-## TODO
-
-- [] Optimize population calculations
-  - [] Change contact definition
-  - [] Optimize sampling precedure
-- [] Add Incubation
-- [] Add immunity function to infection
-- [] Add a switch between the different models (SIR, SIS, MSIR, MSEIRS...)
-- [] Fix that tracked person currently can't meet infected (only passive)
