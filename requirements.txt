@@ -9,4 +9,3 @@ pyyaml
 pandas
 flake8
 seaborn
-pickle
