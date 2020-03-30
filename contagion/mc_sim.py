@@ -10,12 +10,14 @@ from collections import defaultdict
 from sys import exit
 from time import time
 import logging
-import numpy as np
-import pandas as pd
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform
+from .state_machine import (
+    Condition, ConditionalTransition, BooleanState, FloatState)
 
 _log = logging.getLogger(__name__)
 
@@ -152,6 +154,9 @@ class MC_Sim(object):
         # The storage dictionary
         self.__statistics = defaultdict(list)
         # Running the simulation
+
+        self._setup_statemachine()
+
         start = time()
         self.__simulation()
         end = time()
@@ -201,7 +206,104 @@ class MC_Sim(object):
     @property
     def population(self):
         return self.__population
-    
+
+    def _setup_statemachine(self):
+
+        boolean_state_names = [
+            "is_infected", "has_died", "is_removed", "is_infectious",
+            "is_hospitalized", "is_recovering", "in_incubation", "has_recovered"]
+
+        boolean_states = {name: BooleanState.from_boolean(name)
+                                 for name in boolean_state_names}
+
+        timer_state_names = [
+            "incubation_duration", "hospitalization_duration", "recovery_time",
+            "time_until_hospitalization", "infectious_duration"]
+
+        timer_states = {name: FloatState.from_timer(name)
+                        for name in timer_state_names}
+
+        infected_condition = Condition(self.__get_new_infections)
+
+        transitions = {
+            "healthy_incubation":
+                ConditionalTransition(
+                    "healthy_incubation",
+                    ~boolean_states["is_infected"],
+                    boolean_states["in_incubation"],
+                    infected_condition
+                ),
+            "incubation_infectious":
+                ConditionalTransition(
+                    "incubation_infectious",
+                    boolean_states["in_incubation"],
+                    boolean_states["is_infectious"],
+                    timer_states["incubation_duration"]
+                ),
+            "infectious_recovering":
+                ConditionalTransition(
+                    "infectious_recovering",
+                    boolean_states["is_infectious"],
+                    boolean_states["is_recovering"],
+                    timer_states["infectious_duration"]
+                ),
+
+       }
+
+    def __get_new_infections(self) -> np.ndarray:
+        pop_csr = self.__pop_matrix.tocsr()
+
+        # TODO: use state
+        infected_mask = self.__population.loc[:, "is_infectious"]
+        infected_indices = self.__population.index[infected_mask]
+
+        # Find all non-zero connections of the infected
+        # rows are the ids / indices of the infected
+        # columns are the people they have contact with
+
+        _, contact_cols, contact_strengths =\
+            sparse.find(pop_csr[infected_indices])
+
+        # Based on the contact rate, sample a poisson rvs
+        # for the number of interactions per timestep.
+        # A contact is sucessful if the rv is > 1, ie.
+        # more than one contact per timestep
+        successful_contacts_mask = self.__rstate.poisson(
+            contact_strengths) >= 1
+
+        # we are just interested in the columns, ie. only the
+        # ids of the people contacted by the infected.
+        # Note, that contacted ids can appear multiple times
+        # if a person is successfully contacted by multiple people.
+        successful_contacts_indices = contact_cols[successful_contacts_mask]
+        num_succesful_contacts = len(successful_contacts_indices)
+
+        self.__statistics["contacts"].append(
+            num_succesful_contacts)
+
+        # Calculate infection probability for all contacts
+        contact_strength = self.__intense_pdf(num_succesful_contacts)
+        infection_prob = self.__infect.pdf_infection_prob(contact_strength)
+
+        # An infection is successful if the bernoulli outcome
+        # based on the infection probability is 1
+
+        newly_infected_mask = self.__rstate.binomial(1, infection_prob)
+        newly_infected_mask = np.asarray(newly_infected_mask, bool)
+
+        # Get the indices for the newly infected
+        newly_infected_indices = successful_contacts_indices[
+            newly_infected_mask]
+
+        # There might be multiple successfull infections per person 
+        # from different infected people
+        newly_infected_indices = np.unique(newly_infected_indices)
+
+        cond = np.zeros(len(df), dtype=np.bool)
+        cond[newly_infected_indices] = True
+
+        return cond
+
 
     def __simulation(self):
         """
@@ -220,91 +322,7 @@ class MC_Sim(object):
             New infections
             """
 
-            infected_mask = self.__population.loc[:, "is_infectious"]
-            infected_indices = self.__population.index[infected_mask]
-
-            # Removing social mobility of tracked people if they are infected
-            if self.__tracked:
-                # TODO make this configurable
-                # The current implementation disables all contacts
-                # of tracked persons
-                tracked_mask = self.__population.loc[:, "is_tracked"]
-
-                tracked_and_infected_mask = np.logical_and(infected_mask,
-                                                           tracked_mask)
-                tracked_and_infected_indices = self.__population.index[
-                    tracked_and_infected_mask
-                ]
-
-                matrix = self.__pop_matrix.tolil()
-
-                # Set connections of infected and tracked people to zero
-                matrix[tracked_and_infected_indices, :] = 0
-                matrix[:, tracked_and_infected_indices] = 0
-
-                # Find all the people in the social circles of tracked
-                # and infected people
-                contact_cols = sparse.find(
-                    self.__pop_matrix.tocsr()[tracked_and_infected_indices]
-                )[1]
-
-                # Mark the people mention above as tracked
-                self.__population.loc[contact_cols, "is_tracked"] = True
-
-                # Set the social connections of all the people in the social
-                # circles of tracked and infected people to zero
-                matrix[contact_cols, :] = 0
-                matrix[:, contact_cols] = 0
-
-                self.__pop_matrix = matrix
-
-            pop_csr = self.__pop_matrix.tocsr()
-
-            # Find all non-zero connections of the infected
-            # rows are the ids / indices of the infected
-            # columns are the people they have contact with
-
-            _, contact_cols, contact_strengths = (
-                sparse.find(pop_csr[infected_indices])
-            )
-
-            # Based on the contact rate, sample a poisson rvs
-            # for the number of interactions per timestep.
-            # A contact is sucessful if the rv is > 1, ie.
-            # more than one contact per timestep
-            successful_contacts_mask = (
-                self.__rstate.poisson(contact_strengths) >= 1
-            )
-
-            # we are just interested in the columns, ie. only the
-            # ids of the people contacted by the infected.
-            # Note, that contacted ids can appear multiple times
-            # if a person is successfully contacted by multiple people.
-            successful_contacts_indices = (
-                contact_cols[successful_contacts_mask]
-            )
-            num_succesful_contacts = len(successful_contacts_indices)
-
-            self.__statistics["contacts"].append(num_succesful_contacts)
-
-            # Calculate infection probability for all contacts
-            contact_strength = self.__intense_pdf(num_succesful_contacts)
-            infection_prob = self.__infect.pdf_infection_prob(contact_strength)
-
-            # An infection is successful if the bernoulli outcome
-            # based on the infection probability is 1
-
-            newly_infected_mask = self.__rstate.binomial(1, infection_prob)
-            newly_infected_mask = np.asarray(newly_infected_mask, bool)
-
-            # Get the indices for the newly infected
-            newly_infected_indices = (
-                successful_contacts_indices[newly_infected_mask]
-            )
-
-            # There might be multiple successfull infections per person
-            # from different infected people
-            newly_infected_indices = np.unique(newly_infected_indices)
+            
 
             # check if people are already infected or aleady immune
             already_infected = (
