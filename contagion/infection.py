@@ -57,13 +57,13 @@ class Infection(object):
                 config['infection duration mean'],
                 config['infection duration variance']
                 )
-            self.__pdf = dur_pdf.rvs
+            self.__pdf = dur_pdf
         elif config['infection duration pdf'] == 'gamma':
             dur_pdf = Gamma(
                 config['infection duration mean'],
                 config['infection duration variance']
             )
-            self.__pdf = dur_pdf.rvs
+            self.__pdf = dur_pdf
         else:
             _log.error('Unrecognized infection duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -76,13 +76,13 @@ class Infection(object):
                 config['infectious duration mean'],
                 config['infectious duration variance']
                 )
-            self.__infectious_duration = dur_pdf.rvs
+            self.__infectious_duration = dur_pdf
         elif config['infectious duration pdf'] == 'gamma':
             dur_pdf = Gamma(
                 config['infectious duration mean'],
                 config['infectious duration variance']
             )
-            self.__infectious_duration = dur_pdf.rvs
+            self.__infectious_duration = dur_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -96,13 +96,13 @@ class Infection(object):
                 config['incubation duration mean'],
                 config['incubation duration variance']
                 )
-            self.__incubation_duration = dur_pdf.rvs
+            self.__incubation_duration = dur_pdf
         elif config['incubation duration pdf'] == 'gamma':
             dur_pdf = Gamma(
                 config['incubation duration mean'],
                 config['incubation duration variance']
             )
-            self.__incubation_duration = dur_pdf.rvs
+            self.__incubation_duration = dur_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -116,13 +116,13 @@ class Infection(object):
                 config['recovery time mean'],
                 config['recovery time sd']
                 )
-            self.__recovery_time = recovery_time_pdf.rvs
+            self.__recovery_time = recovery_time_pdf
         elif config['recovery time pdf'] == 'gamma':
             recovery_time_pdf = Gamma(
                 config['recovery time mean'],
                 config['recovery time sd']
             )
-            self.__recovery_time = recovery_time_pdf.rvs
+            self.__recovery_time = recovery_time_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -135,7 +135,7 @@ class Infection(object):
                 config['hospitalization probability mean'],
                 config['hospitalization probability sd']
                 )
-            self._hospitalization_prob = hospit_prob_pdf.rvs
+            self._hospitalization_prob = hospit_prob_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -148,13 +148,13 @@ class Infection(object):
                 config['hospitalization duration mean'],
                 config['hospitalization duration sd']
                 )
-            self.__hospitalization_duration = hospit_dur_pdf.rvs
+            self.__hospitalization_duration = hospit_dur_pdf
         elif config['hospitalization duration pdf'] == 'gamma':
             hospit_dur_pdf = Gamma(
                 config['hospitalization duration mean'],
                 config['hospitalization duration sd']
             )
-            self.__hospitalization_duration = recovery_time_pdf.rvs
+            self.__hospitalization_duration = recovery_time_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -168,13 +168,13 @@ class Infection(object):
                 config['time until hospitalization mean'],
                 config['time until hospitalization sd']
                 )
-            self.__time_until_hospitalization = hospit_dur_until_pdf.rvs
+            self.__time_until_hospitalization = hospit_dur_until_pdf
         elif config['time until hospitalization pdf'] == 'gamma':
             hospit_dur_until_pdf = Gamma(
                 config['time until hospitalization mean'],
                 config['time until hospitalization sd']
             )
-            self.__time_until_hospitalization = hospit_dur_until_pdf.rvs
+            self.__time_until_hospitalization = hospit_dur_until_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -188,13 +188,13 @@ class Infection(object):
                 config['time incubation death mean'],
                 config['time incubation death sd']
                 )
-            self.__time_incubation_death = time_till_death_pdf.rvs
+            self.__time_incubation_death = time_till_death_pdf
         elif config['time incubation death pdf'] == 'gamma':
             time_till_death_pdf = Gamma(
                 config['time incubation death mean'],
                 config['time incubation death sd']
             )
-            self.__time_incubation_death = time_till_death_pdf.rvs
+            self.__time_incubation_death = time_till_death_pdf
         else:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infection duration pdf'])
@@ -206,7 +206,7 @@ class Infection(object):
                 config['mortality rate mean'],
                 config['mortality rate sd']
                 )
-            self.__death_prob = death_prob_pdf.rvs
+            self.__death_prob = death_prob_pdf
         else:
             _log.error('Unrecognized incubation duration pdf! Set to ' +
                              config['infection duration pdf'])
