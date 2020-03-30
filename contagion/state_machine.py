@@ -1,6 +1,9 @@
+from __future__ import annotations
 import abc
 from collections import defaultdict
-from typing import Dict, Any, Callable, Union, List
+import functools
+import logging
+from typing import Callable, Union, List, Tuple, Dict
 
 import numpy as np
 import pandas as pd
@@ -8,6 +11,80 @@ from scipy import sparse
 
 from .infection import Infection
 from .pdfs import PDF
+
+
+_log = logging.getLogger(__name__)
+
+DEBUG = False
+
+
+class DataDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        field_len = None
+        for key, val in self.items():
+            if field_len is not None and len(val) != field_len:
+                raise RuntimeError("Not all fields are of same length")
+            field_len = len(val)
+
+        self._field_len = field_len
+
+    @property
+    def field_len(self):
+        return self._field_len
+
+
+class Condition(object):
+    """
+    Convenience class for storing references to conditions
+    """
+    def __init__(self, condition: Callable):
+        self._condition = condition
+
+    @property
+    def condition(self):
+        return self._condition
+
+    @condition.setter
+    def condition(self, val):
+        self._condition = val
+
+    def __call__(self, data: DataDict):
+        """Evaluate condition on DataFrame"""
+        return self.condition(data)
+
+    def __and__(self, other: TCondition):
+        def new_condition(data: DataDict):
+            cond = unify_condition(other, data)
+
+            return self(data) & cond
+        return Condition(new_condition)
+
+
+TCondition = Union["_State", np.ndarray, Condition]
+
+
+def unify_condition(condition: TCondition, data: DataDict) -> np.ndarray:
+    if isinstance(condition, (_State, Condition)):
+        cond = condition(data)
+    elif isinstance(condition, np.ndarray):
+        cond = condition
+    elif condition is None:
+        cond = np.ones(data.field_len, dtype=np.bool)
+    else:
+        raise ValueError("Unsupported type: ", type(condition))
+    return cond
+
+
+class ConditionalMixin(object):
+
+    def __init__(self, condition, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._condition = condition
+
+    def unify_condition(self, data: DataDict):
+        return unify_condition(self._condition, data)
 
 
 class _State(object, metaclass=abc.ABCMeta):
@@ -18,13 +95,17 @@ class _State(object, metaclass=abc.ABCMeta):
             state_getter: Callable,
             state_value_getter: Callable,
             name: str,
-            state_change: Callable):
+            data_field: str,
+            state_change: Callable,
+            *args, **kwargs):
+
         self._state_getter = state_getter
         self._state_value_getter = state_value_getter
         self._name = name
         self._state_change = state_change
+        self._data_field = data_field
 
-    def __call__(self, df: pd.DataFrame):
+    def __call__(self, data: DataDict):
         """
         Returns the state
 
@@ -34,30 +115,37 @@ class _State(object, metaclass=abc.ABCMeta):
         Returns:
             pd.Series
         """
-        return self._state_getter(df)
+        return self._state_getter(data[self._data_field])
 
-    def get_state_value(self, df: pd.DataFrame):
-        return self._state_value_getter(df)
+    def get_state_value(self, data: DataDict):
+        return self._state_value_getter(data[self._data_field])
 
     def __invert__(self):
         """
         Return a state with inverted condition
         """
-        def inverted_condition(df):
-            return ~(self(df))
+        def inverted_condition(arr: np.ndarray):
+            return ~(self._state_getter(arr))
+
         return type(self)(
             inverted_condition,
             self._state_value_getter,
             "inverted_" + self.name,
+            self._data_field,
             self._state_change)
 
-    @abc.abstractmethod
     def change_state(
             self,
-            df: pd.DataFrame,
+            data: DataDict,
             state: np.ndarray,
-            condition=None):
-        pass
+            condition: TCondition = None,
+            ):
+        """Changes the state in the DataFrame"""
+        # Check which is currently in this state
+
+        self_cond = self(data)
+        cond = unify_condition(condition, data)
+        self._state_change(data, state, cond & self_cond)
 
     @property
     def name(self):
@@ -83,83 +171,68 @@ class BooleanState(_State):
 
     @classmethod
     def from_boolean(cls, name: str):
-        def get_state(df):
-            return df[name]
+        def get_state(arr: np.ndarray):
+            return arr
 
-        def state_change(df: pd.DataFrame, state: bool, condition):
-            df.loc[condition, name] = state
-        return cls(get_state, get_state, name, state_change)
+        def state_change(
+                data: DataDict,
+                state: np.ndarray,
+                condition: np.ndarray):
 
-    def change_state(
-            self,
-            df: pd.DataFrame,
-            state: np.ndarray,
-            condition=None,
-            ):
-        """Changes the state in the DataFrame"""
-        # Check which is currently in this state
+            # TODO: maybe offload application of condition to state here?
+            data[name][condition] = state
 
-        cond = pd.Series(self(df), copy=True)
-
-        if isinstance(condition, _State):
-            cond &= condition(df)
-        elif isinstance(condition, np.ndarray):
-            cond &= condition
-        elif isinstance(condition, pd.Series):
-            cond &= condition
-        elif condition is None:
-            pass
-        else:
-            raise ValueError("Unsupported type: ", type(condition))
-        self._state_change(df, state, cond)
+        return cls(get_state, get_state, name, name, state_change)
 
 
 class FloatState(_State):
 
     @classmethod
     def from_timer(cls, name: str):
-        def get_state(df):
-            return df[name] > 0
+        def get_state(arr: np.ndarray):
+            return arr > 0
 
-        def get_state_value(df):
-            return df[name]
+        def get_state_value(arr: np.ndarray):
+            return arr
 
-        def state_change(df: pd.DataFrame, state: np.ndarray, condition):
-            df.loc[condition, name] = state
+        def state_change(data: DataDict, state: np.ndarray, condition):
+            data[name][condition] = state
 
-        return cls(get_state, get_state_value, name, state_change)
+        return cls(get_state, get_state_value, name, name, state_change)
 
-    def change_state(
-            self,
-            df: pd.DataFrame,
-            state: np.ndarray,
-            condition=None):
-        """Changes the state in the DataFrame"""
-        # Check which is currently in this state
 
-        cond = self(df)
+def log_call(func):
 
-        if isinstance(condition, _State):
-            cond &= condition(df)
-        elif isinstance(condition, np.ndarray):
-            cond &= condition
-        elif condition is None:
-            pass
-        else:
-            raise ValueError("Unsupported type: ", type(condition))
+    if DEBUG:
+        @functools.wraps(func)
+        def log_wrapper(self, df):
+            _log.debug("Performing %s", self.name)
+            df_before = pd.DataFrame(df, copy=True)
+            retval = func(self, df)
+            df_after = pd.DataFrame(df, copy=True)
 
-        self._state_change(df, state, cond)
+            diff = df_before.astype("float") - df_after.astype("float")
+
+            diff_rows = diff.loc[diff.any(axis=1), :]
+            diff_cols = diff_rows.loc[:, diff_rows.any(axis=0)]
+            _log.debug(
+                "Dataframe diff: %s", diff_cols
+                )
+
+            return retval
+        return log_wrapper
+    else:
+        return func
 
 
 class _Transition(object, metaclass=abc.ABCMeta):
     """Interface for Transitions"""
 
     def __init__(self, name, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._name = name
 
     @abc.abstractmethod
-    def __call__(self, df):
+    def __call__(self, data: DataDict):
         pass
 
     @property
@@ -180,7 +253,8 @@ class Transition(_Transition):
         self._state_a = state_a
         self._state_b = state_b
 
-    def __call__(self, df):
+    @log_call
+    def __call__(self, data: DataDict):
         """
         Perform the transition.
 
@@ -188,224 +262,308 @@ class Transition(_Transition):
         to state B.
 
         Parameters:
-            df: pd.DataFrame
+            arr: DataDict
         """
 
         # Invert state B to select all rows which are _not_ in state B
         # Use state A as condition so that only rows are activated which
         # where in state A
-        (~self._state_b).change_state(df, True, self._state_a(df))
 
-        self._state_a.change_state(df, False)
-
-
-class Condition(object):
-    """
-    Convenience class for storing references to conditions
-    """
-    def __init__(self, condition):
-        self._condition = condition
-
-    @property
-    def condition(self):
-        return self._condition
-
-    @condition.setter
-    def condition(self, val):
-        self._condition = val
-
-    def __call__(self, df: pd.DataFrame):
-        """Evaluate condition on DataFrame"""
-        return self.condition(df)
+        (~self._state_b).change_state(data, True, self._state_a(data))
+        self._state_a.change_state(data, False)
 
 
-class ConditionalTransitionMixin(object):
-
-    def __init__(self, condition, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._condition = condition
-
-
-class ConditionalTransition(_Transition, ConditionalTransitionMixin):
+class ConditionalTransition(_Transition, ConditionalMixin):
     def __init__(
             self,
             name: str,
             state_a: _State,
             state_b: _State,
-            condition: Union[_State, np.ndarray, pd.DataFrame],
+            condition: TCondition,
             *args, **kwargs,
            ):
 
         _Transition.__init__(self, name, *args, **kwargs)
-        ConditionalTransitionMixin.__init__(self, condition, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition, *args, **kwargs)
         self._state_a = state_a
         self._state_b = state_b
 
+    @log_call
     def __call__(
             self,
-            df: pd.DataFrame):
+            data: DataDict):
 
-        if isinstance(self._condition, _State):
-            cond = self._condition(df)
-        elif isinstance(self._condition, np.ndarray):
-            cond = self._condition
-        elif isinstance(self._condition, pd.Series):
-            cond = self._condition
-        elif self._condition is None:
-            pass
-        else:
-            raise ValueError("Unsupported type: ", type(self._condition))
+        cond = self.unify_condition(data)
 
-        (~self._state_b).change_state(df, True, cond & self._state_a(df))
-        self._state_a.change_state(df, False, self._condition)
+        (~self._state_b).change_state(data, True, cond & self._state_a(data))
+        self._state_a.change_state(data, False, cond)
+
+        return cond
 
 
-class DecreaseTimerTransition(_Transition):
+class DecreaseTimerTransition(_Transition, ConditionalMixin):
     def __init__(
             self,
             name: str,
             state_a: FloatState,
+            condition: TCondition,
             *args, **kwargs
            ):
-        super().__init__(name, *args, **kwargs)
+        _Transition.__init__(self, name, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition, *args, **kwargs)
         self._state_a = state_a
 
+    @log_call
     def __call__(
             self,
-            df: pd.DataFrame):
+            data: DataDict):
 
-        # Get state
-        cur_state = self._state_a.get_state_value(df)
-        self._state_a.change_state(df, cur_state-1)
+        cond = unify_condition(self._condition, data)
+        state_condition = self._state_a(data)
+
+        cur_state = self._state_a.get_state_value(data)[
+            cond & state_condition]
+        self._state_a.change_state(data, cur_state-1, cond)
 
 
-class InitializeTimerTransition(_Transition, ConditionalTransitionMixin):
+class InitializeTimerTransition(_Transition, ConditionalMixin):
     def __init__(
             self,
             name: str,
-            state_a: FloatState,
+            state_a: _State,
+            state_b: FloatState,
             initialization_pdf: PDF,
-            condition: Union[_State, np.ndarray, pd.DataFrame],
+            condition: TCondition,
             *args,
             **kwargs
            ):
 
         _Transition.__init__(self, name, *args, **kwargs)
-        ConditionalTransitionMixin.__init__(self, condition)
+        ConditionalMixin.__init__(self, condition)
         self._state_a = state_a
+        self._state_b = state_b
         self._initialization_pdf = initialization_pdf
 
+    @log_call
     def __call__(
             self,
-            df: pd.DataFrame):
+            data: DataDict):
 
-        # Invert state to get all rows that are currently 0
-        zero_rows = ~(self._state_a)
+        cond = self.unify_condition(data)
 
+        zero_rows = self._state_a(data) & cond
         num_zero_rows = zero_rows.sum(axis=0)
 
         initial_vals = self._initialization_pdf.rvs(num_zero_rows)
-        zero_rows.change_state(df, initial_vals)
+        (~self._state_b).change_state(
+            data, initial_vals, cond & self._state_a(data))
 
-def MultiStateTransition(object):
+        self._state_a.change_state(data, False, cond)
+
+
+class MultiStateConditionalTransition(_Transition, ConditionalMixin):
+
+    _states_b: List[_State]
+    _states_b_vals: List[bool]
+
     def __init__(
             self,
             name: str,
-            state_a: _State,
-            states_b: List[_State]):
+            state_a: Union[_State, Tuple[_State, bool]],
+            states_b: List[Union[_State, Tuple[_State, bool]]],
+            condition: TCondition,
+            *args, **kwargs):
 
-        self._name = name
-        self._state_a = state_a
-        self._states_b = states_b
+        _Transition.__init__(self, name, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition, *args, **kwargs)
 
-    def __call__(self, df):
-        """
-        Perform the transition
+        if isinstance(state_a, tuple):
+            self._state_a = state_a[0]
+            self._state_a_val = state_a[1]
+        else:
+            self._state_a = state_a
+            self._state_a_val = False
 
-        Parameters:
-            df: pd.DataFrame
-        """
+        self._states_b = []
+        self._states_b_vals = []
+        for state in states_b:
+            if isinstance(state, tuple):
+                self._states_b.append(state[0])
+                self._states_b_vals.append(state[1])
+            else:
+                self._states_b.append(state)
+                self._states_b_vals.append(True)
 
-        self._state_a.change_state(df)
+    @log_call
+    def __call__(self, data: DataDict):
 
-        for state in self._states_b:
-            state.change_state(df)
+        cond = self.unify_condition(data)
+        is_in_state_a = self._state_a(data)
+        for state, val in zip(self._states_b, self._states_b_vals):
+            (~state).change_state(data, val, cond & is_in_state_a)
+        self._state_a.change_state(data, self._state_a_val, cond)
 
-
-def MultiStateConditionalTransition(object):
-    def __init__(
-            self,
-            name: str,
-            state_a: _State,
-            states_b: List[_State]):
-
-        self._name = name
-        self._state_a = state_a
-        self._states_b = states_b
-
-    def __call__(
-            self,
-            df: pd.DataFrame,
-            condition: Union[_State, np.ndarray]):
-        """
-        Perform the transition
-
-        Parameters:
-            df: pd.DataFrame
-        """
-
-        self._state_a.change_state(df.loc[condition])
-
-        for state in self._states_b:
-            state.change_state(df.loc[condition])
+        return cond
 
 
-class StateMachine(object):
+class StateMachine(object, metaclass=abc.ABCMeta):
 
     def __init__(
             self,
-            states: Dict,
-            transitions: Dict,
             df: pd.DataFrame,
             *args, **kwargs):
-        self._transitions = transitions
-        self._states = states
-        self._df = df
+        self._data = DataDict({key: df[key].values for key in df.columns})
 
-    @property
-    def states(self):
-        return self._states
+    @abc.abstractmethod
+    def transitions(self) -> List[_Transition]:
+        pass
+
+    @abc.abstractmethod
+    def states(self) -> List[_State]:
+        pass
+
+    def tick(self):
+        for transition in self.transitions:
+            transition(self._data)
+
+
+class ContagionStateMachine(StateMachine):
+
+    _states: Dict[str, _State]
+    _statistics: Dict[str, List[float]]
+
+    def __init__(
+            self,
+            df: pd.DataFrame,
+            interactions: sparse.spmatrix,
+            infection: Infection,
+            intensity_pdf: PDF,
+            rstate: np.random.RandomState,
+            *args, **kwargs):
+        super().__init__(df, *args, **kwargs)
+
+        self._interactions = interactions.tocsr()
+        self._rstate = rstate
+        self._infection = infection
+        self._intensity_pdf = intensity_pdf
+        self._statistics = defaultdict(list)
+
+        boolean_state_names = [
+            "is_infected", "is_new_infected", "has_died", "is_removed",
+            "is_infectious", "is_new_infectious", "is_hospitalized",
+            "is_new_hospitalized", "is_recovering", "is_new_recovering",
+            "is_incubation", "is_new_incubation",
+            "is_recovered"]
+
+        boolean_states = {name: BooleanState.from_boolean(name)
+                                 for name in boolean_state_names}
+
+        timer_state_names = [
+            "incubation_duration", "hospitalization_duration", "recovery_time",
+            "time_until_hospitalization", "infectious_duration"]
+
+        timer_states = {name: FloatState.from_timer(name)
+                        for name in timer_state_names}
+
+        self._states = {}
+        self._states.update(boolean_states)
+        self._states.update(timer_states)
+
+        infected_condition = Condition(self.__get_new_infections)
+
+        is_infectable = (
+                infected_condition & (~boolean_states["is_removed"])
+            )
+        self._transitions = [
+            MultiStateConditionalTransition(
+                "healthy_incubation",
+                ~boolean_states["is_infected"],
+                [boolean_states["is_incubation"],
+                 boolean_states["is_new_incubation"],
+                 boolean_states["is_infected"]],
+                is_infectable
+            ),
+            InitializeTimerTransition(
+                "incubation_timer_initialization",
+                boolean_states["is_new_incubation"],
+                timer_states["incubation_duration"],
+                self._infection.incubation_duration,
+                None
+            ),
+            MultiStateConditionalTransition(
+                "incubation_infectious",
+                boolean_states["is_incubation"],
+                [boolean_states["is_infectious"],
+                 boolean_states["is_new_infectious"]],
+                ~(timer_states["incubation_duration"])
+            ),
+            InitializeTimerTransition(
+                "infectious_timer_initialization",
+                boolean_states["is_new_infectious"],
+                timer_states["infectious_duration"],
+                self._infection.infectious_duration,
+                None
+            ),
+
+            MultiStateConditionalTransition(
+                "infectious_recovering",
+                boolean_states["is_infectious"],
+                [boolean_states["is_recovering"],
+                 boolean_states["is_new_recovering"],
+                 boolean_states["is_removed"]],
+                ~(timer_states["infectious_duration"])
+            ),
+
+            InitializeTimerTransition(
+                "infectious_timer_initialization",
+                boolean_states["is_new_recovering"],
+                timer_states["recovery_time"],
+                self._infection.recovery_time,
+                None
+            ),
+
+            MultiStateConditionalTransition(
+                "recovering_recovered",
+                boolean_states["is_recovering"],
+                [boolean_states["is_recovered"],
+                 (~boolean_states["is_infected"], False)],
+                ~(timer_states["recovery_time"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_incubation_time",
+                timer_states["incubation_duration"],
+                ~(boolean_states["is_new_incubation"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_infectious_time",
+                timer_states["infectious_duration"],
+                ~(boolean_states["is_new_infectious"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_recovery_time",
+                timer_states["recovery_time"],
+                ~(boolean_states["is_new_recovering"])
+            ),
+
+        ]
 
     @property
     def transitions(self):
         return self._transitions
 
+    @property
+    def states(self):
+        return self._states
 
-class ContagionStateMachine(StateMachine):
-
-    def __init__(
-            self,
-            states: Dict,
-            transitions: Dict,
-            df: pd.DataFrame,
-            interactions: sparse.spmatrix,
-            infection: Infection,
-            rstate: np.random.RandomState,
-            *args, **kwargs):
-        super().__init__(states, transitions, df, *args, **kwargs)
-
-        self._interactions = interactions
-        self._rstate = rstate
-        self._infection = infection
-        self._statistics = defaultdict(list)
-
-    def __get_new_infections(self) -> np.ndarray:
-        pop_csr = self._interactions.tocsr()
+    def __get_new_infections(self, data: DataDict) -> np.ndarray:
+        pop_csr = self._interactions
 
         # TODO: use state
-        infected_mask = self.states["is_infected"](self._df)
-        infected_indices = infected_mask.index[infected_mask]
+        infected_mask = self.states["is_infected"](data)
+        infected_indices = np.nonzero(infected_mask)[0]
 
         # Find all non-zero connections of the infected
         # rows are the ids / indices of the infected
@@ -420,7 +578,6 @@ class ContagionStateMachine(StateMachine):
         # more than one contact per timestep
         successful_contacts_mask = self._rstate.poisson(
             contact_strengths) >= 1
-
         # we are just interested in the columns, ie. only the
         # ids of the people contacted by the infected.
         # Note, that contacted ids can appear multiple times
@@ -432,8 +589,8 @@ class ContagionStateMachine(StateMachine):
             num_succesful_contacts)
 
         # Calculate infection probability for all contacts
-        contact_strength = self.__intense_pdf(num_succesful_contacts)
-        infection_prob = self.__infect.pdf_infection_prob(contact_strength)
+        contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
+        infection_prob = self._infection.pdf_infection_prob(contact_strength)
 
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
@@ -449,7 +606,7 @@ class ContagionStateMachine(StateMachine):
         # from different infected people
         newly_infected_indices = np.unique(newly_infected_indices)
 
-        cond = np.zeros(len(df), dtype=np.bool)
+        cond = np.zeros(len(infected_mask), dtype=np.bool)
         cond[newly_infected_indices] = True
 
         return cond
