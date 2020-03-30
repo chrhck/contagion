@@ -35,7 +35,7 @@ _baseconfig = {
     # re-simulate population
     "re-use population": False,
     # Population storage lcoation
-    "population storage": "../populations/munich.pkl",
+    "population storage": "../populations/generic.pkl",
     ###################################################
     # 'realistic' options
     ###################################################
