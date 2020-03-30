@@ -54,7 +54,7 @@ class Population(object):
             soc_circ_pdf = TruncatedNormal(
                 config['average social circle'],
                 config['infection duration variance'],
-                max_val = config['population size']
+                max_val=config['population size']
                 )
 
             self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)

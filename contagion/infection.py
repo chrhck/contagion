@@ -61,7 +61,7 @@ class Infection(object):
                 config['infection duration variance']
             )
             self.__pdf = dur_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized infection duration pdf! Set to ' +
                              config['infection duration pdf'])
             exit('Check the infection duration pdf in the config file!')
@@ -70,10 +70,9 @@ class Infection(object):
             dur_infectious_pdf = (
                 self.__std_pdfs[config['infectious duration pdf']](
                 config['infectious duration mean'],
-                config['infectious duration variance']
-            ))
+                config['infectious duration variance']))
             self.__infectious_duration  = dur_infectious_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infectious duration pdf'])
             exit('Check the infectious duration pdf in the config file!')
@@ -81,10 +80,9 @@ class Infection(object):
             dur_incubation_pdf = (
                 self.__std_pdfs[config['incubation duration pdf']](
                     config['incubation duration mean'],
-                    config['incubation duration variance']
-            ))
+                    config['incubation duration variance']))
             self.__incubation_duration = dur_incubation_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized incubation duration pdf! Set to ' +
                              config['incubation duration pdf'])
             exit('Check the incubation duration pdf in the config file!')
@@ -97,7 +95,7 @@ class Infection(object):
                     config['recovery time sd']
             ))
             self.__recovery_time = recovery_time_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized recovery duration pdf! Set to ' +
                              config['recovery time pdf'])
             exit('Check the recovery duration pdf in the config file!')
@@ -121,7 +119,7 @@ class Infection(object):
                     config['hospitalization duration sd'] 
             ))
             self.__hospitalization_duration = hospit_dur_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized hospitalization duration pdf! Set to ' +
                              config['hospitalization duration pdf'])
             exit('Check the hospitalization duration pdf in the config file!')
@@ -132,7 +130,7 @@ class Infection(object):
                     config['time until hospitalization sd']
             ))
             self.__time_until_hospitalization = hospit_dur_until_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized time until hospitalization pdf pdf!' +
                        ' Set to ' + config['time until hospitalization pdf'])
             exit('Check the time until hospitalization pdf ' +
@@ -146,7 +144,7 @@ class Infection(object):
                     config['time incubation death sd']
             ))
             self.__time_incubation_death = time_till_death_pdf.rvs
-        except:
+        except ValueError:
             _log.error('Unrecognized time incubation death pdf! Set to ' +
                              config['time incubation death pdf'])
             exit('Check the time incubation death pdf in the config file!')

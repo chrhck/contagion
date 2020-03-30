@@ -32,6 +32,10 @@ _baseconfig = {
     "infected": 10,
     # random state to use
     'random state': np.random.RandomState(1337),
+    # re-simulate population
+    "re-use population": True,
+    # Population storage lcoation
+    "population storage": "../populations/munich.pkl",
     ###################################################
     # 'realistic' options
     ###################################################

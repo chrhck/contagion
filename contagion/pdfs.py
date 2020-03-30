@@ -110,7 +110,7 @@ class TruncatedNormal(ScipyPDF):
             self,
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
-            max_val = np.infty) -> None:
+            max_val=np.infty) -> None:
         """
         function: __init__
         Initializes the TruncatedNormal class
