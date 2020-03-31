@@ -100,10 +100,6 @@ class TruncatedNormal(ScipyPDF):
     class: TuncatedNormal
     Class for the truncated normal distributon
     Parameters:
-        lower: Union[float, np.ndarray]
-            Lower bound (can be -inf)
-        upper: Union[float, np.ndarray]
-            Upper bound (can be +inf)
         mean: Union[float, np.ndarray]
         sd: Union[float, np.ndarray]
     Returns:
@@ -112,26 +108,22 @@ class TruncatedNormal(ScipyPDF):
 
     def __init__(
             self,
-            lower: Union[float, np.ndarray],
-            upper: Union[float, np.ndarray],
             mean: Union[float, np.ndarray],
-            sd: Union[float, np.ndarray]) -> None:
+            sd: Union[float, np.ndarray],
+            max_val=np.infty) -> None:
         """
         function: __init__
         Initializes the TruncatedNormal class
         Parameters:
-            lower: Union[float, np.ndarray]
-                Lower bound (can be -inf)
-            upper: Union[float, np.ndarray]
-                Upper bound (can be +inf)
             mean: Union[float, np.ndarray]
             sd: Union[float, np.ndarray]
         Returns:
             -None
         """
         super().__init__()
-        self._lower = lower
-        self._upper = upper
+        # Other cases aren't used
+        self._lower = 0.
+        self._upper = max_val
         self._mean = mean
         self._sd = sd
 

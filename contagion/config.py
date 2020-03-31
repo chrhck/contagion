@@ -25,13 +25,19 @@ _baseconfig = {
     # Dump experiment config to this location
     'config location': '../run/config.txt',
     # The size of the population
-    "population size": 10000,
+    "population size": 1000,
     # Simulation duration
     "simulation length": 200,
     # The number of starting infections
     "infected": 10,
     # random state to use
     'random state': np.random.RandomState(1337),
+    # re-simulate population
+    "re-use population": False,
+    # store population
+    "store population": False,
+    # Population storage lcoation
+    "population storage": "../populations/generic.pkl",
     ###################################################
     # 'realistic' options
     ###################################################
@@ -53,7 +59,7 @@ _baseconfig = {
     # available: 'intensity'
     'infection probability pdf': 'intensity',
     # Infection duration mean
-    'infection duration mean': 20,
+    'infection duration mean': 14,
     # Infection duration sd
     'infection duration variance': 5,
     # Infection duration pdf
@@ -67,8 +73,9 @@ _baseconfig = {
     # Available: 'gauss', 'gamma'
     'infectious duration pdf': 'gauss',
 
+    # TODO: Rename to latent period
     # Incubation duration mean
-    'incubation duration mean': 5,
+    'incubation duration mean': 2.5,
     # Incubation duration sd
     'incubation duration variance': 2,
     # Incubation duration pdf
