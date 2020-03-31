@@ -34,6 +34,8 @@ _baseconfig = {
     'random state': np.random.RandomState(1337),
     # re-simulate population
     "re-use population": False,
+    # store population
+    "store population": False,
     # Population storage lcoation
     "population storage": "../populations/generic.pkl",
     ###################################################

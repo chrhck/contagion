@@ -16,7 +16,8 @@ from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform
-from .state_machine import ContagionStateMachine
+from .state_machine import ContagionStateMachine, StatCollector
+
 
 _log = logging.getLogger(__name__)
 
@@ -107,7 +108,8 @@ class MC_Sim(object):
                 "is_recovered": False,
                 "will_die": False,
                 "will_be_hospitalized": False,
-                "has_died": False,
+                "is_dead": False,
+                "is_new_dead": False,
                 "incubation_duration": 0,
                 "infectious_duration": 0,
                 "time_until_hospitalization": 0,
@@ -126,7 +128,7 @@ class MC_Sim(object):
 
         # Their infection duration
         infect_dur = (
-            np.around(self.__infect.infectious_duration(self.__infected))
+            np.around(self.__infect.infectious_duration.rvs(self.__infected))
         )
 
         # Filling the array
@@ -160,8 +162,12 @@ class MC_Sim(object):
         self.__statistics = defaultdict(list)
         # Running the simulation
 
+        stat_collector = StatCollector(
+            ["is_removed", "is_incubation", "is_infectious", "is_infected",
+             "is_hospitalized", "is_recovered", "is_dead"])
         self._sm = ContagionStateMachine(
             self.__population,
+            stat_collector,
             self.__pop_matrix,
             self.__infect,
             self.__intense_pdf,
@@ -170,7 +176,7 @@ class MC_Sim(object):
         start = time()
         self.__simulation()
         end = time()
-        self.__statistics.update(self._sm._statistics)
+        self.__statistics = self._sm.statistics
         _log.info("MC simulation took %f seconds" % (end - start))
 
     @property
@@ -229,39 +235,9 @@ class MC_Sim(object):
         """
 
         start = time()
+
         for step, _ in enumerate(self.__t):
             self._sm.tick()
-
-            # Storing statistics
-            is_removed = self.__population.loc[:, "is_removed"]
-            self.__statistics["removed"].append(is_removed.sum(axis=0))
-            in_incubation = self.__population.loc[:, "is_incubation"]
-            self.__statistics["incubation"].append(in_incubation.sum(axis=0))
-            is_infectious = self.__population.loc[:, "is_infectious"]
-            self.__statistics["infectious"].append(is_infectious.sum(axis=0))
-            has_recovered = self.__population.loc[:, "is_recovered"]
-            self.__statistics["recovered"].append(has_recovered.sum(axis=0))
-            is_infected = self.__population.loc[:, "is_infected"]
-            self.__statistics["infected"].append(is_infected.sum(axis=0))
-
-            is_hospitalized = self.__population.loc[:, "is_hospitalized"]
-            self.__statistics["hospitalized"].append(
-                is_hospitalized.sum(axis=0)
-            )
-
-            is_dead = self.__population.loc[:, "has_died"]
-            self.__statistics["total_deaths"].append(is_dead.sum(axis=0))
-
-            """
-            self.__statistics["new infections"].append(num_newly_infected)
-            self.__statistics["newly infectious"].append(num_newly_infectious)
-            self.__statistics["newly recovered"].append(num_newly_recovered)
-            self.__statistics["newly removed"].append(num_newly_removed)
-            self.__statistics["will be hospitalized"].append(num_hospitalized)
-            self.__statistics["will die"].append(num_will_die)
-            self.__statistics["new deaths"].append(num_has_died)
-
-            """
             if step % (int(len(self.__t) / 10)) == 0:
                 end = time()
                 _log.debug("In step %d" % step)
