@@ -69,8 +69,8 @@ class Infection(object):
         try:
             dur_infectious_pdf = (
                 self.__std_pdfs[config['infectious duration pdf']](
-                config['infectious duration mean'],
-                config['infectious duration variance']))
+                    config['infectious duration mean'],
+                    config['infectious duration variance']))
             self.__infectious_duration  = dur_infectious_pdf.rvs
         except ValueError:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
@@ -93,7 +93,7 @@ class Infection(object):
                 self.__std_pdfs[config['recovery time pdf']](
                     config['recovery time mean'],
                     config['recovery time sd']
-            ))
+                ))
             self.__recovery_time = recovery_time_pdf.rvs
         except ValueError:
             _log.error('Unrecognized recovery duration pdf! Set to ' +
@@ -116,8 +116,8 @@ class Infection(object):
             hospit_dur_pdf = (
                 self.__std_pdfs[config['hospitalization duration pdf']](
                     config['hospitalization duration mean'],
-                    config['hospitalization duration sd'] 
-            ))
+                    config['hospitalization duration sd']
+                ))
             self.__hospitalization_duration = hospit_dur_pdf.rvs
         except ValueError:
             _log.error('Unrecognized hospitalization duration pdf! Set to ' +
@@ -128,7 +128,7 @@ class Infection(object):
                 self.__std_pdfs[config['time until hospitalization pdf']](
                     config['time until hospitalization mean'],
                     config['time until hospitalization sd']
-            ))
+                ))
             self.__time_until_hospitalization = hospit_dur_until_pdf.rvs
         except ValueError:
             _log.error('Unrecognized time until hospitalization pdf pdf!' +
@@ -142,7 +142,7 @@ class Infection(object):
                 self.__std_pdfs[config['time incubation death pdf']](
                     config['time incubation death mean'],
                     config['time incubation death sd']
-            ))
+                ))
             self.__time_incubation_death = time_till_death_pdf.rvs
         except ValueError:
             _log.error('Unrecognized time incubation death pdf! Set to ' +

@@ -93,7 +93,7 @@ class Contagion(object):
                 sys.exit('Population file not found!' +
                          ' Check the config file!')
         else:
-            _log.info('Starting population construction')           
+            _log.info('Starting population construction')
             self.pop = Population().population
             # Storing for later
             _log.debug('Storing for later use')
