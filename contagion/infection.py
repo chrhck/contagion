@@ -68,7 +68,7 @@ class Infection(object):
         _log.debug('The infection pdfs')
         if config['infection duration pdf'] == 'gauss':
             dur_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['infection duration mean'],
                 config['infection duration variance']
@@ -97,7 +97,7 @@ class Infection(object):
 =======
         if config['infectious duration pdf'] == 'gauss':
             dur_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['infectious duration mean'],
                 config['infectious duration variance']
@@ -145,7 +145,7 @@ class Infection(object):
 # TODO: Update logger messages
         if config['incubation duration pdf'] == 'gauss':
             dur_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['incubation duration mean'],
                 config['incubation duration variance']
@@ -165,7 +165,7 @@ class Infection(object):
 # TODO: Update logger messages
         if config['recovery time pdf'] == 'gauss':
             recovery_time_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['recovery time mean'],
                 config['recovery time sd']
@@ -240,7 +240,7 @@ class Infection(object):
 
         if config['hospitalization duration pdf'] == 'gauss':
             hospit_dur_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['hospitalization duration mean'],
                 config['hospitalization duration sd']
@@ -260,7 +260,7 @@ class Infection(object):
 # TODO: Update logger messages
         if config['time until hospitalization pdf'] == 'gauss':
             hospit_dur_until_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['time until hospitalization mean'],
                 config['time until hospitalization sd']
@@ -280,7 +280,7 @@ class Infection(object):
 # TODO: Update logger messages
         if config['time incubation death pdf'] == 'gauss':
             time_till_death_pdf = TruncatedNormal(
-                0,
+                1,  # require at least 1 day
                 np.inf,
                 config['time incubation death mean'],
                 config['time incubation death sd']

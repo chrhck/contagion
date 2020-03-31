@@ -3,7 +3,7 @@ import abc
 from collections import defaultdict
 import functools
 import logging
-from typing import Callable, Union, List, Tuple, Dict
+from typing import Callable, Union, List, Tuple, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -41,6 +41,10 @@ class Condition(object):
     """
     def __init__(self, condition: Callable):
         self._condition = condition
+
+    @classmethod
+    def from_state(cls, state: _State):
+        return cls(state)
 
     @property
     def condition(self):
@@ -205,11 +209,14 @@ def log_call(func):
 
     if DEBUG:
         @functools.wraps(func)
-        def log_wrapper(self, df):
+        def log_wrapper(self, data):
             _log.debug("Performing %s", self.name)
-            df_before = pd.DataFrame(df, copy=True)
-            retval = func(self, df)
-            df_after = pd.DataFrame(df, copy=True)
+            if hasattr(self, "_condition"):
+                cond = self.unify_condition(data)
+                _log.debug("Condition is: %s", cond)
+            df_before = pd.DataFrame(data, copy=True)
+            retval = func(self, data)
+            df_after = pd.DataFrame(data, copy=True)
 
             diff = df_before.astype("float") - df_after.astype("float")
 
@@ -273,6 +280,35 @@ class Transition(_Transition):
         self._state_a.change_state(data, False)
 
 
+class ChangeStateConditionalTransition(_Transition, ConditionalMixin):
+    def __init__(
+            self,
+            name: str,
+            state_a: Union[_State, Tuple[_State, bool]],
+            condition: TCondition,
+            *args, **kwargs,
+           ):
+        _Transition.__init__(self, name, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition, *args, **kwargs)
+
+        if isinstance(state_a, tuple):
+            self._state_a = state_a[0]
+            self._state_a_val = state_a[1]
+        else:
+            self._state_a = state_a
+            self._state_a_val = True
+
+    @log_call
+    def __call__(
+            self,
+            data: DataDict):
+        cond = self.unify_condition(data)
+        self._state_a.change_state(
+            data, self._state_a_val, cond)
+
+        return cond
+
+
 class ConditionalTransition(_Transition, ConditionalMixin):
     def __init__(
             self,
@@ -330,8 +366,7 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
     def __init__(
             self,
             name: str,
-            state_a: _State,
-            state_b: FloatState,
+            state_a: FloatState,
             initialization_pdf: PDF,
             condition: TCondition,
             *args,
@@ -341,7 +376,6 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         _Transition.__init__(self, name, *args, **kwargs)
         ConditionalMixin.__init__(self, condition)
         self._state_a = state_a
-        self._state_b = state_b
         self._initialization_pdf = initialization_pdf
 
     @log_call
@@ -351,14 +385,12 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
 
         cond = self.unify_condition(data)
 
-        zero_rows = self._state_a(data) & cond
+        zero_rows = (~self._state_a(data)) & cond
         num_zero_rows = zero_rows.sum(axis=0)
 
         initial_vals = self._initialization_pdf.rvs(num_zero_rows)
-        (~self._state_b).change_state(
-            data, initial_vals, cond & self._state_a(data))
-
-        self._state_a.change_state(data, False, cond)
+        (~self._state_a).change_state(
+            data, initial_vals, cond)
 
 
 class MultiStateConditionalTransition(_Transition, ConditionalMixin):
@@ -398,12 +430,35 @@ class MultiStateConditionalTransition(_Transition, ConditionalMixin):
     def __call__(self, data: DataDict):
 
         cond = self.unify_condition(data)
+
         is_in_state_a = self._state_a(data)
         for state, val in zip(self._states_b, self._states_b_vals):
+            if DEBUG:
+                _log.debug("Changing state %s to %s", (~state).name, val)
+                _log.debug("State was: %s", (~state)(data)[cond & is_in_state_a])
             (~state).change_state(data, val, cond & is_in_state_a)
+            if DEBUG:
+                _log.debug("State is: %s", (~state)(data)[cond & is_in_state_a])
+
         self._state_a.change_state(data, self._state_a_val, cond)
 
         return cond
+
+
+class StatCollector(object, metaclass=abc.ABCMeta):
+    _statistics: Dict[str, List[float]]
+
+    def __init__(self, data_fields):
+        self._data_fields = data_fields
+        self._statistics = defaultdict(list)
+
+    def __call__(self, data: DataDict):
+        for field in self._data_fields:
+            self._statistics[field].append(data[field].sum())
+
+    @property
+    def statistics(self):
+        return self._statistics
 
 
 class StateMachine(object, metaclass=abc.ABCMeta):
@@ -411,8 +466,10 @@ class StateMachine(object, metaclass=abc.ABCMeta):
     def __init__(
             self,
             df: pd.DataFrame,
+            stat_colletor: Optional[StatCollector],
             *args, **kwargs):
         self._data = DataDict({key: df[key].values for key in df.columns})
+        self._stat_collector = stat_colletor
 
     @abc.abstractmethod
     def transitions(self) -> List[_Transition]:
@@ -425,6 +482,12 @@ class StateMachine(object, metaclass=abc.ABCMeta):
     def tick(self):
         for transition in self.transitions:
             transition(self._data)
+        if self._stat_collector is not None:
+            self._stat_collector(self._data)
+
+    @property
+    def statistics(self):
+        return self._stat_collector.statistics
 
 
 class ContagionStateMachine(StateMachine):
@@ -435,12 +498,13 @@ class ContagionStateMachine(StateMachine):
     def __init__(
             self,
             df: pd.DataFrame,
+            stat_colletor: Optional[StatCollector],
             interactions: sparse.spmatrix,
             infection: Infection,
             intensity_pdf: PDF,
             rstate: np.random.RandomState,
             *args, **kwargs):
-        super().__init__(df, *args, **kwargs)
+        super().__init__(df, stat_colletor, *args, **kwargs)
 
         self._interactions = interactions.tocsr()
         self._rstate = rstate
@@ -449,18 +513,19 @@ class ContagionStateMachine(StateMachine):
         self._statistics = defaultdict(list)
 
         boolean_state_names = [
-            "is_infected", "is_new_infected", "has_died", "is_removed",
+            "is_infected", "is_new_infected", "is_dead", "is_removed",
             "is_infectious", "is_new_infectious", "is_hospitalized",
             "is_new_hospitalized", "is_recovering", "is_new_recovering",
             "is_incubation", "is_new_incubation",
-            "is_recovered"]
+            "is_recovered", "will_be_hospitalized", "will_die"]
 
         boolean_states = {name: BooleanState.from_boolean(name)
                                  for name in boolean_state_names}
 
         timer_state_names = [
             "incubation_duration", "hospitalization_duration", "recovery_time",
-            "time_until_hospitalization", "infectious_duration"]
+            "time_until_hospitalization", "infectious_duration",
+            "time_until_death"]
 
         timer_states = {name: FloatState.from_timer(name)
                         for name in timer_state_names}
@@ -474,6 +539,14 @@ class ContagionStateMachine(StateMachine):
         is_infectable = (
                 infected_condition & (~boolean_states["is_removed"])
             )
+
+        will_be_hospitalized_cond = Condition(self.__will_be_hospitalized)
+        will_die_cond = Condition(self.__will_die)
+        normal_recovery_condition = (
+            Condition.from_state(~(timer_states["infectious_duration"])) &
+            Condition.from_state(~(boolean_states["is_hospitalized"]))
+            )
+
         self._transitions = [
             MultiStateConditionalTransition(
                 "healthy_incubation",
@@ -483,12 +556,69 @@ class ContagionStateMachine(StateMachine):
                  boolean_states["is_infected"]],
                 is_infectable
             ),
+            ChangeStateConditionalTransition(
+                "will_be_hospitalized",
+                ~boolean_states["will_be_hospitalized"],
+                will_be_hospitalized_cond
+            ),
+            # TODO: This is a bit sloppy, timer shouly only run
+            # for newly will be hospitalized
+            InitializeTimerTransition(
+                "time_until_hospitalization_init",
+                timer_states["time_until_hospitalization"],
+                self._infection.time_until_hospitalization,
+                boolean_states["is_new_incubation"]
+            ),
+            MultiStateConditionalTransition(
+                "will_be_hospitalized_hospitalized",
+                boolean_states["will_be_hospitalized"],
+                [boolean_states["is_hospitalized"],
+                 boolean_states["is_new_hospitalized"],
+                 boolean_states["is_removed"],
+                 (~boolean_states["is_infectious"], False),
+                 (~boolean_states["is_incubation"], False),
+                 (~boolean_states["is_recovering"], False)],
+                ~(timer_states["time_until_hospitalization"])
+            ),
+            InitializeTimerTransition(
+                "hospitalization_duration_timer_init",
+                timer_states["hospitalization_duration"],
+                self._infection.hospitalization_duration,
+                boolean_states["is_new_hospitalized"]
+            ),
+
+            ChangeStateConditionalTransition(
+                "will_die",
+                ~boolean_states["will_die"],
+                will_die_cond
+            ),
+            # TODO: This is a bit sloppy, timer shouly only run
+            # for newly will die
+            InitializeTimerTransition(
+                "time_until_death_init",
+                timer_states["time_until_death"],
+                self._infection.time_incubation_death,
+                boolean_states["is_new_hospitalized"]
+            ),
+
+            MultiStateConditionalTransition(
+                "will_die_is_dead",
+                boolean_states["will_die"],
+                [boolean_states["is_dead"],
+                 boolean_states["is_removed"],
+                 (~boolean_states["is_infectious"], False),
+                 (~boolean_states["is_incubation"], False),
+                 (~boolean_states["is_infected"], False),
+                 (~boolean_states["is_hospitalized"], False),
+                 (~boolean_states["is_new_hospitalized"], False)],
+                ~(timer_states["time_until_death"])
+            ),
+
             InitializeTimerTransition(
                 "incubation_timer_initialization",
-                boolean_states["is_new_incubation"],
                 timer_states["incubation_duration"],
                 self._infection.incubation_duration,
-                None
+                boolean_states["is_new_incubation"]
             ),
             MultiStateConditionalTransition(
                 "incubation_infectious",
@@ -499,10 +629,9 @@ class ContagionStateMachine(StateMachine):
             ),
             InitializeTimerTransition(
                 "infectious_timer_initialization",
-                boolean_states["is_new_infectious"],
                 timer_states["infectious_duration"],
                 self._infection.infectious_duration,
-                None
+                boolean_states["is_new_infectious"],
             ),
 
             MultiStateConditionalTransition(
@@ -511,15 +640,14 @@ class ContagionStateMachine(StateMachine):
                 [boolean_states["is_recovering"],
                  boolean_states["is_new_recovering"],
                  boolean_states["is_removed"]],
-                ~(timer_states["infectious_duration"])
+                normal_recovery_condition
             ),
 
             InitializeTimerTransition(
                 "infectious_timer_initialization",
-                boolean_states["is_new_recovering"],
                 timer_states["recovery_time"],
                 self._infection.recovery_time,
-                None
+                boolean_states["is_new_recovering"],
             ),
 
             MultiStateConditionalTransition(
@@ -528,6 +656,14 @@ class ContagionStateMachine(StateMachine):
                 [boolean_states["is_recovered"],
                  (~boolean_states["is_infected"], False)],
                 ~(timer_states["recovery_time"])
+            ),
+
+            MultiStateConditionalTransition(
+                "hospitalized_recovered",
+                boolean_states["is_hospitalized"],
+                [boolean_states["is_recovered"],
+                 (~boolean_states["is_infected"], False)],
+                ~(timer_states["hospitalization_duration"])
             ),
 
             DecreaseTimerTransition(
@@ -548,6 +684,45 @@ class ContagionStateMachine(StateMachine):
                 ~(boolean_states["is_new_recovering"])
             ),
 
+            DecreaseTimerTransition(
+                "decrease_time_until_hospitalization",
+                timer_states["time_until_hospitalization"],
+                ~(boolean_states["is_new_incubation"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_hospitalization_duration",
+                timer_states["hospitalization_duration"],
+                ~(boolean_states["is_new_hospitalized"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_time_until_death",
+                timer_states["time_until_death"],
+                ~(boolean_states["is_new_hospitalized"])
+            ),
+
+            ChangeStateConditionalTransition(
+                "deactivate_is_new_incubation",
+                (boolean_states["is_new_incubation"], False),
+                None
+            ),
+            ChangeStateConditionalTransition(
+                "deactivate_is_new_infectious",
+                (boolean_states["is_new_infectious"], False),
+                None
+            ),
+            ChangeStateConditionalTransition(
+                "deactivate_is_new_recovering",
+                (boolean_states["is_new_recovering"], False),
+                None
+            ),
+
+            ChangeStateConditionalTransition(
+                "deactivate_is_new_hospizalized",
+                (boolean_states["is_new_hospitalized"], False),
+                None
+            ),
         ]
 
     @property
@@ -561,7 +736,6 @@ class ContagionStateMachine(StateMachine):
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
         pop_csr = self._interactions
 
-        # TODO: use state
         infected_mask = self.states["is_infected"](data)
         infected_indices = np.nonzero(infected_mask)[0]
 
@@ -605,8 +779,57 @@ class ContagionStateMachine(StateMachine):
         # There might be multiple successfull infections per person 
         # from different infected people
         newly_infected_indices = np.unique(newly_infected_indices)
-
         cond = np.zeros(len(infected_mask), dtype=np.bool)
         cond[newly_infected_indices] = True
+
+        return cond
+
+    def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
+        new_incub_indices = np.nonzero(
+            self.states["is_new_incubation"](data))[0]
+        if len(new_incub_indices) == 0:
+            return np.zeros(data.field_len, dtype=np.bool)
+
+        num_new_incub = len(new_incub_indices)
+        will_be_hospitalized_prob = self._infection.hospitalization_prob.rvs(
+                num_new_incub
+            )
+
+        # roll the dice
+        will_be_hospitalized = (
+            self._rstate.binomial(
+                1, will_be_hospitalized_prob, size=num_new_incub
+            )
+            == 1
+        )
+
+        will_be_hospitalized_indices = new_incub_indices[will_be_hospitalized]
+        cond = np.zeros(data.field_len, dtype=np.bool)
+        cond[will_be_hospitalized_indices] = True
+
+        return cond
+
+    def __will_die(self, data: DataDict) -> np.ndarray:
+        new_hosp_indices = np.nonzero(
+            self.states["is_new_hospitalized"](data))[0]
+        if len(new_hosp_indices) == 0:
+            return np.zeros(data.field_len, dtype=np.bool)
+
+        num_new_incub = len(new_hosp_indices)
+        will_die_prob = self._infection.death_prob.rvs(
+                num_new_incub
+            )
+
+        # roll the dice
+        will_die = (
+            self._rstate.binomial(
+                1, will_die_prob, size=num_new_incub
+            )
+            == 1
+        )
+
+        will_die_indices = new_hosp_indices[will_die]
+        cond = np.zeros(data.field_len, dtype=np.bool)
+        cond[will_die_indices] = True
 
         return cond
