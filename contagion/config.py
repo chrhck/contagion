@@ -25,7 +25,7 @@ _baseconfig = {
     # Dump experiment config to this location
     'config location': '../run/config.txt',
     # The size of the population
-    "population size": 10000,
+    "population size": 1000,
     # Simulation duration
     "simulation length": 200,
     # The number of starting infections
