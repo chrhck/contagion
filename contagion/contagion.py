@@ -12,6 +12,7 @@ of safety measures, such as social distancing and tracking.
 # Native modules
 import sys
 import logging
+import pickle
 
 # -----------------------------------------
 # Package modules
@@ -81,8 +82,23 @@ class Contagion(object):
 
         _log.info('---------------------------------------------------')
         _log.info('---------------------------------------------------')
-        _log.info('Starting population construction')
-        self.pop = Population().population
+        if config["re-use population"]:
+            try:
+                self.pop = pickle.load(
+                    open(config["population storage"], "rb")
+                )
+                _log.debug('Population loaded')
+            except ImportError:
+                _log.error('Population file not found!')
+                sys.exit('Population file not found!' +
+                         ' Check the config file!')
+        else:
+            _log.info('Starting population construction')           
+            self.pop = Population().population
+            # Storing for later
+            _log.debug('Storing for later use')
+            pickle.dump(self.pop, open(config["population storage"],
+                                       "wb" ) )
         _log.info('Finished the population')
         _log.info('---------------------------------------------------')
         _log.info('---------------------------------------------------')
@@ -162,7 +178,7 @@ class Contagion(object):
         dt = config['time step']
         if dt > 1.:
             _log.error("Chosen time step too large!")
-            exit("Please run with time steps smaller than 1s!")
+            sys.exit("Please run with time steps smaller than 1s!")
         _log.debug('Realistic run')
         self.__mc_run = MC_Sim(
             self.pop,

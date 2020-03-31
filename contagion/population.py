@@ -52,10 +52,9 @@ class Population(object):
         if config['social circle pdf'] == 'gauss':
 
             soc_circ_pdf = TruncatedNormal(
-                0,
-                config['population size'],
                 config['average social circle'],
-                config['infection duration variance']
+                config['infection duration variance'],
+                max_val=config['population size']
                 )
 
             self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
@@ -74,10 +73,9 @@ class Population(object):
             upper[zero_contacts_mask] = 1
 
             soc_circ_interact_pdf = TruncatedNormal(
-                0,
-                upper,
                 config['mean social circle interactions'],
-                config['variance social circle interactions']
+                config['variance social circle interactions'],
+                max_val=upper
                 )
 
             self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
