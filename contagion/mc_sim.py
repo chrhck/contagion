@@ -10,12 +10,13 @@ from collections import defaultdict
 from sys import exit
 from time import time
 import logging
-import numpy as np
-import pandas as pd
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform
+from .state_machine import ContagionStateMachine
 
 _log = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class MC_Sim(object):
 
         _log.debug("The interaction intensity pdf")
         if config["interaction intensity"] == "uniform":
-            self.__intense_pdf = Uniform(0, 1).rvs
+            self.__intense_pdf = Uniform(0, 1)
             # The Reproductive Number
             self.__R0 = (
                 config["mean social circle interactions"]
@@ -92,22 +93,28 @@ class MC_Sim(object):
         self.__population = pd.DataFrame(
             {
                 "is_infected": False,
-                "in_incubation": False,
+                "is_new_infected": False,
+                "is_incubation": False,
+                "is_new_incubation": False,
                 "is_infectious": False,
-                "incubation_duration": 0,
-                "infectious_duration": 0,
+                "is_new_infectious": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
+                "is_new_hospitalized": False,
                 "is_recovering": False,
-                "time_until_hospitalization": 0,
-                "hospitalization_duration": 0,
-                "recovery_time": 0,
-                "has_recovered": 0,
-                "time_until_death": 0,
+                "is_new_recovering": False,
+                "is_recovered": False,
                 "will_die": False,
                 "will_be_hospitalized": False,
                 "has_died": False,
+                "incubation_duration": 0,
+                "infectious_duration": 0,
+                "time_until_hospitalization": 0,
+                "hospitalization_duration": 0,
+                "recovery_time": 0,
+                "time_until_death": 0,
+
             },
             index=np.arange(self.__pop_size),
         )
@@ -119,7 +126,7 @@ class MC_Sim(object):
 
         # Their infection duration
         infect_dur = (
-            np.around(self.__infect.infectious_duration(self.__infected))
+            np.around(self.__infect.infectious_duration.rvs(self.__infected))
         )
 
         # Filling the array
@@ -152,9 +159,18 @@ class MC_Sim(object):
         # The storage dictionary
         self.__statistics = defaultdict(list)
         # Running the simulation
+
+        self._sm = ContagionStateMachine(
+            self.__population,
+            self.__pop_matrix,
+            self.__infect,
+            self.__intense_pdf,
+            self.__rstate)
+
         start = time()
         self.__simulation()
         end = time()
+        self.__statistics.update(self._sm._statistics)
         _log.info("MC simulation took %f seconds" % (end - start))
 
     @property
@@ -198,6 +214,10 @@ class MC_Sim(object):
         """
         return self.__R0
 
+    @property
+    def population(self):
+        return self.__population
+
     def __simulation(self):
         """
         function: __simulation
@@ -210,96 +230,9 @@ class MC_Sim(object):
 
         start = time()
         for step, _ in enumerate(self.__t):
+            self._sm.tick()
 
             """
-            New infections
-            """
-
-            infected_mask = self.__population.loc[:, "is_infectious"]
-            infected_indices = self.__population.index[infected_mask]
-
-            # Removing social mobility of tracked people if they are infected
-            if self.__tracked:
-                # TODO make this configurable
-                # The current implementation disables all contacts
-                # of tracked persons
-                tracked_mask = self.__population.loc[:, "is_tracked"]
-
-                tracked_and_infected_mask = np.logical_and(infected_mask,
-                                                           tracked_mask)
-                tracked_and_infected_indices = self.__population.index[
-                    tracked_and_infected_mask
-                ]
-
-                matrix = self.__pop_matrix.tolil()
-
-                # Set connections of infected and tracked people to zero
-                matrix[tracked_and_infected_indices, :] = 0
-                matrix[:, tracked_and_infected_indices] = 0
-
-                # Find all the people in the social circles of tracked
-                # and infected people
-                contact_cols = sparse.find(
-                    self.__pop_matrix.tocsr()[tracked_and_infected_indices]
-                )[1]
-
-                # Mark the people mention above as tracked
-                self.__population.loc[contact_cols, "is_tracked"] = True
-
-                # Set the social connections of all the people in the social
-                # circles of tracked and infected people to zero
-                matrix[contact_cols, :] = 0
-                matrix[:, contact_cols] = 0
-
-                self.__pop_matrix = matrix
-
-            pop_csr = self.__pop_matrix.tocsr()
-
-            # Find all non-zero connections of the infected
-            # rows are the ids / indices of the infected
-            # columns are the people they have contact with
-
-            _, contact_cols, contact_strengths = (
-                sparse.find(pop_csr[infected_indices])
-            )
-
-            # Based on the contact rate, sample a poisson rvs
-            # for the number of interactions per timestep.
-            # A contact is sucessful if the rv is > 1, ie.
-            # more than one contact per timestep
-            successful_contacts_mask = (
-                self.__rstate.poisson(contact_strengths) >= 1
-            )
-
-            # we are just interested in the columns, ie. only the
-            # ids of the people contacted by the infected.
-            # Note, that contacted ids can appear multiple times
-            # if a person is successfully contacted by multiple people.
-            successful_contacts_indices = (
-                contact_cols[successful_contacts_mask]
-            )
-            num_succesful_contacts = len(successful_contacts_indices)
-
-            self.__statistics["contacts"].append(num_succesful_contacts)
-
-            # Calculate infection probability for all contacts
-            contact_strength = self.__intense_pdf(num_succesful_contacts)
-            infection_prob = self.__infect.pdf_infection_prob(contact_strength)
-
-            # An infection is successful if the bernoulli outcome
-            # based on the infection probability is 1
-
-            newly_infected_mask = self.__rstate.binomial(1, infection_prob)
-            newly_infected_mask = np.asarray(newly_infected_mask, bool)
-
-            # Get the indices for the newly infected
-            newly_infected_indices = (
-                successful_contacts_indices[newly_infected_mask]
-            )
-
-            # There might be multiple successfull infections per person
-            # from different infected people
-            newly_infected_indices = np.unique(newly_infected_indices)
 
             # check if people are already infected or aleady immune
             already_infected = (
@@ -319,10 +252,9 @@ class MC_Sim(object):
 
             num_newly_infected = len(newly_infected_indices)
 
-            """
-            For newly infected determine whether they will be hospitalized
-            and die
-            """
+
+            # For newly infected determine whether they will be hospitalized
+            # and die
 
             will_be_hospitalized_prob = self.__infect.hospitalization_prob(
                 num_newly_infected
@@ -376,16 +308,16 @@ class MC_Sim(object):
 
             self.__population.loc[will_die_indices, "will_die"] = True
 
-            """
-            Status updates
-            """
 
-            """
-            Incubation
+            # Status updates
 
-            First update incubation duration of old cases. Then add new cases.
-            Finally check cases that passes incubation peroid
-            """
+
+
+            # Incubation
+
+            # First update incubation duration of old cases. Then add new cases.
+            # Finally check cases that passes incubation peroid
+
             # Old cases
             in_incubation_mask = self.__population.loc[:, "in_incubation"]
 
@@ -430,11 +362,10 @@ class MC_Sim(object):
                 self.__population.loc[passed_incubation,
                                       "in_incubation"] = False
 
-            """
-            Death
 
-            TODO: Remove on death / hospitalization
-            """
+            # Death
+
+            # TODO: Remove on death / hospitalization
 
             will_die = self.__population.loc[:, "will_die"] == True
             self.__population.loc[will_die, "time_until_death"] -= 1
@@ -455,9 +386,8 @@ class MC_Sim(object):
                                       "is_infectious"] = False
                 self.__population.loc[has_died_indices, "is_infected"] = False
 
-            """
-            Hospitalization recovery
-            """
+
+            # Hospitalization recovery
 
             def where_col(df, col, cond, other):
                 df[col].where(cond, other, axis=0, inplace=True)
@@ -483,9 +413,8 @@ class MC_Sim(object):
                 .pipe(where_col, "is_hospitalized", cond, False)
             )
 
-            """
-            Hospitalization
-            """
+            # Hospitalization
+
 
             will_be_hospitalized = (
                 self.__population.loc[:, "will_be_hospitalized"] == True
@@ -528,9 +457,9 @@ class MC_Sim(object):
                     is_hospitalized_indices, "hospitalization_duration"
                 ] = hostpit_dur
 
-            """
-            Recovery
-            """
+
+            # Recovery
+
 
             is_recovering_mask = (
                 self.__population.loc[:, "is_recovering"] == True
@@ -555,12 +484,10 @@ class MC_Sim(object):
                 self.__population.loc[has_recovered_indices,
                                       "is_infected"] = False
 
-            """
-            Infectious
+            # Infectious
 
-            First update infectious duration of old cases. Then add new cases.
-            Finally check cases that passes infectious peroid
-            """
+            # First update infectious duration of old cases. Then add new cases.
+            # Finally check cases that passes infectious peroid
 
             # Number of people who became infectious this timestep
 
@@ -608,14 +535,15 @@ class MC_Sim(object):
                 self.__population.loc[passed_infectious,
                                       "is_recovering"] = True
 
+            """
             # Storing statistics
             is_removed = self.__population.loc[:, "is_removed"]
             self.__statistics["removed"].append(is_removed.sum(axis=0))
-            in_incubation = self.__population.loc[:, "in_incubation"]
+            in_incubation = self.__population.loc[:, "is_incubation"]
             self.__statistics["incubation"].append(in_incubation.sum(axis=0))
             is_infectious = self.__population.loc[:, "is_infectious"]
             self.__statistics["infectious"].append(is_infectious.sum(axis=0))
-            has_recovered = self.__population.loc[:, "has_recovered"]
+            has_recovered = self.__population.loc[:, "is_recovered"]
             self.__statistics["recovered"].append(has_recovered.sum(axis=0))
             is_infected = self.__population.loc[:, "is_infected"]
             self.__statistics["infected"].append(is_infected.sum(axis=0))
@@ -625,6 +553,10 @@ class MC_Sim(object):
                 is_hospitalized.sum(axis=0)
             )
 
+            is_dead = self.__population.loc[:, "has_died"]
+            self.__statistics["total_deaths"].append(is_dead.sum(axis=0))
+
+            """
             self.__statistics["new infections"].append(num_newly_infected)
             self.__statistics["newly infectious"].append(num_newly_infectious)
             self.__statistics["newly recovered"].append(num_newly_recovered)
@@ -632,8 +564,8 @@ class MC_Sim(object):
             self.__statistics["will be hospitalized"].append(num_hospitalized)
             self.__statistics["will die"].append(num_will_die)
             self.__statistics["new deaths"].append(num_has_died)
-            is_dead = self.__population.loc[:, "has_died"]
-            self.__statistics["total_deaths"].append(is_dead.sum(axis=0))
+
+            """
             if step % (int(len(self.__t) / 10)) == 0:
                 end = time()
                 _log.debug("In step %d" % step)

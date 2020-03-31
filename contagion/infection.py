@@ -76,6 +76,7 @@ class Infection(object):
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infectious duration pdf'])
             exit('Check the infectious duration pdf in the config file!')
+
         try:
             dur_incubation_pdf = (
                 self.__std_pdfs[config['incubation duration pdf']](
@@ -101,12 +102,13 @@ class Infection(object):
             exit('Check the recovery duration pdf in the config file!')
 # -----------------------------------------------------------------------------
         _log.debug('The hospitalization pdfs')
+
         if config['hospitalization probability pdf'] == 'beta':
             hospit_prob_pdf = Beta(
                 config['hospitalization probability mean'],
                 config['hospitalization probability sd']
                 )
-            self._hospitalization_prob = hospit_prob_pdf.rvs
+            self._hospitalization_prob = hospit_prob_pdf
         else:
             _log.error('Unrecognized hospitalization pdf! Set to ' +
                              config['hospitalization probability pdf'])
@@ -148,12 +150,13 @@ class Infection(object):
             _log.error('Unrecognized time incubation death pdf! Set to ' +
                              config['time incubation death pdf'])
             exit('Check the time incubation death pdf in the config file!')
+
         if config['mortality prob pdf'] == 'beta':
             death_prob_pdf = Beta(
                 config['mortality rate mean'],
                 config['mortality rate sd']
                 )
-            self.__death_prob = death_prob_pdf.rvs
+            self.__death_prob = death_prob_pdf
         else:
             _log.error('Unrecognized mortality prob pdf! Set to ' +
                              config['mortality prob pdf'])
