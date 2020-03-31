@@ -435,10 +435,12 @@ class MultiStateConditionalTransition(_Transition, ConditionalMixin):
         for state, val in zip(self._states_b, self._states_b_vals):
             if DEBUG:
                 _log.debug("Changing state %s to %s", (~state).name, val)
-                _log.debug("State was: %s", (~state)(data)[cond & is_in_state_a])
+                _log.debug("State was: %s",
+                           (~state)(data)[cond & is_in_state_a])
             (~state).change_state(data, val, cond & is_in_state_a)
             if DEBUG:
-                _log.debug("State is: %s", (~state)(data)[cond & is_in_state_a])
+                _log.debug("State is: %s",
+                           (~state)(data)[cond & is_in_state_a])
 
         self._state_a.change_state(data, self._state_a_val, cond)
 
@@ -776,7 +778,7 @@ class ContagionStateMachine(StateMachine):
         newly_infected_indices = successful_contacts_indices[
             newly_infected_mask]
 
-        # There might be multiple successfull infections per person 
+        # There might be multiple successfull infections per person
         # from different infected people
         newly_infected_indices = np.unique(newly_infected_indices)
         cond = np.zeros(len(infected_mask), dtype=np.bool)

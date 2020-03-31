@@ -12,7 +12,6 @@ from time import time
 import logging
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-from scipy import sparse
 
 from .config import config
 from .pdfs import Uniform

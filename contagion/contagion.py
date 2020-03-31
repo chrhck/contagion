@@ -99,7 +99,7 @@ class Contagion(object):
                 # Storing for later
                 _log.debug('Storing for later use')
                 pickle.dump(self.pop, open(config["population storage"],
-                                           "wb" ) )
+                                           "wb"))
         _log.info('Finished the population')
         _log.info('---------------------------------------------------')
         _log.info('---------------------------------------------------')
