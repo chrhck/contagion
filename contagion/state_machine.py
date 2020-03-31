@@ -354,7 +354,7 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         zero_rows = self._state_a(data) & cond
         num_zero_rows = zero_rows.sum(axis=0)
 
-        initial_vals = self._initialization_pdf.rvs(num_zero_rows)
+        initial_vals = self._initialization_pdf(num_zero_rows)
         (~self._state_b).change_state(
             data, initial_vals, cond & self._state_a(data))
 
