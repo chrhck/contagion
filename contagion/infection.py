@@ -71,7 +71,7 @@ class Infection(object):
                 self.__std_pdfs[config['infectious duration pdf']](
                     config['infectious duration mean'],
                     config['infectious duration variance']))
-            self.__infectious_duration  = dur_infectious_pdf.rvs
+            self.__infectious_duration = dur_infectious_pdf.rvs
         except ValueError:
             _log.error('Unrecognized infectious duration pdf! Set to ' +
                              config['infectious duration pdf'])
