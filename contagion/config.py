@@ -57,7 +57,7 @@ _baseconfig = {
     # available: 'intensity'
     'infection probability pdf': 'intensity',
     # Infection duration mean
-    'infection duration mean': 20,
+    'infection duration mean': 14,
     # Infection duration sd
     'infection duration variance': 5,
     # Infection duration pdf
@@ -71,8 +71,9 @@ _baseconfig = {
     # Available: 'gauss', 'gamma'
     'infectious duration pdf': 'gauss',
 
+    # TODO: Rename to latent period
     # Incubation duration mean
-    'incubation duration mean': 5,
+    'incubation duration mean': 2.5,
     # Incubation duration sd
     'incubation duration variance': 2,
     # Incubation duration pdf
