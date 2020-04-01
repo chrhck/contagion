@@ -71,7 +71,8 @@ class MC_Sim(object):
             )
         else:
             _log.error(
-                "Unrecognized intensity pdf! Set to " + config["interaction intensity"]
+                "Unrecognized intensity pdf! Set to "
+                + config["interaction intensity"]
             )
             exit("Check the interaction intensity in the config file!")
 
@@ -124,7 +125,9 @@ class MC_Sim(object):
         )
 
         # Their infection duration
-        infect_dur = np.around(self.__infect.infectious_duration.rvs(self.__infected))
+        infect_dur = np.around(
+            self.__infect.infectious_duration.rvs(self.__infected)
+        )
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
@@ -141,7 +144,9 @@ class MC_Sim(object):
                 {"is_tracked": False}, index=np.arange(self.__pop_size)
             )
             tracked_df.loc[tracked, "is_tracked"] = True
-            self.__population = pd.concat([self.__population, tracked_df], axis=1)
+            self.__population = pd.concat(
+                [self.__population, tracked_df], axis=1
+            )
         else:
             _log.debug("Population is not tracked")
             self.__tracked = False
@@ -154,7 +159,9 @@ class MC_Sim(object):
                 {"is_distanced": False}, index=np.arange(self.__pop_size)
             )
             distanced_df.loc[distanced, "is_distanced"] = True
-            self.__population = pd.concat([self.__population, distanced_df], axis=1)
+            self.__population = pd.concat(
+                [self.__population, distanced_df], axis=1
+            )
             self._distanced_size = int(self.__pop_size * config["distanced"])
         else:
             _log.debug("Population is not Social Distancing")
@@ -258,5 +265,7 @@ class MC_Sim(object):
             if step % (int(len(self.__t) / 10)) == 0:
                 end = time()
                 _log.debug("In step %d" % step)
-                _log.debug("Last round of simulations took %f seconds" % (end - start))
+                _log.debug(
+                    "Last round of simulations took %f seconds" % (end - start)
+                )
                 start = time()

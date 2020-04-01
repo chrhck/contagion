@@ -112,5 +112,7 @@ class Measures(object):
         distanced_pop = int(config["population size"] * config["distanced"])
         _log.debug("Number of people social distancing is %d" % distanced_pop)
         self.__distanced = np.random.choice(
-            range(self.__config["population size"]), size=distanced_pop, replace=False
+            range(self.__config["population size"]),
+            size=distanced_pop,
+            replace=False,
         ).flatten()

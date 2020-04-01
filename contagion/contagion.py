@@ -85,11 +85,15 @@ class Contagion(object):
         _log.info("---------------------------------------------------")
         if config["re-use population"]:
             try:
-                self.pop = pickle.load(open(config["population storage"], "rb"))
+                self.pop = pickle.load(
+                    open(config["population storage"], "rb")
+                )
                 _log.debug("Population loaded")
             except ImportError:
                 _log.error("Population file not found!")
-                sys.exit("Population file not found!" + " Check the config file!")
+                sys.exit(
+                    "Population file not found!" + " Check the config file!"
+                )
         else:
             _log.info("Starting population construction")
             self.pop = Population().population
@@ -193,7 +197,9 @@ class Contagion(object):
             _log.error("Chosen time step too large!")
             sys.exit("Please run with time steps smaller than 1s!")
         _log.debug("Realistic run")
-        self.__mc_run = MC_Sim(self.pop, self.infection, self.tracked, self.distanced)
+        self.__mc_run = MC_Sim(
+            self.pop, self.infection, self.tracked, self.distanced
+        )
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
         _log.info("Finished calculation")
