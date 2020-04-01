@@ -137,6 +137,20 @@ class Contagion(object):
         return self.__mc_run.statistics
 
     @property
+    def trace_spread(self):
+        """
+        function: trace_spread
+        Getter functions for the simulation results
+        from the simulation
+        Parameters:
+            -None
+        Returns:
+            -list trace_spread:
+                Stores the results from the simulation
+        """
+        return self.__mc_run.trace_spread
+
+    @property
     def t(self):
         """
         function: t
