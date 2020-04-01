@@ -19,11 +19,11 @@ _baseconfig = {
     # General
     ###################################################
     # Output level
-    'debug level': logging.WARNING,
+    "debug level": logging.WARNING,
     # Location of logging file handler
-    'log file handler': '../run/contagion.log',
+    "log file handler": "../run/contagion.log",
     # Dump experiment config to this location
-    'config location': '../run/config.txt',
+    "config location": "../run/config.txt",
     # The size of the population
     "population size": 1000,
     # Simulation duration
@@ -31,7 +31,7 @@ _baseconfig = {
     # The number of starting infections
     "infected": 10,
     # random state to use
-    'random state': np.random.RandomState(1337),
+    "random state": np.random.RandomState(1337),
     # re-simulate population
     "re-use population": False,
     # store population
@@ -42,92 +42,88 @@ _baseconfig = {
     # 'realistic' options
     ###################################################
     # The average size of a person's social circle
-    'average social circle': 20,
+    "average social circle": 20,
     # The variance of one's social circle
-    'variance social circle': 5,
+    "variance social circle": 5,
     # Social circle pdf:
     # Available: 'gauss'
-    'social circle pdf': 'gauss',
+    "social circle pdf": "gauss",
     # Average number of interactions per time step in sc
-    'mean social circle interactions': 0.2,
+    "mean social circle interactions": 0.2,
     # sd of sc interactions
-    'variance social circle interactions': 2,
+    "variance social circle interactions": 2,
     # Distribution of the interaction rates
     # Available: 'gauss'
-    'social circle interactions pdf': 'gauss',
+    "social circle interactions pdf": "gauss",
     # Infection probability pdf
     # available: 'intensity'
-    'infection probability pdf': 'intensity',
+    "infection probability pdf": "intensity",
     # Infection duration mean
-    'infection duration mean': 14,
+    "infection duration mean": 14,
     # Infection duration sd
-    'infection duration variance': 5,
+    "infection duration variance": 5,
     # Infection duration pdf
     # Available: 'gauss', 'gamma'
-    'infection duration pdf': 'gauss',
+    "infection duration pdf": "gauss",
     # Infectious duration mean
-    'infectious duration mean': 3,
+    "infectious duration mean": 3,
     # Infectious duration sd
-    'infectious duration variance': 5,
+    "infectious duration variance": 5,
     # Infectious duration pdf
     # Available: 'gauss', 'gamma'
-    'infectious duration pdf': 'gauss',
-
+    "infectious duration pdf": "gauss",
     # TODO: Rename to latent period
     # Incubation duration mean
-    'incubation duration mean': 2.5,
+    "incubation duration mean": 2.5,
     # Incubation duration sd
-    'incubation duration variance': 2,
+    "incubation duration variance": 2,
     # Incubation duration pdf
     # Available: 'gauss', 'gamma'
-    'incubation duration pdf': 'gauss',
-
+    "incubation duration pdf": "gauss",
     # Hospitalization / death and recovery pdfs
-    'hospitalization probability pdf': 'beta',
-    'hospitalization probability mean': 0.2,
-    'hospitalization probability sd': 0.1,
-
+    "hospitalization probability pdf": "beta",
+    "hospitalization probability mean": 0.2,
+    "hospitalization probability sd": 0.1,
     # Available: 'gauss', 'gamma'
-    'hospitalization duration pdf': 'gauss',
-    'hospitalization duration mean': 28,
-    'hospitalization duration sd': 5,
-
+    "hospitalization duration pdf": "gauss",
+    "hospitalization duration mean": 28,
+    "hospitalization duration sd": 5,
     # Available: 'gauss', 'gamma'
-    'time until hospitalization pdf': 'gauss',
-    'time until hospitalization mean': 5,
-    'time until hospitalization sd': 2,
-
+    "time until hospitalization pdf": "gauss",
+    "time until hospitalization mean": 5,
+    "time until hospitalization sd": 2,
     # Available: 'gauss', 'gamma'
-    'time incubation death pdf': 'gauss',
-    'time incubation death mean': 32,
-    'time incubation death sd': 5,
-
+    "time incubation death pdf": "gauss",
+    "time incubation death mean": 32,
+    "time incubation death sd": 5,
     # Available: 'gauss', 'gamma'
-    'recovery time pdf': 'gauss',
-    'recovery time mean': 11,
-    'recovery time sd': 5,
-
+    "recovery time pdf": "gauss",
+    "recovery time mean": 11,
+    "recovery time sd": 5,
     # Mortalitiy rate relative to hospitalization prob
-    'mortality prob pdf': 'beta',
-    'mortality rate mean': 0.1,
-    'mortality rate sd': 0.1,
-
+    "mortality prob pdf": "beta",
+    "mortality rate mean": 0.1,
+    "mortality rate sd": 0.1,
     # Possible measures to take
     # -'None'
     # -'contact tracing'
-    'measures': 'none',
+    # -'social distancing'
+    # -'all'
+    "measures": "none",
     # fraction of population tracked
-    'tracked': 0.2,
+    "tracked": 0.2,
+    # fraction of population distanced
+    "distanced": 0.8,
     # Interaction intensity distribution:
     # Available: uniform
-    'interaction intensity': 'uniform',
+    "interaction intensity": "uniform",
     ###################################################
     # More advanced
     ###################################################
     # Time step to use
     # TODO: Define time steps
     # This should be at maximum 1
-    'time step': 1.,
+    "time step": 1.0,
     # Freedom of movement
     # How large the angle change between steps can be
     # (for the organisms)
@@ -136,7 +132,7 @@ _baseconfig = {
     # Number of points to use when constructing a spherical
     # geometry. Increasing the number increases the precision,
     # while reducing efficiency
-    'sphere samples': int(5e1),  # Number of points to construct the sphere
+    "sphere samples": int(5e1),  # Number of points to construct the sphere
 }
 
 
@@ -153,6 +149,7 @@ class ConfigClass(dict):
     Returns:
         -None
     """
+
     def __init__(self, *args, **kwargs):
         """
         function: __init__

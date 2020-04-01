@@ -106,8 +106,22 @@ class Contagion(object):
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
         _log.info("Starting the measure construction")
-        self.tracked = Measures().tracked
-        self.distanced = Measures().distanced
+        if config["measures"] == "contact tracing":
+            self.tracked = Measures().tracked
+            self.distanced = None
+            _log.info("-- Contact Tracing")
+        elif config["measures"] == "social distancing":
+            self.tracked = None
+            self.distanced = Measures().distanced
+            _log.info("-- Social Distancing")
+        elif config["measures"] == "all":
+            self.tracked = Measures().tracked
+            self.distanced = Measures().distanced
+            _log.info("-- All Measures")
+        else:
+            self.tracked = None
+            self.distanced = None
+            _log.info("-- No Measures")
         _log.info("Finished the measure construction")
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
