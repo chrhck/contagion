@@ -775,7 +775,6 @@ class ContagionStateMachine(StateMachine):
             "will_die_new", "is_new_latent"
             ]
 
-
         # Timer name, tick when not in this state
         # state will be inverted
         timer_ticks = [
