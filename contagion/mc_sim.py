@@ -10,12 +10,13 @@ from collections import defaultdict
 from sys import exit
 from time import time
 import logging
-import numpy as np
-import pandas as pd
-from scipy import sparse
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 
 from .config import config
 from .pdfs import Uniform
+from .state_machine import ContagionStateMachine, StatCollector
+
 
 _log = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class MC_Sim(object):
 
         _log.debug("The interaction intensity pdf")
         if config["interaction intensity"] == "uniform":
-            self.__intense_pdf = Uniform(0, 1).rvs
+            self.__intense_pdf = Uniform(0, 1)
             # The Reproductive Number
             self.__R0 = (
                 config["mean social circle interactions"]
@@ -70,8 +71,7 @@ class MC_Sim(object):
             )
         else:
             _log.error(
-                "Unrecognized intensity pdf! Set to " +
-                config["interaction intensity"]
+                "Unrecognized intensity pdf! Set to " + config["interaction intensity"]
             )
             exit("Check the interaction intensity in the config file!")
 
@@ -92,22 +92,28 @@ class MC_Sim(object):
         self.__population = pd.DataFrame(
             {
                 "is_infected": False,
-                "in_incubation": False,
+                "is_new_infected": False,
+                "is_incubation": False,
+                "is_new_incubation": False,
                 "is_infectious": False,
-                "incubation_duration": 0,
-                "infectious_duration": 0,
+                "is_new_infectious": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
+                "is_new_hospitalized": False,
                 "is_recovering": False,
+                "is_new_recovering": False,
+                "is_recovered": False,
+                "will_die": False,
+                "will_be_hospitalized": False,
+                "is_dead": False,
+                "is_new_dead": False,
+                "incubation_duration": 0,
+                "infectious_duration": 0,
                 "time_until_hospitalization": 0,
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
-                "has_recovered": 0,
                 "time_until_death": 0,
-                "will_die": False,
-                "will_be_hospitalized": False,
-                "has_died": False,
             },
             index=np.arange(self.__pop_size),
         )
@@ -118,9 +124,7 @@ class MC_Sim(object):
         )
 
         # Their infection duration
-        infect_dur = (
-            np.around(self.__infect.infectious_duration(self.__infected))
-        )
+        infect_dur = np.around(self.__infect.infectious_duration.rvs(self.__infected))
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
@@ -137,8 +141,7 @@ class MC_Sim(object):
                 {"is_tracked": False}, index=np.arange(self.__pop_size)
             )
             tracked_df.loc[tracked, "is_tracked"] = True
-            self.__population = pd.concat([self.__population, tracked_df],
-                                          axis=1)
+            self.__population = pd.concat([self.__population, tracked_df], axis=1)
         else:
             _log.debug("Population is not tracked")
             self.__tracked = False
@@ -150,7 +153,7 @@ class MC_Sim(object):
             distanced_df = pd.DataFrame(
                 {"is_distanced": False}, index=np.arange(self.__pop_size)
             )
-            distanced_df.loc[distanced, "is_tracked"] = True
+            distanced_df.loc[distanced, "is_distanced"] = True
             self.__population = pd.concat([self.__population, distanced_df], axis=1)
             self._distanced_size = int(self.__pop_size * config["distanced"])
         else:
@@ -166,9 +169,31 @@ class MC_Sim(object):
         # The storage dictionary
         self.__statistics = defaultdict(list)
         # Running the simulation
+
+        stat_collector = StatCollector(
+            [
+                "is_removed",
+                "is_incubation",
+                "is_infectious",
+                "is_infected",
+                "is_hospitalized",
+                "is_recovered",
+                "is_dead",
+            ]
+        )
+        self._sm = ContagionStateMachine(
+            self.__population,
+            stat_collector,
+            self.__pop_matrix,
+            self.__infect,
+            self.__intense_pdf,
+            self.__rstate,
+        )
+
         start = time()
         self.__simulation()
         end = time()
+        self.__statistics = self._sm.statistics
         _log.info("MC simulation took %f seconds" % (end - start))
 
     @property
@@ -212,6 +237,10 @@ class MC_Sim(object):
         """
         return self.__R0
 
+    @property
+    def population(self):
+        return self.__population
+
     def __simulation(self):
         """
         function: __simulation
@@ -223,441 +252,11 @@ class MC_Sim(object):
         """
 
         start = time()
+
         for step, _ in enumerate(self.__t):
-
-            """
-            New infections
-            """
-
-            infected_mask = self.__population.loc[:, "is_infectious"]
-            infected_indices = self.__population.index[infected_mask]
-
-            # Removing social mobility of tracked people if they are infected
-            if self.__tracked:
-                tracked_mask = self.__population.loc[:, "is_tracked"]
-
-                tracked_and_infected_mask = np.logical_and(infected_mask,
-                                                           tracked_mask)
-                tracked_and_infected_indices = self.__population.index[
-                    tracked_and_infected_mask
-                ]
-
-                matrix = self.__pop_matrix.tolil()
-
-                # Set connections of infected and tracked people to zero
-                matrix[tracked_and_infected_indices, :] = 0
-                matrix[:, tracked_and_infected_indices] = 0
-
-                # Find all the people in the social circles of tracked
-                # and infected people
-                contact_cols = sparse.find(
-                    self.__pop_matrix.tocsr()[tracked_and_infected_indices]
-                )[1]
-
-                # Mark the people mention above as tracked
-                self.__population.loc[contact_cols, "is_tracked"] = True
-
-                # Set the social connections of all the people in the social
-                # circles of tracked and infected people to zero
-                matrix[contact_cols, :] = 0
-                matrix[:, contact_cols] = 0
-
-                self.__pop_matrix = matrix
-
-            # Redefining Social Structure to include social distancing
-            if self.__distanced:
-                distanced_mask = self.__population.loc[:, "is_distanced"]
-
-                # Average household size
-                h_size = np.random.poisson(3, size=self._distanced_size)
-
-                matrix = self.__pop_matrix.tolil()
-
-            pop_csr = self.__pop_matrix.tocsr()
-
-            # Find all non-zero connections of the infected
-            # rows are the ids / indices of the infected
-            # columns are the people they have contact with
-
-            _, contact_cols, contact_strengths = (
-                sparse.find(pop_csr[infected_indices])
-            )
-
-            # Based on the contact rate, sample a poisson rvs
-            # for the number of interactions per timestep.
-            # A contact is sucessful if the rv is > 1, ie.
-            # more than one contact per timestep
-            successful_contacts_mask = (
-                self.__rstate.poisson(contact_strengths) >= 1
-            )
-
-            # we are just interested in the columns, ie. only the
-            # ids of the people contacted by the infected.
-            # Note, that contacted ids can appear multiple times
-            # if a person is successfully contacted by multiple people.
-            successful_contacts_indices = (
-                contact_cols[successful_contacts_mask]
-            )
-            num_succesful_contacts = len(successful_contacts_indices)
-
-            self.__statistics["contacts"].append(num_succesful_contacts)
-
-            # Calculate infection probability for all contacts
-            contact_strength = self.__intense_pdf(num_succesful_contacts)
-            infection_prob = self.__infect.pdf_infection_prob(contact_strength)
-
-            # An infection is successful if the bernoulli outcome
-            # based on the infection probability is 1
-
-            newly_infected_mask = self.__rstate.binomial(1, infection_prob)
-            newly_infected_mask = np.asarray(newly_infected_mask, bool)
-
-            # Get the indices for the newly infected
-            newly_infected_indices = (
-                successful_contacts_indices[newly_infected_mask]
-            )
-
-            # There might be multiple successfull infections per person
-            # from different infected people
-            newly_infected_indices = np.unique(newly_infected_indices)
-
-            # check if people are already infected or aleady immune
-            already_infected = (
-                self.__population.loc[newly_infected_indices,
-                                      "in_incubation"] == True
-            ) | (self.__population.loc[newly_infected_indices,
-                                       "is_infectious"] == True)
-
-            already_immune = (
-                self.__population.loc[newly_infected_indices,
-                                      "is_removed"] == True
-            )
-
-            newly_infected_indices = self.__population.index[
-                newly_infected_indices[~(already_infected | already_immune)]
-            ]
-
-            num_newly_infected = len(newly_infected_indices)
-
-            """
-            For newly infected determine whether they will be hospitalized
-            and die
-            """
-
-            will_be_hospitalized_prob = self.__infect.hospitalization_prob(
-                num_newly_infected
-            )
-
-            # roll the dice
-            will_be_hospitalized = (
-                self.__rstate.binomial(
-                    1, will_be_hospitalized_prob, size=num_newly_infected
-                )
-                == 1
-            )
-
-            num_hospitalized = np.sum(will_be_hospitalized)
-
-            will_be_hospitalized_indices = (
-                newly_infected_indices[will_be_hospitalized]
-            )
-
-            time_until_hospit = self.__infect.time_until_hospitalization(
-                num_hospitalized
-            )
-
-            # Same for mortality
-
-            will_die_prob = self.__infect.death_prob(num_hospitalized)
-
-            will_die = (
-                self.__rstate.binomial(1, will_die_prob,
-                                       size=num_hospitalized) == 1
-            )
-
-            will_die_indices = will_be_hospitalized_indices[will_die]
-            num_will_die = np.sum(will_die)
-
-            # Time until death is relative to end of incubation perdiod
-            # Thus add after calculating incubation time
-            time_until_death = (
-                self.__infect.time_incubation_death(num_will_die)
-            )
-
-            # Add info to dataframe
-
-            self.__population.loc[
-                will_be_hospitalized_indices, "will_be_hospitalized"
-            ] = True
-
-            self.__population.loc[
-                will_be_hospitalized_indices, "time_until_hospitalization"
-            ] = time_until_hospit
-
-            self.__population.loc[will_die_indices, "will_die"] = True
-
-            """
-            Status updates
-            """
-
-            """
-            Incubation
-
-            First update incubation duration of old cases. Then add new cases.
-            Finally check cases that passes incubation peroid
-            """
-            # Old cases
-            in_incubation_mask = self.__population.loc[:, "in_incubation"]
-
-            # adjusting incubation duration
-            self.__population.loc[in_incubation_mask,
-                                  "incubation_duration"] -= 1
-
-            # add new incubations
-            tmp_dur = (
-                np.around(
-                    self.__infect.incubation_duration(num_newly_infected)
-                )
-            )
-
-            self.__population.loc[newly_infected_indices,
-                                  "in_incubation"] = True
-            self.__population.loc[newly_infected_indices,
-                                  "is_infected"] = True
-            self.__population.loc[
-                newly_infected_indices, "incubation_duration"
-            ] = tmp_dur
-
-            # For those who will day, calculate time until death
-
-            self.__population.loc[will_die_indices, "time_until_death"] = (
-                self.__population.loc[will_die_indices, "incubation_duration"]
-                + time_until_death
-            )
-
-            # Change state to infected if passed incubration duration
-            # Check only old cases
-            passed_incubation_index = (
-                self.__population.loc[in_incubation_mask].index
-            )
-            passed_incubation = passed_incubation_index[
-                self.__population.loc[in_incubation_mask,
-                                      "incubation_duration"] <= 0
-            ]
-
-            num_newly_infectious = len(passed_incubation)
-            if num_newly_infectious > 0:
-                self.__population.loc[passed_incubation,
-                                      "in_incubation"] = False
-
-            """
-            Death
-
-            TODO: Remove on death / hospitalization
-            """
-
-            will_die = self.__population.loc[:, "will_die"] == True
-            self.__population.loc[will_die, "time_until_death"] -= 1
-
-            will_die_indices = self.__population.loc[will_die].index
-
-            has_died = self.__population.loc[will_die_indices,
-                                             "time_until_death"] <= 0
-            has_died_indices = will_die_indices[has_died]
-            num_has_died = len(has_died_indices)
-
-            if num_has_died > 0:
-                self.__population.loc[has_died_indices, "has_died"] = True
-                self.__population.loc[has_died_indices,
-                                      "is_hospitalized"] = False
-                self.__population.loc[has_died_indices, "will_die"] = False
-                self.__population.loc[has_died_indices,
-                                      "is_infectious"] = False
-                self.__population.loc[has_died_indices, "is_infected"] = False
-
-            """
-            Hospitalization recovery
-            """
-
-            def where_col(df, col, cond, other):
-                df[col].where(cond, other, axis=0, inplace=True)
-                return df
-
-            (
-                self.__population["hospitalization_duration"].where(
-                    ~self.__population["is_hospitalized"] == True,
-                    self.__population["hospitalization_duration"] - 1,
-                    inplace=True,
-                )
-            )
-
-            cond = ~(
-                (self.__population["hospitalization_duration"] <= 0)
-                & self.__population["is_hospitalized"]
-                == True
-            )
-
-            self.__population = (
-                self.__population.pipe(where_col, "is_infected", cond, False)
-                .pipe(where_col, "has_recovered", cond, True)
-                .pipe(where_col, "is_hospitalized", cond, False)
-            )
-
-            """
-            Hospitalization
-            """
-
-            will_be_hospitalized = (
-                self.__population.loc[:, "will_be_hospitalized"] == True
-            )
-            self.__population.loc[
-                will_be_hospitalized, "time_until_hospitalization"
-            ] -= 1
-
-            will_be_hospitalized_indices = self.__population.loc[
-                will_be_hospitalized
-            ].index
-
-            is_hospitalized = (
-                self.__population.loc[
-                    will_be_hospitalized_indices, "time_until_hospitalization"
-                ]
-                <= 0
-            )
-            is_hospitalized_indices = (
-                will_be_hospitalized_indices[is_hospitalized]
-            )
-
-            num_is_hospitalized = len(is_hospitalized_indices)
-
-            if num_is_hospitalized > 0:
-                self.__population.loc[is_hospitalized_indices,
-                                      "is_hospitalized"] = True
-                self.__population.loc[
-                    is_hospitalized_indices, "will_be_hospitalized"
-                ] = False
-                # TODO: could reduce contact rate instead??
-                self.__population.loc[is_hospitalized_indices,
-                                      "is_infectious"] = False
-
-                hostpit_dur = self.__infect.hospitalization_duration(
-                    num_is_hospitalized
-                )
-                # print(hostpit_dur)
-                self.__population.loc[
-                    is_hospitalized_indices, "hospitalization_duration"
-                ] = hostpit_dur
-
-            """
-            Recovery
-            """
-
-            is_recovering_mask = (
-                self.__population.loc[:, "is_recovering"] == True
-            )
-            is_recovering_indices = self.__population.index[is_recovering_mask]
-
-            self.__population.loc[is_recovering_indices, "recovery_time"] -= 1
-
-            has_recovered_mask = (
-                self.__population.loc[is_recovering_indices,
-                                      "recovery_time"] <= 0
-            )
-            has_recovered_indices = is_recovering_indices[has_recovered_mask]
-
-            num_newly_recovered = len(has_recovered_indices)
-
-            if num_newly_recovered > 0:
-                self.__population.loc[has_recovered_indices,
-                                      "is_recovering"] = False
-                self.__population.loc[has_recovered_indices,
-                                      "has_recovered"] = True
-                self.__population.loc[has_recovered_indices,
-                                      "is_infected"] = False
-
-            """
-            Infectious
-
-            First update infectious duration of old cases. Then add new cases.
-            Finally check cases that passes infectious peroid
-            """
-
-            # Number of people who became infectious this timestep
-
-            # Old cases
-            is_infectious_mask = self.__population.loc[:, "is_infectious"]
-
-            # adjusting infectious duration
-            self.__population.loc[is_infectious_mask,
-                                  "infectious_duration"] -= 1
-
-            # add new infectious
-            tmp_dur = (
-                np.around(
-                    self.__infect.infectious_duration(num_newly_infectious)
-                    )
-            )
-
-            if len(passed_incubation) > 0:
-                self.__population.loc[passed_incubation,
-                                      "is_infectious"] = True
-                self.__population.loc[
-                    passed_incubation, "infectious_duration"
-                ] = tmp_dur
-
-            # Change state to removed if passed infectious duration
-            # Check only old cases
-            passed_infectious_index = (
-                self.__population.loc[is_infectious_mask].index
-            )
-            passed_infectious = passed_infectious_index[
-                self.__population.loc[is_infectious_mask,
-                                      "infectious_duration"] <= 0
-            ]
-
-            num_newly_removed = len(passed_infectious)
-            if num_newly_removed > 0:
-                self.__population.loc[passed_infectious,
-                                      "is_infectious"] = False
-                self.__population.loc[passed_infectious, "is_removed"] = True
-                recovery_time = self.__infect.recovery_time(num_newly_removed)
-
-                self.__population.loc[
-                    passed_infectious, "recovery_time"
-                ] = recovery_time
-                self.__population.loc[passed_infectious,
-                                      "is_recovering"] = True
-
-            # Storing statistics
-            is_removed = self.__population.loc[:, "is_removed"]
-            self.__statistics["removed"].append(is_removed.sum(axis=0))
-            in_incubation = self.__population.loc[:, "in_incubation"]
-            self.__statistics["incubation"].append(in_incubation.sum(axis=0))
-            is_infectious = self.__population.loc[:, "is_infectious"]
-            self.__statistics["infectious"].append(is_infectious.sum(axis=0))
-            has_recovered = self.__population.loc[:, "has_recovered"]
-            self.__statistics["recovered"].append(has_recovered.sum(axis=0))
-            is_infected = self.__population.loc[:, "is_infected"]
-            self.__statistics["infected"].append(is_infected.sum(axis=0))
-
-            is_hospitalized = self.__population.loc[:, "is_hospitalized"]
-            self.__statistics["hospitalized"].append(
-                is_hospitalized.sum(axis=0)
-            )
-
-            self.__statistics["new infections"].append(num_newly_infected)
-            self.__statistics["newly infectious"].append(num_newly_infectious)
-            self.__statistics["newly recovered"].append(num_newly_recovered)
-            self.__statistics["newly removed"].append(num_newly_removed)
-            self.__statistics["will be hospitalized"].append(num_hospitalized)
-            self.__statistics["will die"].append(num_will_die)
-            self.__statistics["new deaths"].append(num_has_died)
-            is_dead = self.__population.loc[:, "has_died"]
-            self.__statistics["total_deaths"].append(is_dead.sum(axis=0))
+            self._sm.tick()
             if step % (int(len(self.__t) / 10)) == 0:
                 end = time()
                 _log.debug("In step %d" % step)
-                _log.debug(
-                    "Last round of simulations took %f seconds" % (end - start)
-                )
+                _log.debug("Last round of simulations took %f seconds" % (end - start))
                 start = time()
