@@ -39,7 +39,7 @@ _baseconfig = {
     # Population storage lcoation
     "population storage": "../populations/generic.pkl",
     # Trace the infection spread
-    "trace spread": True,
+    "trace spread": False,
     ###################################################
     # population options
     ###################################################
