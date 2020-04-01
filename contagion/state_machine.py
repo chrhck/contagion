@@ -516,10 +516,11 @@ class ContagionStateMachine(StateMachine):
 
         boolean_state_names = [
             "is_infected", "is_new_infected", "is_dead", "is_removed",
-            "is_infectious", "is_new_infectious", "is_hospitalized",
-            "is_new_hospitalized", "is_recovering", "is_new_recovering",
+            "is_infectious", "is_new_infectious", "is_latent", "is_new_latent",
+            "is_hospitalized", "is_new_hospitalized",
+            "is_recovering", "is_new_recovering",
             "is_incubation", "is_new_incubation",
-            "is_recovered", "will_be_hospitalized", "will_die"]
+            "is_recovered", "will_be_hospitalized", "will_die", 'can_infect']
 
         boolean_states = {name: BooleanState.from_boolean(name)
                                  for name in boolean_state_names}
@@ -527,7 +528,7 @@ class ContagionStateMachine(StateMachine):
         timer_state_names = [
             "incubation_duration", "hospitalization_duration", "recovery_time",
             "time_until_hospitalization", "infectious_duration",
-            "time_until_death"]
+            "time_until_death", "latent_duration"]
 
         timer_states = {name: FloatState.from_timer(name)
                         for name in timer_state_names}
@@ -551,13 +552,21 @@ class ContagionStateMachine(StateMachine):
 
         self._transitions = [
             MultiStateConditionalTransition(
-                "healthy_incubation",
+                "healthy_latent",
                 ~boolean_states["is_infected"],
-                [boolean_states["is_incubation"],
-                 boolean_states["is_new_incubation"],
+                [boolean_states["is_latent"],
+                 boolean_states["is_new_latent"],
                  boolean_states["is_infected"]],
                 is_infectable
             ),
+            # MultiStateConditionalTransition(
+            #    "healthy_incubation",
+            #     ~boolean_states["is_infected"],
+            #     [boolean_states["is_incubation"],
+            #      boolean_states["is_new_incubation"],
+            #      boolean_states["is_infected"]],
+            #     is_infectable
+            # ),
             ChangeStateConditionalTransition(
                 "will_be_hospitalized",
                 ~boolean_states["will_be_hospitalized"],
@@ -569,8 +578,14 @@ class ContagionStateMachine(StateMachine):
                 "time_until_hospitalization_init",
                 timer_states["time_until_hospitalization"],
                 self._infection.time_until_hospitalization,
-                boolean_states["is_new_incubation"]
+                boolean_states["is_new_latent"]
             ),
+            # InitializeTimerTransition(
+            #     "time_until_hospitalization_init",
+            #     timer_states["time_until_hospitalization"],
+            #     self._infection.time_until_hospitalization,
+            #     boolean_states["is_new_incubation"]
+            # ),
             MultiStateConditionalTransition(
                 "will_be_hospitalized_hospitalized",
                 boolean_states["will_be_hospitalized"],
@@ -579,7 +594,9 @@ class ContagionStateMachine(StateMachine):
                  boolean_states["is_removed"],
                  (~boolean_states["is_infectious"], False),
                  (~boolean_states["is_incubation"], False),
-                 (~boolean_states["is_recovering"], False)],
+                 (~boolean_states["is_latent"], False),
+                 (~boolean_states["is_recovering"], False),
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["time_until_hospitalization"])
             ),
             InitializeTimerTransition(
@@ -610,10 +627,28 @@ class ContagionStateMachine(StateMachine):
                  boolean_states["is_removed"],
                  (~boolean_states["is_infectious"], False),
                  (~boolean_states["is_incubation"], False),
+                 (~boolean_states["is_latent"], False),
                  (~boolean_states["is_infected"], False),
                  (~boolean_states["is_hospitalized"], False),
-                 (~boolean_states["is_new_hospitalized"], False)],
+                 (~boolean_states["is_new_hospitalized"], False),
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["time_until_death"])
+            ),
+
+            InitializeTimerTransition(
+                "latent_timer_initialization",
+                timer_states["latent_duration"],
+                self._infection.latent_duration,
+                boolean_states["is_new_latent"]
+            ),
+
+            MultiStateConditionalTransition(
+                "latent_incubation",
+                boolean_states["is_latent"],
+                [boolean_states["is_incubation"],
+                 boolean_states["is_new_incubation"],
+                 boolean_states["can_infect"]],
+                ~(timer_states["latent_duration"])
             ),
 
             InitializeTimerTransition(
@@ -656,7 +691,8 @@ class ContagionStateMachine(StateMachine):
                 "recovering_recovered",
                 boolean_states["is_recovering"],
                 [boolean_states["is_recovered"],
-                 (~boolean_states["is_infected"], False)],
+                 (~boolean_states["is_infected"], False),
+                 (~boolean_states['can_infect'], False)],
                 ~(timer_states["recovery_time"])
             ),
 
@@ -664,8 +700,15 @@ class ContagionStateMachine(StateMachine):
                 "hospitalized_recovered",
                 boolean_states["is_hospitalized"],
                 [boolean_states["is_recovered"],
-                 (~boolean_states["is_infected"], False)],
+                 (~boolean_states["is_infected"], False),
+                 (~boolean_states['can_infect'], False)],
                 ~(timer_states["hospitalization_duration"])
+            ),
+
+            DecreaseTimerTransition(
+                "decrease_latent_time",
+                timer_states["latent_duration"],
+                ~(boolean_states["is_new_latent"])
             ),
 
             DecreaseTimerTransition(
@@ -686,6 +729,7 @@ class ContagionStateMachine(StateMachine):
                 ~(boolean_states["is_new_recovering"])
             ),
 
+
             DecreaseTimerTransition(
                 "decrease_time_until_hospitalization",
                 timer_states["time_until_hospitalization"],
@@ -702,6 +746,12 @@ class ContagionStateMachine(StateMachine):
                 "decrease_time_until_death",
                 timer_states["time_until_death"],
                 ~(boolean_states["is_new_hospitalized"])
+            ),
+
+            ChangeStateConditionalTransition(
+                "deactivate_is_new_latent",
+                (boolean_states["is_new_latent"], False),
+                None
             ),
 
             ChangeStateConditionalTransition(
@@ -738,7 +788,7 @@ class ContagionStateMachine(StateMachine):
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
         pop_csr = self._interactions
 
-        infected_mask = self.states["is_infected"](data)
+        infected_mask = self.states["can_infect"](data)
         infected_indices = np.nonzero(infected_mask)[0]
 
         # Find all non-zero connections of the infected
@@ -788,7 +838,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
         new_incub_indices = np.nonzero(
-            self.states["is_new_incubation"](data))[0]
+            self.states["is_new_latent"](data))[0]
         if len(new_incub_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 

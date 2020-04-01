@@ -54,16 +54,16 @@ class Infection(object):
                              config['infection probability pdf'])
             exit('Check the infection probability pdf in the config file!')
         _log.debug('The infection duration pdfs')
-        try:
-            dur_pdf = self.__std_pdfs[config['infection duration pdf']](
-                config['infection duration mean'],
-                config['infection duration variance']
-            )
-            self.__pdf = dur_pdf
-        except ValueError:
-            _log.error('Unrecognized infection duration pdf! Set to ' +
-                             config['infection duration pdf'])
-            exit('Check the infection duration pdf in the config file!')
+        # try:
+        #     dur_pdf = self.__std_pdfs[config['infection duration pdf']](
+        #         config['infection duration mean'],
+        #         config['infection duration variance']
+        #     )
+        #     self.__pdf = dur_pdf
+        # except ValueError:
+        #     _log.error('Unrecognized infection duration pdf! Set to ' +
+        #                      config['infection duration pdf'])
+        #     exit('Check the infection duration pdf in the config file!')
 
         try:
             dur_infectious_pdf = (
@@ -86,6 +86,17 @@ class Infection(object):
             _log.error('Unrecognized incubation duration pdf! Set to ' +
                              config['incubation duration pdf'])
             exit('Check the incubation duration pdf in the config file!')
+
+        try:
+            dur_latent_pdf = (
+                self.__std_pdfs[config['latency duration pdf']](
+                    config['latency duration mean'],
+                    config['latency duration variance']))
+            self.__latent_duration = dur_latent_pdf
+        except ValueError:
+            _log.error('Unrecognized latency duration pdf! Set to ' +
+                             config['latency duration pdf'])
+            exit('Check the latency duration pdf in the config file!')
 
         _log.debug('The recovery time pdf')
         try:
@@ -176,6 +187,20 @@ class Infection(object):
                 Takes the sc intensity
         """
         return self.__pdf_infection_prob
+
+    @property
+    def latent_duration(self):
+        """
+        function: latent_duration
+        Getter function for the latent duration
+        duration
+        Parameters:
+            -None
+        Returns:
+            -int latent_duration:
+                The duration of latent period
+        """
+        return self.__latent_duration
 
     @property
     def incubation_duration(self):
