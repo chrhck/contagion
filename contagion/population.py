@@ -93,16 +93,21 @@ class Population(object):
         interaction_matrix = (
             sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
         )
-        indices = np.arange(self.__pop)
 
         # Here, the interaction matrix stores the connections of every
         # person, aka their social circle.
+
         for i, circle_size in enumerate(self.__social_circles):
-            # Get the social circle size for this person and randomly
-            # select indices of people they are connected to
-            self.__rstate.shuffle(indices)
-            sel_indices = indices[:circle_size]
-            # Set the connection
+            # Get unique indices
+            sel_indices = set()
+            for _ in range(circle_size):
+                while True:
+                    ind = self.__rstate.randint(0, self.__pop)
+                    if ind not in sel_indices:
+                        sel_indices.add(ind)
+                        break
+            sel_indices = list(sel_indices)
+
             interaction_matrix[i, sel_indices] = True
 
         # Symmetrize the matrix, such that when A is connected to B,
@@ -110,14 +115,15 @@ class Population(object):
         # of ther upper and lower(tranposed) triangle of the matrix
 
         # Logical or for the upper triangle
+        # interaction_matrix = interaction_matrix.tocsr()
         interaction_matrix = sparse.triu(interaction_matrix, 1) +\
             sparse.triu(interaction_matrix.transpose(), 1)
 
         # Mirror the upper triangle to the lower triangle
         interaction_matrix = interaction_matrix +\
             interaction_matrix.transpose()
-        interaction_matrix = interaction_matrix.tolil()
 
+        interaction_matrix = interaction_matrix.tolil()
         # No self-interaction
         interaction_matrix.setdiag(0)
 
