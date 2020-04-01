@@ -66,7 +66,8 @@ class MC_Sim(object):
             # The Reproductive Number
             self.__R0 = (
                 config["mean social circle interactions"]
-                * config["infection duration mean"]
+                * (config["infectious duration mean"] +
+                   config["incubation duration mean"])
                 * 0.5
             )
         else:
@@ -96,8 +97,11 @@ class MC_Sim(object):
                 "is_new_infected": False,
                 "is_incubation": False,
                 "is_new_incubation": False,
+                "is_latent": False,
+                "is_new_latent": False,
                 "is_infectious": False,
                 "is_new_infectious": False,
+                "can_infect": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
@@ -106,11 +110,14 @@ class MC_Sim(object):
                 "is_new_recovering": False,
                 "is_recovered": False,
                 "will_die": False,
+                "will_die_new": False,
                 "will_be_hospitalized": False,
+                "will_be_hospitalized_new": False,
                 "is_dead": False,
                 "is_new_dead": False,
                 "incubation_duration": 0,
                 "infectious_duration": 0,
+                "latent_duration": 0,
                 "time_until_hospitalization": 0,
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
@@ -133,6 +140,8 @@ class MC_Sim(object):
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
         self.__population.loc[infect_id, "is_infectious"] = True
+        # TODO: Add a switch if these people have symptoms or not
+        self.__population.loc[infect_id, "can_infect"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
 
         _log.info("There will be %d simulation steps" % len(self.__t))
@@ -151,19 +160,16 @@ class MC_Sim(object):
             _log.debug("Population is not tracked")
             self.__tracked = False
 
-        # Some additional storage
-        self.__distribution = []
-        self.__total_infections = []
-        self.__new_infections = []
-        self.__immune = []
-
         # The storage dictionary
         self.__statistics = defaultdict(list)
-        # Running the simulation
 
+        # The statistics of interes
         stat_collector = StatCollector(
-            ["is_removed", "is_incubation", "is_infectious", "is_infected",
+            ["is_removed", "is_incubation", "is_latent", "is_infectious",
+             "is_infected", "can_infect",
              "is_hospitalized", "is_recovered", "is_dead"])
+        # The state machine
+        _log.debug("Setting up the state machine")
         self._sm = ContagionStateMachine(
             self.__population,
             stat_collector,
@@ -171,10 +177,13 @@ class MC_Sim(object):
             self.__infect,
             self.__intense_pdf,
             self.__rstate)
-
+        _log.debug("Finished the state machine")
+        # Running the simulation
+        _log.debug("Launching the simulation")
         start = time()
         self.__simulation()
         end = time()
+        _log.debug("Finished the simulation")
         self.__statistics = self._sm.statistics
         _log.info("MC simulation took %f seconds" % (end - start))
 

@@ -53,7 +53,7 @@ class Population(object):
 
             soc_circ_pdf = TruncatedNormal(
                 config['average social circle'],
-                config['infection duration variance'],
+                config['variance social circle'],
                 max_val=config['population size']
                 )
 
