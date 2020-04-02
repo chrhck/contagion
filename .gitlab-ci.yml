@@ -75,3 +75,9 @@ con_distribution_comparison:
     NOTEBOOK: con_distribution_comparison
     FIGURE: Contagion_Distribution.png
   <<: *test_notebook
+
+con_trace:
+  variables:
+    NOTEBOOK: con_trace
+    FIGURE: Contagion_Tracing.png
+  <<: *test_notebook
