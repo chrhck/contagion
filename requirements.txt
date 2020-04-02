@@ -9,3 +9,5 @@ pyyaml
 pandas
 flake8
 seaborn
+networkx
+graphviz
