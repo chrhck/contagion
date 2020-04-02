@@ -181,7 +181,7 @@ class MC_Sim(object):
         # The storage dictionary
         self.__statistics = defaultdict(list)
 
-        # The statistics of interes
+        # The statistics of interest
         stat_collector = StatCollector(
             [
                 "is_removed",
@@ -228,6 +228,20 @@ class MC_Sim(object):
                 Stores the results from the simulation
         """
         return self.__statistics
+
+    @property
+    def trace_spread(self):
+        """
+        function: trace_spread
+        Getter functions for the simulation results
+        from the simulation
+        Parameters:
+            -None
+        Returns:
+            -list trace_spread:
+                Stores the spread
+        """
+        return self._sm.trace_spread
 
     @property
     def time_array(self):
