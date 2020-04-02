@@ -165,7 +165,7 @@ class Population(object):
 
         self.__interaction_matrix = interaction_matrix
         end = time()
-        _log.debug('Population construction took: %.1f' %(end - start))
+        _log.debug('Population construction took: %.1f' % (end - start))
 
     @property
     def population(self):
