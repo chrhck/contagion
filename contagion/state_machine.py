@@ -1050,8 +1050,16 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        contact_rows, contact_cols, contact_strengths =\
-            sparse.find(pop_csr[infected_indices])
+        infected_sub_mtx = pop_csr[infected_indices]
+        if config['trace spread']:
+            # here we need the rows
+            # NOTE: This is ~2times slower
+
+            contact_rows, contact_cols, contact_strengths =\
+                sparse.find(infected_sub_mtx)
+        else:
+            contact_cols = infected_sub_mtx.indices  # nonzero column indices
+            contact_strengths = infected_sub_mtx.data  # nonzero data
 
         # Based on the contact rate, sample a poisson rvs
         # for the number of interactions per timestep.
