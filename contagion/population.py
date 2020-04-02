@@ -11,6 +11,7 @@ import numpy as np
 # A truncated normal continuous random variable
 import scipy.sparse as sparse
 import logging
+from time import time
 
 from .pdfs import TruncatedNormal
 from .config import config
@@ -46,7 +47,7 @@ class Population(object):
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
-
+        start = time()
         _log.info('Constructing social circles for the population')
         _log.debug('Number of people in social circles')
         if config['social circle pdf'] == 'gauss':
@@ -163,6 +164,8 @@ class Population(object):
         interaction_matrix = max_inter + max_inter.transpose()
 
         self.__interaction_matrix = interaction_matrix
+        end = time()
+        _log.debug('Population construction took: %.1f' %(end - start))
 
     @property
     def population(self):
