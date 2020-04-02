@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""
+Name: state_machine.py
+Authors: Christian Haack, Stephan Meighen-Berger
+Constructs the state machine
+"""
+
 from __future__ import annotations
 import abc
 from collections import defaultdict
@@ -1056,12 +1064,13 @@ class ContagionStateMachine(StateMachine):
         # Note, that contacted ids can appear multiple times
         # if a person is successfully contacted by multiple people.
         successful_contacts_indices = contact_cols[successful_contacts_mask]
-        self._trace_spread.append(np.dstack((
-            infected_indices[contact_rows[successful_contacts_mask]],
-            contact_cols[successful_contacts_mask]
-        )))
+        # TODO: Add this as a state not seperate list
+        if config['trace spread']:
+            self._trace_spread.append(np.dstack((
+                infected_indices[contact_rows[successful_contacts_mask]],
+                contact_cols[successful_contacts_mask]
+            )))
         num_succesful_contacts = len(successful_contacts_indices)
-
         self._statistics["contacts"].append(
             num_succesful_contacts)
 
