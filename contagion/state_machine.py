@@ -1069,7 +1069,7 @@ class ContagionStateMachine(StateMachine):
             self._trace_spread.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask]],
                 contact_cols[successful_contacts_mask]
-        )))
+            )))
         num_succesful_contacts = len(successful_contacts_indices)
         self._statistics["contacts"].append(
             num_succesful_contacts)
