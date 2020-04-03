@@ -51,12 +51,12 @@ _baseconfig = {
     # Available: 'gauss', 'gamma'
     'social circle pdf': 'gamma',
     # Average number of interactions per time step in sc
-    'mean social circle interactions': 0.2,
+    'mean social circle interactions': 11,
     # sd of sc interactions
     'variance social circle interactions': 0.2,
     # Distribution of the interaction rates
     # Available: 'gauss', 'gamma'
-    'social circle interactions pdf': 'gamma',
+    'social circle interactions pdf': 'gauss',
     ###################################################
     # infection options
     ###################################################
@@ -166,9 +166,6 @@ _baseconfig = {
     'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
 
-
-# TODO: Explain this to idiot Stephan
-# Why is a class required?
 class ConfigClass(dict):
     """
     class: ConfigClass
