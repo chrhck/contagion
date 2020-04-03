@@ -202,18 +202,32 @@ class MC_Sim(object):
         return self.__statistics
 
     @property
-    def trace_spread(self):
+    def trace_contacts(self):
         """
-        function: trace_spread
+        function: trace_contacts
         Getter functions for the simulation results
         from the simulation
         Parameters:
             -None
         Returns:
-            -list trace_spread:
+            -list trace_contacts:
                 Stores the spread
         """
-        return self._sm.trace_spread
+        return self._sm.trace_contacts
+
+    @property
+    def trace_infection(self):
+        """
+        function: trace_infection
+        Getter functions for the simulation results
+        from the simulation
+        Parameters:
+            -None
+        Returns:
+            -list trace_infection:
+                Stores the spread
+        """
+        return self._sm.trace_infection
 
     @property
     def time_array(self):

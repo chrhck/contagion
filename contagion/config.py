@@ -53,7 +53,7 @@ _baseconfig = {
     # Average number of interactions per time step in sc
     'mean social circle interactions': 0.2,
     # sd of sc interactions
-    'variance social circle interactions': 2,
+    'variance social circle interactions': 0.2,
     # Distribution of the interaction rates
     # Available: 'gauss', 'gamma'
     'social circle interactions pdf': 'gamma',
@@ -64,8 +64,12 @@ _baseconfig = {
     # General
     # -------------------------------------------------
     # Infection probability pdf
-    # available: 'intensity'
-    'infection probability pdf': 'intensity',
+    # available: 'beta'
+    'infection probability pdf': 'beta',
+    # The mean probability value
+    'infection probability mean': 0.2,
+    # The variance
+    'infection probability variance': 0.2,
     # -------------------------------------------------
     # Infectious
     # -------------------------------------------------

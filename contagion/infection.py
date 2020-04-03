@@ -37,7 +37,7 @@ class Infection(object):
         self.__std_pdfs = {
             'gauss': TruncatedNormal,
             'gamma': Gamma,
-            'beta': Beta,
+            'beta': Beta
         }
         # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
@@ -46,25 +46,22 @@ class Infection(object):
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
+        # Infection probability
         _log.debug('The infection probability pdf')
-        if config['infection probability pdf'] == 'intensity':
-            self.__pdf_infection_prob = NormalizedProbability(0, 1)
-        else:
-            _log.error('Unrecognized infection pdf! Set to ' +
+        try:
+            infection_prob_pdf = (
+                self.__std_pdfs[config['infection probability pdf']](
+                    config['infection probability mean'],
+                    config['infection probability variance']
+                )
+            )
+            self.__pdf_infection_prob = infection_prob_pdf
+        except ValueError:
+            _log.error('Unrecognized infection probability pdf! Set to ' +
                              config['infection probability pdf'])
             exit('Check the infection probability pdf in the config file!')
+# -----------------------------------------------------------------------------
         _log.debug('The infection duration pdfs')
-        # try:
-        #     dur_pdf = self.__std_pdfs[config['infection duration pdf']](
-        #         config['infection duration mean'],
-        #         config['infection duration variance']
-        #     )
-        #     self.__pdf = dur_pdf
-        # except ValueError:
-        #     _log.error('Unrecognized infection duration pdf! Set to ' +
-        #                      config['infection duration pdf'])
-        #     exit('Check the infection duration pdf in the config file!')
-
         try:
             dur_infectious_pdf = (
                 self.__std_pdfs[config['infectious duration pdf']](
@@ -110,7 +107,7 @@ class Infection(object):
             _log.error('Unrecognized recovery duration pdf! Set to ' +
                              config['recovery time pdf'])
             exit('Check the recovery duration pdf in the config file!')
-
+# -----------------------------------------------------------------------------
         _log.debug('The hospitalization pdfs')
 
         try:
@@ -148,7 +145,7 @@ class Infection(object):
                        ' Set to ' + config['time until hospitalization pdf'])
             exit('Check the time until hospitalization pdf ' +
                  'in the config file!')
-
+# -----------------------------------------------------------------------------
         _log.debug('The mortality pdfs')
         try:
             time_till_death_pdf = (
@@ -161,7 +158,6 @@ class Infection(object):
             _log.error('Unrecognized time incubation death pdf! Set to ' +
                              config['time incubation death pdf'])
             exit('Check the time incubation death pdf in the config file!')
-
         try:
             death_prob_pdf = (
                 self.__std_pdfs[config['mortality prob pdf']](

@@ -94,6 +94,50 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
             rvs = np.asarray(rvs, dtype=dtype)
         return rvs
 
+    def pdf(self, points: Union[float, np.ndarray],
+            dtype: Optional[type] = None) -> np.ndarray:
+        """
+        function: pdf
+        Calculates the pdf for given values
+        Parameters:
+            -float points:
+                Points to check probability for
+            -optional dtype:
+                Type of the output
+        Returns:
+            -np.array pdf:
+                The calculated pdfs
+        """
+        pdf = self._pdf.pdf(
+            points
+        )
+
+        if dtype is not None:
+            pdf = np.asarray(pdf, dtype=dtype)
+        return pdf
+
+    def cdf(self, points: Union[float, np.ndarray],
+            dtype: Optional[type] = None) -> np.ndarray:
+        """
+        function: cdf
+        Calculates the cdf for given values
+        Parameters:
+            -float points:
+                Points to check probability for
+            -optional dtype:
+                Type of the output
+        Returns:
+            -np.array cdf:
+                The calculated cdf
+        """
+        pdf = self._pdf.pdf(
+            points
+        )
+
+        if dtype is not None:
+            pdf = np.asarray(pdf, dtype=dtype)
+        return pdf
+
 
 class TruncatedNormal(ScipyPDF):
     """

@@ -674,7 +674,8 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         self._stat_collector = stat_collector
         if config['trace spread']:
             _log.debug('Tracing the population')
-            self._trace_spread = []
+            self._trace_contacts = []
+            self._trace_infection = []
 
     @property
     @abc.abstractmethod
@@ -1029,8 +1030,12 @@ class ContagionStateMachine(StateMachine):
             )
 
     @ property
-    def trace_spread(self):
-        return self._trace_spread
+    def trace_contacts(self):
+        return self._trace_contacts
+
+    @ property
+    def trace_infection(self):
+        return self._trace_infection
 
     @property
     def transitions(self):
@@ -1074,7 +1079,7 @@ class ContagionStateMachine(StateMachine):
         successful_contacts_indices = contact_cols[successful_contacts_mask]
         # TODO: Add this as a state not seperate list
         if config['trace spread']:
-            self._trace_spread.append(np.dstack((
+            self._trace_contacts.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask]],
                 contact_cols[successful_contacts_mask]
             )))
@@ -1083,15 +1088,24 @@ class ContagionStateMachine(StateMachine):
             num_succesful_contacts)
 
         # Calculate infection probability for all contacts
+        # TODO: Add infection probability depending on current status
         contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
-        infection_prob = self._infection.pdf_infection_prob(contact_strength)
-
+        # Weighted with the contact strength
+        infection_prob = (
+            self._infection.pdf_infection_prob.rvs(len(contact_strength))
+        ) * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
 
         newly_infected_mask = self._rstate.binomial(1, infection_prob)
         newly_infected_mask = np.asarray(newly_infected_mask, bool)
-
+        if config['trace spread']:
+            self._trace_infection.append(np.dstack((
+                infected_indices[contact_rows[successful_contacts_mask][
+                    newly_infected_mask
+                ]],
+                contact_cols[successful_contacts_mask][newly_infected_mask]
+            )))
         # Get the indices for the newly infected
         newly_infected_indices = successful_contacts_indices[
             newly_infected_mask]
