@@ -8,7 +8,7 @@ Constructs the infection.
 
 # Imports
 import numpy as np  # type: ignore
-from .pdfs import TruncatedNormal, NormalizedProbability, Beta, Gamma
+from .pdfs import TruncatedNormal, Beta, Gamma
 import logging
 from .config import config
 
