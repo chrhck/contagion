@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""
+Name: state_machine.py
+Authors: Christian Haack, Stephan Meighen-Berger
+Constructs the state machine
+"""
+
 from __future__ import annotations
 import abc
 from collections import defaultdict
@@ -11,6 +19,7 @@ from scipy import sparse
 
 from .infection import Infection
 from .pdfs import PDF
+from .config import config
 
 
 _log = logging.getLogger(__name__)
@@ -663,6 +672,9 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         else:
             self._data = data
         self._stat_collector = stat_collector
+        if config['trace spread']:
+            _log.debug('Tracing the population')
+            self._trace_spread = []
 
     @property
     @abc.abstractmethod
@@ -1016,6 +1028,10 @@ class ContagionStateMachine(StateMachine):
                 )
             )
 
+    @ property
+    def trace_spread(self):
+        return self._trace_spread
+
     @property
     def transitions(self):
         return self._transitions
@@ -1034,8 +1050,16 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        _, contact_cols, contact_strengths =\
-            sparse.find(pop_csr[infected_indices])
+        infected_sub_mtx = pop_csr[infected_indices]
+        if config['trace spread']:
+            # here we need the rows
+            # NOTE: This is ~2times slower
+
+            contact_rows, contact_cols, contact_strengths =\
+                sparse.find(infected_sub_mtx)
+        else:
+            contact_cols = infected_sub_mtx.indices  # nonzero column indices
+            contact_strengths = infected_sub_mtx.data  # nonzero data
 
         # Based on the contact rate, sample a poisson rvs
         # for the number of interactions per timestep.
@@ -1048,8 +1072,13 @@ class ContagionStateMachine(StateMachine):
         # Note, that contacted ids can appear multiple times
         # if a person is successfully contacted by multiple people.
         successful_contacts_indices = contact_cols[successful_contacts_mask]
+        # TODO: Add this as a state not seperate list
+        if config['trace spread']:
+            self._trace_spread.append(np.dstack((
+                infected_indices[contact_rows[successful_contacts_mask]],
+                contact_cols[successful_contacts_mask]
+            )))
         num_succesful_contacts = len(successful_contacts_indices)
-
         self._statistics["contacts"].append(
             num_succesful_contacts)
 

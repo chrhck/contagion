@@ -38,6 +38,8 @@ _baseconfig = {
     "store population": False,
     # Population storage lcoation
     "population storage": "../populations/generic.pkl",
+    # Trace the infection spread
+    "trace spread": False,
     ###################################################
     # population options
     ###################################################
@@ -46,15 +48,15 @@ _baseconfig = {
     # The variance of one's social circle
     'variance social circle': 5,
     # Social circle pdf:
-    # Available: 'gauss'
-    'social circle pdf': 'gauss',
+    # Available: 'gauss', 'gamma'
+    'social circle pdf': 'gamma',
     # Average number of interactions per time step in sc
     'mean social circle interactions': 0.2,
     # sd of sc interactions
     'variance social circle interactions': 2,
     # Distribution of the interaction rates
-    # Available: 'gauss'
-    'social circle interactions pdf': 'gauss',
+    # Available: 'gauss', 'gamma'
+    'social circle interactions pdf': 'gamma',
     ###################################################
     # infection options
     ###################################################
@@ -73,7 +75,7 @@ _baseconfig = {
     'infectious duration variance': 2,
     # Infectious duration pdf
     # Available: 'gauss', 'gamma'
-    'infectious duration pdf': 'gauss',
+    'infectious duration pdf': 'gamma',
     # -------------------------------------------------
     # Latency
     # -------------------------------------------------
@@ -83,7 +85,7 @@ _baseconfig = {
     'latency duration variance': 2,
     # Incubation duration pdf
     # Available: 'gauss', 'gamma'
-    'latency duration pdf': 'gauss',
+    'latency duration pdf': 'gamma',
     # -------------------------------------------------
     # Incubation
     # -------------------------------------------------
@@ -93,7 +95,7 @@ _baseconfig = {
     'incubation duration variance': 2,
     # Incubation duration pdf
     # Available: 'gauss', 'gamma'
-    'incubation duration pdf': 'gauss',
+    'incubation duration pdf': 'gamma',
     # -------------------------------------------------
     # Hospitalization
     # -------------------------------------------------
@@ -103,19 +105,19 @@ _baseconfig = {
     'hospitalization probability sd': 0.1,
 
     # Available: 'gauss', 'gamma'
-    'hospitalization duration pdf': 'gauss',
+    'hospitalization duration pdf': 'gamma',
     'hospitalization duration mean': 28,
     'hospitalization duration sd': 5,
 
     # Available: 'gauss', 'gamma'
-    'time until hospitalization pdf': 'gauss',
+    'time until hospitalization pdf': 'gamma',
     'time until hospitalization mean': 5,
     'time until hospitalization sd': 2,
     # -------------------------------------------------
     # Mortality
     # -------------------------------------------------
     # Available: 'gauss', 'gamma'
-    'time incubation death pdf': 'gauss',
+    'time incubation death pdf': 'gamma',
     'time incubation death mean': 32,
     'time incubation death sd': 5,
 
@@ -127,7 +129,7 @@ _baseconfig = {
     # Recovery
     # -------------------------------------------------
     # Available: 'gauss', 'gamma'
-    'recovery time pdf': 'gauss',
+    'recovery time pdf': 'gamma',
     'recovery time mean': 11,
     'recovery time sd': 5,
     ###################################################

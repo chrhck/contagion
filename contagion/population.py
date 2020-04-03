@@ -11,8 +11,9 @@ import numpy as np
 # A truncated normal continuous random variable
 import scipy.sparse as sparse
 import logging
+from time import time
 
-from .pdfs import TruncatedNormal
+from .pdfs import TruncatedNormal, Gamma
 from .config import config
 
 _log = logging.getLogger(__name__)
@@ -46,63 +47,76 @@ class Population(object):
             self.__rstate = np.random.RandomState()
         else:
             self.__rstate = config['random state']
-
+        start = time()
         _log.info('Constructing social circles for the population')
         _log.debug('Number of people in social circles')
+        # TODO: Unify the pdf definitions with max_val
         if config['social circle pdf'] == 'gauss':
 
             soc_circ_pdf = TruncatedNormal(
                 config['average social circle'],
                 config['variance social circle'],
                 max_val=config['population size']
-                )
-
-            self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
+            )
+        elif config['social circle pdf'] == 'gamma':
+            soc_circ_pdf = Gamma(
+                config['average social circle'],
+                config['variance social circle']
+            )
         else:
             _log.error('Unrecognized social pdf! Set to ' +
                        config['social circle pdf'])
             raise RuntimeError('Check the social circle distribution' +
                                ' in the config file!')
-
+        self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
         _log.debug('The social circle interactions for each person')
         if config['social circle interactions pdf'] == 'gauss':
             upper = self.__social_circles
             # Check if there are people with zero contacts and set them to
             # 1 for the time being
             zero_contacts_mask = upper == 0
-            upper[zero_contacts_mask] = 1
+            # upper[zero_contacts_mask] = 1
 
             soc_circ_interact_pdf = TruncatedNormal(
                 config['mean social circle interactions'],
-                config['variance social circle interactions'],
-                max_val=upper
-                )
-
-            self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
-
-            # Set the interactions to zero for all people with zero contacts
-            self.__sc_interactions[zero_contacts_mask] = 0
+                config['variance social circle interactions']
+                # max_val=upper
+            )
+        elif config['social circle pdf'] == 'gamma':
+            upper = self.__social_circles
+            zero_contacts_mask = upper == 0
+            soc_circ_interact_pdf = Gamma(
+                config['average social circle'],
+                config['variance social circle']
+            )
         else:
             _log.error('Unrecognized sc interactions pdf! Set to ' +
                              config['social circle interactions pdf'])
             raise RuntimeError('Check the social circle interactions' +
                                ' distribution in the config file!')
-
+        self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
+        # Set the interactions to zero for all people with zero contacts
+        self.__sc_interactions[zero_contacts_mask] = 0
         _log.debug('Constructing population')
         # LIL sparse matrices are efficient for row-wise construction
         interaction_matrix = (
             sparse.lil_matrix((self.__pop, self.__pop), dtype=np.bool)
         )
-        indices = np.arange(self.__pop)
 
         # Here, the interaction matrix stores the connections of every
         # person, aka their social circle.
+
         for i, circle_size in enumerate(self.__social_circles):
-            # Get the social circle size for this person and randomly
-            # select indices of people they are connected to
-            self.__rstate.shuffle(indices)
-            sel_indices = indices[:circle_size]
-            # Set the connection
+            # Get unique indices
+            sel_indices = set()
+            for _ in range(circle_size):
+                while True:
+                    ind = self.__rstate.randint(0, self.__pop)
+                    if ind not in sel_indices:
+                        sel_indices.add(ind)
+                        break
+            sel_indices = list(sel_indices)
+
             interaction_matrix[i, sel_indices] = True
 
         # Symmetrize the matrix, such that when A is connected to B,
@@ -110,14 +124,15 @@ class Population(object):
         # of ther upper and lower(tranposed) triangle of the matrix
 
         # Logical or for the upper triangle
+        # interaction_matrix = interaction_matrix.tocsr()
         interaction_matrix = sparse.triu(interaction_matrix, 1) +\
             sparse.triu(interaction_matrix.transpose(), 1)
 
         # Mirror the upper triangle to the lower triangle
         interaction_matrix = interaction_matrix +\
             interaction_matrix.transpose()
-        interaction_matrix = interaction_matrix.tolil()
 
+        interaction_matrix = interaction_matrix.tolil()
         # No self-interaction
         interaction_matrix.setdiag(0)
 
@@ -157,6 +172,8 @@ class Population(object):
         interaction_matrix = max_inter + max_inter.transpose()
 
         self.__interaction_matrix = interaction_matrix
+        end = time()
+        _log.debug('Population construction took: %.1f' % (end - start))
 
     @property
     def population(self):
