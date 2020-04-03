@@ -110,22 +110,23 @@ class Contagion(object):
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
         _log.info("Starting the measure construction")
-        if config["measures"] == "contact tracing":
-            self.tracked = Measures().tracked
-            self.distanced = None
-            _log.info("-- Contact Tracing")
-        elif config["measures"] == "social distancing":
-            self.tracked = None
-            self.distanced = Measures().distanced
-            _log.info("-- Social Distancing")
-        elif config["measures"] == "all":
-            self.tracked = Measures().tracked
-            self.distanced = Measures().distanced
-            _log.info("-- All Measures")
-        else:
-            self.tracked = None
-            self.distanced = None
-            _log.info("-- No Measures")
+        self.measures = Measures()
+        # if config["measures"] == "contact tracing":
+        #    self.tracked = Measures().tracked
+        #    self.distanced = None
+        #    _log.info("-- Contact Tracing")
+        # elif config["measures"] == "social distancing":
+        #    self.tracked = None
+        #    self.distanced = Measures().distanced
+        #    _log.info("-- Social Distancing")
+        # elif config["measures"] == "all":
+        #    self.tracked = Measures().tracked
+        #    self.distanced = Measures().distanced
+        #    _log.info("-- All Measures")
+        # else:
+        #    self.tracked = None
+        #    self.distanced = None
+        #    _log.info("-- No Measures")
         _log.info("Finished the measure construction")
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
@@ -211,9 +212,7 @@ class Contagion(object):
             _log.error("Chosen time step too large!")
             sys.exit("Please run with time steps smaller than 1s!")
         _log.debug("Realistic run")
-        self.__mc_run = MC_Sim(
-            self.pop, self.infection, self.tracked, self.distanced
-        )
+        self.__mc_run = MC_Sim(self.pop, self.infection, self.measures)
         _log.info("---------------------------------------------------")
         _log.info("---------------------------------------------------")
         _log.info("Finished calculation")

@@ -39,7 +39,7 @@ class MC_Sim(object):
     "God does not roll dice!"
     """
 
-    def __init__(self, population, infection, tracked, distanced):
+    def __init__(self, population, infection, measures):
         """
         function: __init__
         Initializes the class.
@@ -48,14 +48,15 @@ class MC_Sim(object):
                 The population
             -obj infection:
                 The infection object
-            -np.array tracked:
-                The tracked population
+            -obj measures:
+                The measures object
         Returns:
             -None
         """
         # Inputs
         self.__infected = config["infected"]
         self.__infect = infection
+        self.__measures = measures
         self.__dt = config["time step"]
         self.__pop_matrix = population
         self.__t = np.arange(0.0, config["simulation length"], step=self.__dt)
@@ -117,6 +118,8 @@ class MC_Sim(object):
                 "will_be_hospitalized_new": False,
                 "is_dead": False,
                 "is_new_dead": False,
+                "is_quarantined": False,
+                "is_new_quarantined": False,
                 "incubation_duration": 0,
                 "infectious_duration": 0,
                 "latent_duration": 0,
@@ -124,6 +127,7 @@ class MC_Sim(object):
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
+                "quarantine_duration": 0,
             },
             index=np.arange(self.__pop_size),
         )
@@ -148,9 +152,9 @@ class MC_Sim(object):
         _log.info("There will be %d simulation steps" % len(self.__t))
 
         # Set Contact Tracing
+        tracked = self.__measures.tracked
         if tracked is not None:
             _log.debug("Constructing tracked people ids")
-            self.__tracked = True
             tracked_df = pd.DataFrame(
                 {"is_tracked": False}, index=np.arange(self.__pop_size)
             )
@@ -160,23 +164,22 @@ class MC_Sim(object):
             )
         else:
             _log.debug("Population is not tracked")
-            self.__tracked = False
 
         # Set Social Distancing
-        if distanced is not None:
-            _log.debug("Constructiong social distancing people ids")
-            self.__distanced = True
-            distanced_df = pd.DataFrame(
-                {"is_distanced": False}, index=np.arange(self.__pop_size)
-            )
-            distanced_df.loc[distanced, "is_distanced"] = True
-            self.__population = pd.concat(
-                [self.__population, distanced_df], axis=1
-            )
-            self._distanced_size = int(self.__pop_size * config["distanced"])
-        else:
-            _log.debug("Population is not Social Distancing")
-            self.__distanced = False
+        # if distanced is not None:
+        #    _log.debug("Constructiong social distancing people ids")
+        #    self.__distanced = True
+        #    distanced_df = pd.DataFrame(
+        #        {"is_distanced": False}, index=np.arange(self.__pop_size)
+        #    )
+        #    distanced_df.loc[distanced, "is_distanced"] = True
+        #    self.__population = pd.concat(
+        #        [self.__population, distanced_df], axis=1
+        #    )
+        #    self._distanced_size = int(self.__pop_size * config["distanced"])
+        # else:
+        #    _log.debug("Population is not Social Distancing")
+        #    self.__distanced = False
 
         # The storage dictionary
         self.__statistics = defaultdict(list)
@@ -193,6 +196,7 @@ class MC_Sim(object):
                 "is_hospitalized",
                 "is_recovered",
                 "is_dead",
+                "is_quarantined",
             ]
         )
         # The state machine
@@ -202,6 +206,7 @@ class MC_Sim(object):
             stat_collector,
             self.__pop_matrix,
             self.__infect,
+            self.__measures,
             self.__intense_pdf,
             self.__rstate,
         )

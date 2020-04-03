@@ -12,6 +12,7 @@ from sys import exit
 import numpy as np
 import logging
 
+from .pdfs import Uniform
 from .config import config
 
 _log = logging.getLogger(__name__)
@@ -37,6 +38,12 @@ class Measures(object):
         Returns:
             -None
         """
+        if config["random state"] is None:
+            _log.warning("No random state given, constructing new state")
+            self.__rstate = np.random.RandomState()
+        else:
+            self.__rstate = config["random state"]
+
         if config["measures"] == "none":
             _log.info("No measure taken")
             self.__tracked = None
@@ -44,7 +51,7 @@ class Measures(object):
             _log.info("Using contact tracing")
             self.__contact_tracing()
             self.__distanced = None
-        elif config["measures"] == "social sidtancing":
+        elif config["measures"] == "social distancing":
             _log.info("Using social distancing")
             self.__social_distancing()
             self.__tracked = None
@@ -53,10 +60,11 @@ class Measures(object):
             _log.info("Using contact tracing")
             self.__contact_tracing()
             self.__social_distancing()
-
         else:
             _log.error("measure not implemented! Set to " + config["measures"])
             exit("Please check the config file what measures are allowed")
+
+        self.__def_quarantine_pdf()
 
     @property
     def tracked(self):
@@ -83,6 +91,19 @@ class Measures(object):
                 The ids of the distanced population
         """
         return self.__distanced
+
+    @property
+    def quarantine_duration(self):
+        """
+        function: quarantine_duration
+        Getter function for the duration of the quarantine
+        Parameters:
+            -None
+        Returns:
+            -PDF
+                The pdf of the quarantine duration
+        """
+        return self.__quarantine_duration
 
     # TODO: Not 100% of participants will report correctly
     def __contact_tracing(self):
@@ -116,3 +137,15 @@ class Measures(object):
             size=distanced_pop,
             replace=False,
         ).flatten()
+
+    def __def_quarantine_pdf(self):
+        """
+        function: __def_quarantine_pdf
+        Defines the pdf for the duration of the quarantine
+        Parameters:
+            -None
+        Returns:
+            -None
+        """
+        quarantine_duration_pdf = Uniform(config["quarantine duration"], 0.0)
+        self.__quarantine_duration = quarantine_duration_pdf

@@ -145,6 +145,8 @@ _baseconfig = {
     # Interaction intensity distribution:
     # Available: uniform
     "interaction intensity": "uniform",
+    # Quarantine duration
+    "quarantine duration": 14.0,
     ###################################################
     # More advanced
     ###################################################
