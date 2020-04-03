@@ -74,9 +74,9 @@ _baseconfig = {
     # Infectious
     # -------------------------------------------------
     # Infectious duration mean
-    'infectious duration mean': 3,
+    'infectious duration mean': 3,  # Paper value 0.824
     # Infectious duration sd
-    'infectious duration variance': 2,
+    'infectious duration variance': 2,  # Paper value 2.42
     # Infectious duration pdf
     # Available: 'gauss', 'gamma'
     'infectious duration pdf': 'gamma',
@@ -94,9 +94,9 @@ _baseconfig = {
     # Incubation
     # -------------------------------------------------
     # Incubation duration mean
-    'incubation duration mean': 5,
+    'incubation duration mean': 5,  # Paper value 7.48
     # Incubation duration sd
-    'incubation duration variance': 2,
+    'incubation duration variance': 2,  # Paper value 4.27
     # Incubation duration pdf
     # Available: 'gauss', 'gamma'
     'incubation duration pdf': 'gamma',
