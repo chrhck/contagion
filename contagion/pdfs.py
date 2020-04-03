@@ -270,8 +270,8 @@ class Gamma(ScipyPDF):
     def __init__(
             self,
             mean: Union[float, np.ndarray],
-            sd: Union[float, np.ndarray]
-            ) -> None:
+            sd: Union[float, np.ndarray],
+            max_val=None) -> None:
         """
         function: __init__
         Initializes the Gamma class

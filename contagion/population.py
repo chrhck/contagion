@@ -41,6 +41,10 @@ class Population(object):
         """
         # Inputs
         self.__pop = config['population size']
+        self.__std_pdfs = {
+            'gauss': TruncatedNormal,
+            'gamma': Gamma
+        }
         # Checking random state
         if config['random state'] is None:
             _log.warning("No random state given, constructing new state")
@@ -50,50 +54,38 @@ class Population(object):
         start = time()
         _log.info('Constructing social circles for the population')
         _log.debug('Number of people in social circles')
-        # TODO: Unify the pdf definitions with max_val
-        if config['social circle pdf'] == 'gauss':
+        try:
+            soc_circ_pdf = (
+                self.__std_pdfs[config['social circle pdf']](
+                    config['average social circle'],
+                    config['variance social circle'],
+                    max_val=config['population size']
+                )
+            )
+            self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
+        except ValueError:
+            _log.error('Unrecognized social circle pdf! Set to ' +
+                             config['social circle pdf'])
+            exit('Check the social circle pdf in the config file!')
 
-            soc_circ_pdf = TruncatedNormal(
-                config['average social circle'],
-                config['variance social circle'],
-                max_val=config['population size']
-            )
-        elif config['social circle pdf'] == 'gamma':
-            soc_circ_pdf = Gamma(
-                config['average social circle'],
-                config['variance social circle']
-            )
-        else:
-            _log.error('Unrecognized social pdf! Set to ' +
-                       config['social circle pdf'])
-            raise RuntimeError('Check the social circle distribution' +
-                               ' in the config file!')
-        self.__social_circles = soc_circ_pdf.rvs(self.__pop, dtype=np.int)
         _log.debug('The social circle interactions for each person')
-        if config['social circle interactions pdf'] == 'gauss':
+        try:
             upper = self.__social_circles
             # Check if there are people with zero contacts and set them to
             # 1 for the time being
             zero_contacts_mask = upper == 0
             # upper[zero_contacts_mask] = 1
-
-            soc_circ_interact_pdf = TruncatedNormal(
-                config['mean social circle interactions'],
-                config['variance social circle interactions']
-                # max_val=upper
+            soc_circ_interact_pdf = (
+                self.__std_pdfs[config['social circle pdf']](
+                    config['mean social circle interactions'],
+                    config['variance social circle interactions']
+                )
             )
-        elif config['social circle pdf'] == 'gamma':
-            upper = self.__social_circles
-            zero_contacts_mask = upper == 0
-            soc_circ_interact_pdf = Gamma(
-                config['average social circle'],
-                config['variance social circle']
-            )
-        else:
-            _log.error('Unrecognized sc interactions pdf! Set to ' +
-                             config['social circle interactions pdf'])
-            raise RuntimeError('Check the social circle interactions' +
-                               ' distribution in the config file!')
+            self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
+        except ValueError:
+            _log.error('Unrecognized social circle pdf! Set to ' +
+                             config['social circle pdf'])
+            exit('Check the social circle pdf in the config file!')
         self.__sc_interactions = soc_circ_interact_pdf.rvs(self.__pop)
         # Set the interactions to zero for all people with zero contacts
         self.__sc_interactions[zero_contacts_mask] = 0
