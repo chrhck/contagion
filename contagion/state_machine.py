@@ -18,6 +18,7 @@ import pandas as pd
 from scipy import sparse
 
 from .infection import Infection
+from .measures import Measures
 from .pdfs import PDF
 from .config import config
 
