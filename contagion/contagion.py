@@ -37,7 +37,7 @@ class Contagion(object):
     Returns:
         -None
     """
-    def __init__(self):
+    def __init__(self, userconfig=None):
         """
         function: __init__
         Initializes the class Contagion.
@@ -48,6 +48,9 @@ class Contagion(object):
             -None
         """
         # Inputs
+        if userconfig is not None:
+            config.from_yaml(userconfig)
+   
         self.__infected = config['infected']
 
         # Logger
@@ -72,7 +75,7 @@ class Contagion(object):
 
         _log.addHandler(fh)
         _log.addHandler(ch)
-        _log.setLevel(logging.DEBUG)
+        _log.setLevel(logging.WARN)
 
         _log.info('---------------------------------------------------')
         _log.info('---------------------------------------------------')
