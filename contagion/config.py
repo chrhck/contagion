@@ -166,6 +166,7 @@ _baseconfig = {
     'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
 
+
 class ConfigClass(dict):
     """
     class: ConfigClass
