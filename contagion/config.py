@@ -111,8 +111,8 @@ _baseconfig = {
 
     # Available: 'gauss', 'gamma'
     'hospitalization duration pdf': 'gamma',
-    'hospitalization duration mean': 28,
-    'hospitalization duration sd': 5,
+    'hospitalization duration mean': 14,
+    'hospitalization duration sd': 1,
 
     # Available: 'gauss', 'gamma'
     'time until hospitalization pdf': 'gamma',
