@@ -29,6 +29,7 @@ DEBUG = False
 if DEBUG:
     _log.warn("DEBUG flag enabled. This will drastically slow down the code")
 
+
 class DataDict(dict):
     """
     Dictionary of numpy arrays with equal length
