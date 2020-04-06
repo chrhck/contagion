@@ -65,38 +65,39 @@ _baseconfig = {
     # -------------------------------------------------
     # Infection probability pdf
     # available: 'beta'
-    'infection probability pdf': 'beta',
+    'infection probability pdf': 'gamma',
     # The mean probability value
-    'infection probability mean': 0.2,
+    # Needs to be between 0. an 1.
+    'infection probability mean': 1.,
     # The variance
-    'infection probability variance': 0.2,
+    'infection probability variance': 0.1,
     # -------------------------------------------------
     # Infectious
     # -------------------------------------------------
     # Infectious duration mean
-    'infectious duration mean': 3,  # Paper value 0.824
+    'infectious duration mean': 0.824,  # Paper value 0.824
     # Infectious duration sd
-    'infectious duration variance': 2,  # Paper value 2.42
+    'infectious duration variance': 2.42,  # Paper value 2.42
     # Infectious duration pdf
     # Available: 'gauss', 'gamma'
     'infectious duration pdf': 'gamma',
     # -------------------------------------------------
     # Latency
     # -------------------------------------------------
-    # Incubation duration mean
-    'latency duration mean': 5,
-    # Incubation duration sd
-    'latency duration variance': 2,
-    # Incubation duration pdf
+    # Latency duration mean
+    'latency duration mean': 2,
+    # Latency duration sd
+    'latency duration variance': 1,
+    # Latency duration pdf
     # Available: 'gauss', 'gamma'
     'latency duration pdf': 'gamma',
     # -------------------------------------------------
     # Incubation
     # -------------------------------------------------
     # Incubation duration mean
-    'incubation duration mean': 5,  # Paper value 7.48
+    'incubation duration mean': 7.48,  # Paper value 7.48
     # Incubation duration sd
-    'incubation duration variance': 2,  # Paper value 4.27
+    'incubation duration variance': 4.27,  # Paper value 4.27
     # Incubation duration pdf
     # Available: 'gauss', 'gamma'
     'incubation duration pdf': 'gamma',
@@ -106,7 +107,7 @@ _baseconfig = {
     # Hospitalization pdfs
     'hospitalization probability pdf': 'beta',
     'hospitalization probability mean': 0.2,
-    'hospitalization probability sd': 0.1,
+    'hospitalization probability sd': 0.01,
 
     # Available: 'gauss', 'gamma'
     'hospitalization duration pdf': 'gamma',

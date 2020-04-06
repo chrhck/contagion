@@ -102,6 +102,7 @@ class MC_Sim(object):
                 "is_infectious": False,
                 "is_new_infectious": False,
                 "can_infect": False,
+                "is_new_can_infect": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
@@ -122,6 +123,7 @@ class MC_Sim(object):
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
+                "duration_of_can_infect":0
 
             },
             index=np.arange(self.__pop_size),
@@ -143,6 +145,7 @@ class MC_Sim(object):
         # TODO: Add a switch if these people have symptoms or not
         self.__population.loc[infect_id, "can_infect"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
+        self.__population.loc[infect_id, "duration_of_can_infect"] = 1
 
         _log.info("There will be %d simulation steps" % len(self.__t))
 
