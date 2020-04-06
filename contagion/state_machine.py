@@ -26,6 +26,8 @@ _log = logging.getLogger(__name__)
 
 DEBUG = False
 
+if DEBUG:
+    _log.warn("DEBUG flag enabled. This will drastically slow down the code")
 
 class DataDict(dict):
     """
