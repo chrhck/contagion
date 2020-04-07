@@ -95,7 +95,7 @@ class Contagion(object):
 
         _log.addHandler(fh)
         _log.addHandler(ch)
-        _log.setLevel(logging.WARN)
+        _log.setLevel(logging.DEBUG)
         _log.info("Welcome to contagion!")
         _log.info("This package will help you model the spread of infections")
 

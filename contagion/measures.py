@@ -71,12 +71,12 @@ class Measures(object):
             -None
         """
         tracked_pop = int(
-            config["population size"] *
-            config["tracked"]
+            config["population"]["population size"] *
+            config["measures"]["tracked fraction"]
         )
         _log.debug("Number of people tracked is %d" % tracked_pop)
         self.__tracked = np.random.choice(
-            range(config["population size"]),
+            range(config["population"]["population size"]),
             size=tracked_pop,
             replace=False
         ).flatten()
