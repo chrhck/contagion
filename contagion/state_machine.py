@@ -1055,7 +1055,8 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        if config["trace spread"]:
+        # TODO: Use an attribute instad of directly invoking config
+        if config["general"]["trace spread"]:
             # here we need the rows
             # NOTE: This is ~2times slower
             contact_cols, contact_strengths, contact_rows =\
