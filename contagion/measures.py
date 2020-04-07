@@ -43,7 +43,7 @@ class Measures(object):
             _log.info("Using contact tracing")
             self.__contact_tracing()
         else:
-            _log.error("measure not implemented! Set to %s",  
+            _log.error("measure not implemented! Set to %s",
                        config["measures"]["measures"])
             exit("Please check the config file what measures are allowed")
 
