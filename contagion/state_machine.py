@@ -627,11 +627,7 @@ class InitializeCounterTransition(_Transition, ConditionalMixin):
 
         cond = self.unify_condition(data)
 
-        # Rows which are currently 0
-        zero_rows = (~self._state_a(data)) & cond
-        num_zero_rows = zero_rows.sum(axis=0)
-
-        initial_vals = 1
+        initial_vals = 1  # Initializes counter at 1
         (~self._state_a).change_state(
             data, initial_vals, cond)
 
@@ -1203,9 +1199,10 @@ class ContagionStateMachine(StateMachine):
                 )
             )
         # Weighted with the contact strength
+        # TODO: Removed contact strength for now
         infection_prob = (
             self._infection.pdf_infection_prob.pdf(infectious_dur_reshape)
-        ) * contact_strength
+        ) #  * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
 

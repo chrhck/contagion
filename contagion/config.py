@@ -56,7 +56,7 @@ _baseconfig = {
     'variance social circle interactions': 0.2,
     # Distribution of the interaction rates
     # Available: 'gauss', 'gamma'
-    'social circle interactions pdf': 'gauss',
+    'social circle interactions pdf': 'gamma',
     ###################################################
     # infection options
     ###################################################
@@ -85,7 +85,7 @@ _baseconfig = {
     # Latency
     # -------------------------------------------------
     # Latency duration mean
-    'latency duration mean': 2,
+    'latency duration mean': 2.52,
     # Latency duration sd
     'latency duration variance': 1,
     # Latency duration pdf
@@ -116,8 +116,8 @@ _baseconfig = {
 
     # Available: 'gauss', 'gamma'
     'time until hospitalization pdf': 'gamma',
-    'time until hospitalization mean': 5,
-    'time until hospitalization sd': 2,
+    'time until hospitalization mean': 2.52,
+    'time until hospitalization sd': 1,
     # -------------------------------------------------
     # Mortality
     # -------------------------------------------------
@@ -156,15 +156,6 @@ _baseconfig = {
     # TODO: Define time steps
     # This should be at maximum 1
     'time step': 1.,
-    # Freedom of movement
-    # How large the angle change between steps can be
-    # (for the organisms)
-    # Org. won't move with angles between the values
-    "angle change": [90, 270],
-    # Number of points to use when constructing a spherical
-    # geometry. Increasing the number increases the precision,
-    # while reducing efficiency
-    'sphere samples': int(5e1),  # Number of points to construct the sphere
 }
 
 
