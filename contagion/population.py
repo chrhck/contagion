@@ -115,23 +115,24 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         contact_rates = []
         n_contacts = self.__soc_circ_interact_pdf.rvs(rows.shape[0])
         contact_rate = n_contacts / self._social_circles[rows]
-
         contact_rate[self._social_circles[rows] == 0] = 0
 
         for i, row_ind in enumerate(rows):
             sel_indices.append(
                 self._rstate.randint(
                     0, self._pop_size, size=int(n_contacts[i])))
-            contact_rates.append(np.ones(int(n_contacts[i]))*contact_rate[i])
-
+            contact_rates.append(
+                np.ones(int(n_contacts[i]), dtype=np.float)*contact_rate[i])
         if return_rows:
             succesful_rows = [
-                np.ones(len(rows), dtype=np.int)*i for i in range(len(rows))
+                np.ones(len(contact_rates[i]), dtype=np.int)*i
+                for i in range(len(rows))
                 if len(contact_rates[i]) > 0]
             if succesful_rows:
                 succesful_rows = np.concatenate(succesful_rows)
             else:
                 succesful_rows = np.empty(0, dtype=int)
+
         if sel_indices:
             sel_indices = np.concatenate(sel_indices)
             contact_rates = np.concatenate(contact_rates)
