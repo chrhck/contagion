@@ -9,32 +9,27 @@ import abc
 from typing import Union, Tuple
 from time import time
 
-import numpy as np
-import scipy.sparse as sparse
+import numpy as np  # type: ignore
+import scipy.sparse as sparse  # type: ignore
 import logging
 
-
-from .pdfs import TruncatedNormal, Gamma
 from .config import config
+from .pdfs import construct_pdf
 
 _log = logging.getLogger(__name__)
-
-STD_PDFS = {
-    'gauss': TruncatedNormal,
-    'gamma': Gamma
-}
 
 
 class Population(object, metaclass=abc.ABCMeta):
     def __init__(self):
         # Checking random state
-        if config['random state'] is None:
-            _log.warning("No random state given, constructing new state")
-            self._rstate = np.random.RandomState()
-        else:
-            self._rstate = config['random state']
 
-        self._pop_size = config['population size']
+        self._pop_size = config["population"]["population size"]
+        self._rstate = config["runtime"]["random state"]
+
+        _log.debug("The interaction intensity pdf")
+
+        self._interaction_intensity = construct_pdf(
+            config["population"]["interaction intensity pdf"])
 
     @abc.abstractmethod
     def get_contacts(
@@ -45,28 +40,28 @@ class Population(object, metaclass=abc.ABCMeta):
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         pass
 
+    @property
+    def interaction_intensity(self):
+        return self._interaction_intensity
+
 
 class PopulationWithSocialCircles(Population):
 
     def __init__(self):
         super().__init__()
 
-        _log.info('Constructing social circles for the population')
-        _log.debug('Number of people in social circles')
-        try:
-            soc_circ_pdf = (
-                STD_PDFS[config['social circle pdf']](
-                    config['average social circle'],
-                    config['variance social circle'],
-                    max_val=config['population size']
-                )
-            )
-            self._social_circles = soc_circ_pdf.rvs(
-                self._pop_size, dtype=np.int)
-        except ValueError:
-            _log.error('Unrecognized social circle pdf! Set to ' +
-                             config['social circle pdf'])
-            exit('Check the social circle pdf in the config file!')
+        _log.info("Constructing social circles for the population")
+
+        soc_circ_pdf = construct_pdf(
+            config["population"]["social circle pdf"])
+
+        self._social_circles = soc_circ_pdf.rvs(
+            self._pop_size, dtype=np.int)
+
+        soc_circ_interact_pdf = construct_pdf(
+                config["population"]["social circle interactions pdf"])
+
+        self._soc_circ_interact_pdf = soc_circ_interact_pdf
 
     @property
     def social_circles(self):
@@ -77,20 +72,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
 
     def __init__(self):
         super().__init__()
-
-        _log.debug('The social circle interactions for each person')
-        try:
-            soc_circ_interact_pdf = (
-                STD_PDFS[config['social circle pdf']](
-                    config['mean social circle interactions'],
-                    config['variance social circle interactions']
-                )
-            )
-            self.__soc_circ_interact_pdf = soc_circ_interact_pdf
-        except ValueError:
-            _log.error('Unrecognized social circle pdf! Set to ' +
-                             config['social circle pdf'])
-            exit('Check the social circle pdf in the config file!')
 
     def get_contacts(
             self,
@@ -113,7 +94,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
 
         sel_indices = []
         contact_rates = []
-        n_contacts = self.__soc_circ_interact_pdf.rvs(rows.shape[0])
+        n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
         contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
 
@@ -170,28 +151,10 @@ class AccuratePopulation(PopulationWithSocialCircles):
         start = time()
         super().__init__()
 
-        _log.debug('The social circle interactions for each person')
-        try:
-            upper = self._social_circles
-            # Check if there are people with zero contacts and set them to
-            # 1 for the time being
-            zero_contacts_mask = upper == 0
-            # upper[zero_contacts_mask] = 1
-            soc_circ_interact_pdf = (
-                STD_PDFS[config['social circle pdf']](
-                    config['mean social circle interactions'],
-                    config['variance social circle interactions']
-                )
-            )
-            self.__sc_interactions = soc_circ_interact_pdf.rvs(self._pop_size)
-        except ValueError:
-            _log.error('Unrecognized social circle pdf! Set to ' +
-                             config['social circle pdf'])
-            exit('Check the social circle pdf in the config file!')
-        self.__sc_interactions = soc_circ_interact_pdf.rvs(self._pop_size)
-        # Set the interactions to zero for all people with zero contacts
-        self.__sc_interactions[zero_contacts_mask] = 0
-        _log.debug('Constructing population')
+        self.__sc_interactions = self._soc_circ_interact_pdf.rvs(
+            self._pop_size)
+
+        _log.debug("Constructing population")
         # LIL sparse matrices are efficient for row-wise construction
         interaction_matrix = (
             sparse.lil_matrix((self._pop_size, self._pop_size), dtype=np.bool)
@@ -200,7 +163,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
         # Here, the interaction matrix stores the connections of every
         # person, aka their social circle.
 
-        for i, circle_size in enumerate(self.social_circles):
+        for i, circle_size in enumerate(self._social_circles):
             # Get unique indices
             sel_indices = set()
             for _ in range(circle_size):
@@ -241,7 +204,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
         num_connections = np.asarray(num_connections).squeeze()
 
         # Context manager
-        with np.errstate(all='ignore'):
+        with np.errstate(all="ignore"):
             contact_rate = num_contacts / (num_connections)
         contact_rate[num_connections <= 0] = 0
 
@@ -267,7 +230,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
 
         self.__interaction_matrix = interaction_matrix.tocsr()
         end = time()
-        _log.debug('Population construction took: %.1f' % (end - start))
+        _log.debug("Population construction took: %.1f" % (end - start))
 
     @property
     def population(self):

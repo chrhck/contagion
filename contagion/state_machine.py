@@ -13,8 +13,8 @@ import functools
 import logging
 from typing import Callable, Union, List, Tuple, Dict, Optional
 
-import numpy as np
-import pandas as pd
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 
 from .config import config
 from .infection import Infection
@@ -675,8 +675,8 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         else:
             self._data = data
         self._stat_collector = stat_collector
-        if config['trace spread']:
-            _log.debug('Tracing the population')
+        if config["general"]["trace spread"]:
+            _log.debug("Tracing the population")
             self._trace_contacts = []
             self._trace_infection = []
 
@@ -726,15 +726,13 @@ class ContagionStateMachine(StateMachine):
             stat_colletor: Optional[StatCollector],
             population: Population,
             infection: Infection,
-            intensity_pdf: PDF,
-            rstate: np.random.RandomState,
             *args, **kwargs):
         super().__init__(data, stat_colletor, *args, **kwargs)
 
         self._population = population
-        self._rstate = rstate
+        self._rstate = config["runtime"]["random state"]
         self._infection = infection
-        self._intensity_pdf = intensity_pdf
+        self._intensity_pdf = population.interaction_intensity
         self._statistics = defaultdict(list)
 
         # Boolean states
@@ -745,7 +743,7 @@ class ContagionStateMachine(StateMachine):
             "is_recovering", "is_new_recovering",
             "is_incubation", "is_new_incubation",
             "is_recovered", "will_be_hospitalized", "will_be_hospitalized_new",
-            "will_die", "will_die_new", 'can_infect']
+            "will_die", "will_die_new", "can_infect"]
 
         boolean_states = {name: BooleanState.from_boolean(name)
                                  for name in boolean_state_names}
@@ -999,7 +997,7 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["is_recovering"],
                 [boolean_states["is_recovered"],
                  (~boolean_states["is_infected"], False),
-                 (~boolean_states['can_infect'], False)],
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["recovery_time"])
             ),
 
@@ -1008,7 +1006,7 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["is_hospitalized"],
                 [boolean_states["is_recovered"],
                  (~boolean_states["is_infected"], False),
-                 (~boolean_states['can_infect'], False)],
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["hospitalization_duration"])
             ),
         ]
@@ -1057,7 +1055,7 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        if config['trace spread']:
+        if config["trace spread"]:
             # here we need the rows
             # NOTE: This is ~2times slower
             contact_cols, contact_strengths, contact_rows =\
@@ -1080,7 +1078,7 @@ class ContagionStateMachine(StateMachine):
         # if a person is successfully contacted by multiple people.
         successful_contacts_indices = contact_cols[successful_contacts_mask]
         # TODO: Add this as a state not seperate list
-        if config['trace spread']:
+        if config["general"]["trace spread"]:
             self._trace_contacts.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask]],
                 contact_cols[successful_contacts_mask]
@@ -1101,7 +1099,7 @@ class ContagionStateMachine(StateMachine):
 
         newly_infected_mask = self._rstate.binomial(1, infection_prob)
         newly_infected_mask = np.asarray(newly_infected_mask, bool)
-        if config['trace spread']:
+        if config["general"]["trace spread"]:
             self._trace_infection.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask][
                     newly_infected_mask

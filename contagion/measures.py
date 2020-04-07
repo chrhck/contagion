@@ -36,16 +36,16 @@ class Measures(object):
         Returns:
             -None
         """
-        if config['measures'] == 'none':
-            _log.info('No measure taken')
+        if config["measures"]["measures"] is None:
+            _log.info("No measure taken")
             self.__tracked = None
-        elif config['measures'] == 'contact tracing':
-            _log.info('Using contact tracing')
+        elif config["measures"]["measures"] == "contact tracing":
+            _log.info("Using contact tracing")
             self.__contact_tracing()
         else:
-            _log.error('measure not implemented! Set to ' +
-                             config['measures'])
-            exit('Please check the config file what measures are allowed')
+            _log.error("measure not implemented! Set to %s",  
+                       config["measures"]["measures"])
+            exit("Please check the config file what measures are allowed")
 
     @property
     def tracked(self):
@@ -71,12 +71,12 @@ class Measures(object):
             -None
         """
         tracked_pop = int(
-            config['population size'] *
-            config['tracked']
+            config["population size"] *
+            config["tracked"]
         )
-        _log.debug('Number of people tracked is %d' % tracked_pop)
+        _log.debug("Number of people tracked is %d" % tracked_pop)
         self.__tracked = np.random.choice(
-            range(config['population size']),
+            range(config["population size"]),
             size=tracked_pop,
             replace=False
         ).flatten()

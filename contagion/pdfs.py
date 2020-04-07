@@ -2,11 +2,14 @@
 This module provided interfaces to PDFs and RNG
 """
 import abc
-from typing import Optional, Union
+import logging
+from typing import Optional, Union, Dict, Any
 import scipy.stats  # type: ignore
 import numpy as np  # type: ignore
 
 from .config import config
+
+_log = logging.getLogger(__name__)
 
 
 class Probability(object, metaclass=abc.ABCMeta):
@@ -88,7 +91,7 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
                 The drawn samples
         """
         rvs = self._pdf.rvs(
-            size=num, random_state=config['random state'])
+            size=num, random_state=config["runtime"]["random state"])
 
         if dtype is not None:
             rvs = np.asarray(rvs, dtype=dtype)
@@ -337,3 +340,23 @@ class NormalizedProbability(Probability):
             raise ValueError("Not all values in range")
 
         return (values - self._lower) / self._interval_length
+
+
+def construct_pdf(conf_dict: Dict[str, Any]) -> PDF:
+    """
+    Convenience function to create a PDF from a config dict
+
+    Parameters:
+        conf_dict: Dict[str, Any]
+            The dict should contain a `class` key with the name of the
+            PDF to instantiate. Any further keys will be passed as kwargs
+    """
+    try:
+        conf_dict = dict(conf_dict)
+        class_name = conf_dict.pop("class")
+        pdf_class = globals()[class_name]
+        pdf = pdf_class(**conf_dict)
+    except KeyError:
+        _log.error("Unknown pdf class: %s", class_name)
+        raise KeyError(("Unknown pdf class: %s".format(class_name)))
+    return pdf
