@@ -13,6 +13,9 @@ of safety measures, such as social distancing and tracking.
 import sys
 import logging
 import pickle
+import yaml
+
+import numpy as np  # type: ignore
 
 # -----------------------------------------
 # Package modules
@@ -23,7 +26,7 @@ from .measures import Measures
 from . import population
 
 # unless we put this class in __init__, __name__ will be contagion.contagion
-_log = logging.getLogger('contagion')
+_log = logging.getLogger("contagion")
 
 
 class Contagion(object):
@@ -51,23 +54,36 @@ class Contagion(object):
         if userconfig is not None:
             config.from_yaml(userconfig)
 
-        self.__infected = config['infected']
+        # Create RandomState
+        if config["general"]["random state seed"] is None:
+            _log.warning("No random state seed given, constructing new state")
+            rstate = np.random.RandomState()
+        else:
+            rstate = np.random.RandomState(
+                 config["general"]["random state seed"])
+
+        config["runtime"] = {
+            "random state": rstate
+            }
+
+        self.__infected = config["infection"]["infected"]
 
         # Logger
         # creating file handler with debug messages
-        fh = logging.FileHandler(config['log file handler'], mode='w')
+        fh = logging.FileHandler(config["general"]["log file handler"],
+                                 mode="w")
         fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(config['debug level'])
+        ch.setLevel(config["general"]["debug level"])
 
         # Logging formatter
-        fmt = '%(levelname)s: %(message)s'
-        fmt_with_name = '[%(name)s] ' + fmt
+        fmt = "%(levelname)s: %(message)s"
+        fmt_with_name = "[%(name)s] " + fmt
         formatter_with_name = logging.Formatter(fmt=fmt_with_name)
         fh.setFormatter(formatter_with_name)
         # add class name to ch only when debugging
-        if config['debug level'] == logging.DEBUG:
+        if config["general"]["debug level"] == logging.DEBUG:
             ch.setFormatter(formatter_with_name)
         else:
             formatter = logging.Formatter(fmt=fmt)
@@ -76,56 +92,48 @@ class Contagion(object):
         _log.addHandler(fh)
         _log.addHandler(ch)
         _log.setLevel(logging.WARN)
+        _log.info("Welcome to contagion!")
+        _log.info("This package will help you model the spread of infections")
 
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('Welcome to contagion!')
-        _log.info('This package will help you model the spread of infections')
-        _log.debug('Trying to catch some errors in the config')
-
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        if config["re-use population"]:
+        if config["population"]["re-use population"]:
             try:
-                self.pop = pickle.load(
-                    open(config["population storage"], "rb")
+                self.pop, pop_config = pickle.load(
+                    open(config["population"]["population storage"], "rb")
                 )
-                _log.debug('Population loaded')
+                if pop_config != config["population"]:
+                    _log.warn(
+                        "Attempting to reuse population with a "
+                        "different config. Continue at own risk.")
+                _log.debug("Population loaded")
             except ImportError:
-                _log.error('Population file not found!')
-                sys.exit('Population file not found!' +
-                         ' Check the config file!')
+                _log.error("Population file not found!")
+                raise ImportError(
+                    "Population file not found! Check the config file.")
         else:
-            _log.info('Starting population construction')
-            population_class = getattr(population, config["population class"])
+            _log.info("Starting population construction")
+            population_class = getattr(
+                population, config["population"]["population class"])
             self.pop = population_class()
-            if config["store population"]:
+            if config["population"]["store population"]:
                 # Storing for later
-                _log.debug('Storing for later use')
+                _log.debug("Storing for later use")
                 pickle.dump(
-                    self.pop,
-                    open(config["population storage"], "wb"))
-        _log.info('Finished the population')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('Starting the infection construction')
+                    (self.pop, config["population"]),
+                    open(config["population"]["population storage"], "wb"))
+        _log.info("Finished the population")
+
+        _log.info("Starting the infection construction")
         self.infection = Infection()
-        _log.info('Finished the infection construction')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('Starting the measure construction')
+        _log.info("Finished the infection construction")
+
+        _log.info("Starting the measure construction")
         self.tracked = Measures().tracked
-        _log.info('Finished the measure construction')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('Setting the simulation framework')
+        _log.info("Finished the measure construction")
+
+        _log.info("Setting the simulation framework")
         self.sim = self.__sim_realistic
-        _log.info('Simulation framework set. Please type:')
-        _log.info('self.sim(parameters) to run the simulation')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
+        _log.info("Simulation framework set. Please type:")
+        _log.info("self.sim(parameters) to run the simulation")
 
     @property
     def statistics(self):
@@ -207,32 +215,21 @@ class Contagion(object):
             -np.array infected:
                 The current population
         """
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        dt = config['time step']
-        if dt > 1.:
-            _log.error("Chosen time step too large!")
-            sys.exit("Please run with time steps smaller than 1s!")
-        _log.debug('Realistic run')
+        _log.debug("Realistic run")
         self.__mc_run = MC_Sim(
             self.pop,
             self.infection,
             self.tracked
         )
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.info('Finished calculation')
-        _log.info('The results are stored in a dictionary self.statistics')
-        _log.info('Structure of dictionray:')
+        _log.info("Finished calculation")
+        _log.info("The results are stored in a dictionary self.statistics")
+        _log.info("Structure of dictionray:")
         _log.info(self.statistics.keys())
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
-        _log.debug('Dumping run settings into %s', config['config location'])
-        with open(config['config location'], 'w') as f:
-            for item in config.keys():
-                print(item + ': ' + str(config[item]), file=f)
-        _log.debug('Finished dump')
-        _log.info('---------------------------------------------------')
-        _log.info('---------------------------------------------------')
+        _log.debug(
+            "Dumping run settings into %s",
+            config["general"]["config location"])
+        with open(config["general"]["config location"], "w") as f:
+            yaml.dump(config, f)
+        _log.debug("Finished dump")
         # Closing log
         logging.shutdown()
