@@ -119,7 +119,7 @@ _baseconfig = {
     "measures": {
         "measures": None,
         # fraction of population tracked
-        "tracked": 0.2,
+        "tracked fraction": 0.2,
     }
 }
 
