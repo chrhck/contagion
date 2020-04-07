@@ -39,6 +39,9 @@ _baseconfig = {
     # Population storage lcoation
     "population storage": "../populations/generic.pkl",
     # Population class
+    # Available: 
+    # - AccuratePopulation
+    # - HomogeneousPopulation
     "population class": "AccuratePopulation",
     # Trace the infection spread
     "trace spread": False,
