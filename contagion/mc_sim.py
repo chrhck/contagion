@@ -44,7 +44,7 @@ class MC_Sim(object):
         function: __init__
         Initializes the class.
         Parameters:
-            -scipy.sparse population:
+            -Population population:
                 The population
             -obj infection:
                 The infection object
@@ -57,7 +57,7 @@ class MC_Sim(object):
         self.__infected = config["infected"]
         self.__infect = infection
         self.__dt = config["time step"]
-        self.__pop_matrix = population
+        self.__pop = population
         self.__t = np.arange(0.0, config["simulation length"], step=self.__dt)
 
         _log.debug("The interaction intensity pdf")
@@ -87,7 +87,7 @@ class MC_Sim(object):
         _log.debug("Constructing simulation population")
         _log.debug("The infected ids and durations...")
 
-        self.__pop_size = population.shape[0]
+        self.__pop_size = config["population size"]
 
         _log.debug("Constructing the population array")
 
@@ -176,7 +176,7 @@ class MC_Sim(object):
         self._sm = ContagionStateMachine(
             self.__population,
             stat_collector,
-            self.__pop_matrix,
+            self.__pop,
             self.__infect,
             self.__intense_pdf,
             self.__rstate)

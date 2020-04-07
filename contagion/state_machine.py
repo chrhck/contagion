@@ -15,16 +15,19 @@ from typing import Callable, Union, List, Tuple, Dict, Optional
 
 import numpy as np
 import pandas as pd
-from scipy import sparse
 
+from .config import config
 from .infection import Infection
 from .pdfs import PDF
-from .config import config
+from .population import Population
 
 
 _log = logging.getLogger(__name__)
 
 DEBUG = False
+
+if DEBUG:
+    _log.warn("DEBUG flag enabled. This will drastically slow down the code")
 
 
 class DataDict(dict):
@@ -787,14 +790,14 @@ class ContagionStateMachine(StateMachine):
             self,
             data: Union[pd.DataFrame, DataDict],
             stat_colletor: Optional[StatCollector],
-            interactions: sparse.spmatrix,
+            population: Population,
             infection: Infection,
             intensity_pdf: PDF,
             rstate: np.random.RandomState,
             *args, **kwargs):
         super().__init__(data, stat_colletor, *args, **kwargs)
 
-        self._interactions = interactions.tocsr()
+        self._population = population
         self._rstate = rstate
         self._infection = infection
         self._intensity_pdf = intensity_pdf
@@ -1136,7 +1139,6 @@ class ContagionStateMachine(StateMachine):
         return self._states
 
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
-        pop_csr = self._interactions
 
         infected_mask = self.states["can_infect"](data)
         infected_indices = np.nonzero(infected_mask)[0]
@@ -1145,16 +1147,16 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        infected_sub_mtx = pop_csr[infected_indices]
         if config['trace spread']:
             # here we need the rows
             # NOTE: This is ~2times slower
-
-            contact_rows, contact_cols, contact_strengths =\
-                sparse.find(infected_sub_mtx)
+            contact_cols, contact_strengths, contact_rows =\
+                self._population.get_contacts(
+                    infected_indices, return_rows=True)
         else:
-            contact_cols = infected_sub_mtx.indices  # nonzero column indices
-            contact_strengths = infected_sub_mtx.data  # nonzero data
+
+            contact_cols, contact_strengths = self._population.get_contacts(
+                infected_indices, return_rows=False)
 
         # Based on the contact rate, sample a poisson rvs
         # for the number of interactions per timestep.

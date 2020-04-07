@@ -20,7 +20,7 @@ from .config import config
 from .infection import Infection
 from .mc_sim import MC_Sim
 from .measures import Measures
-from .population import Population
+from . import population
 
 # unless we put this class in __init__, __name__ will be contagion.contagion
 _log = logging.getLogger('contagion')
@@ -97,12 +97,14 @@ class Contagion(object):
                          ' Check the config file!')
         else:
             _log.info('Starting population construction')
-            self.pop = Population().population
+            population_class = getattr(population, config["population class"])
+            self.pop = population_class()
             if config["store population"]:
                 # Storing for later
                 _log.debug('Storing for later use')
-                pickle.dump(self.pop, open(config["population storage"],
-                                           "wb"))
+                pickle.dump(
+                    self.pop,
+                    open(config["population storage"], "wb"))
         _log.info('Finished the population')
         _log.info('---------------------------------------------------')
         _log.info('---------------------------------------------------')
