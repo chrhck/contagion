@@ -61,7 +61,8 @@ class PopulationWithSocialCircles(Population):
                     max_val=config['population size']
                 )
             )
-            self._social_circles = soc_circ_pdf.rvs(self._pop_size, dtype=np.int)
+            self._social_circles = soc_circ_pdf.rvs(
+                self._pop_size, dtype=np.int)
         except ValueError:
             _log.error('Unrecognized social circle pdf! Set to ' +
                              config['social circle pdf'])
