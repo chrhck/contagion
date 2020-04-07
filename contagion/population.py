@@ -111,9 +111,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_strengths: np.ndarray
         """
 
-        if return_rows:
-            raise RuntimeError("Not yet supported")
-
         sel_indices = []
         contact_rates = []
         n_contacts = self.__soc_circ_interact_pdf.rvs(rows.shape[0])
@@ -127,11 +124,24 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
                     0, self._pop_size, size=int(n_contacts[i])))
             contact_rates.append(np.ones(int(n_contacts[i]))*contact_rate[i])
 
+        if return_rows:
+            succesful_rows = [
+                np.ones(len(rows), dtype=np.int)*i for i in range(len(rows))
+                if len(contact_rates[i]) > 0]
+            if succesful_rows:
+                succesful_rows = np.concatenate(succesful_rows)
+            else:
+                succesful_rows = np.empty(0, dtype=int)
         if sel_indices:
-            return (
-                np.concatenate(sel_indices),
-                np.concatenate(contact_rates))
-        return np.empty(0, dtype=np.int), np.empty(0, dtype=np.int)
+            sel_indices = np.concatenate(sel_indices)
+            contact_rates = np.concatenate(contact_rates)
+        else:
+            sel_indices = np.empty(0, dtype=int)
+            contact_rates = np.empty(0, dtype=int)
+
+        if return_rows:
+            return sel_indices, contact_rates, succesful_rows
+        return sel_indices, contact_rates
 
 
 class AccuratePopulation(PopulationWithSocialCircles):
