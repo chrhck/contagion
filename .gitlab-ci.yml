@@ -70,14 +70,14 @@ con_parameter_scan:
     FIGURE: Contagion_Contact_Rate_Scan.png
   <<: *test_notebook
 
-con_distribution_comparison:
+con_tracing:
   variables:
-    NOTEBOOK: con_distribution_comparison
-    FIGURE: Contagion_Distribution.png
+    NOTEBOOK: con_tracing
+    FIGURE: Contagion_Tracing.png
   <<: *test_notebook
 
-# con_trace:
-#   variables:
-#     NOTEBOOK: con_trace
-#     FIGURE: Contagion_Tracing.png
-#   <<: *test_notebook
+con_distributions:
+  variables:
+    NOTEBOOK: con_distributions
+    FIGURE: Contagion_Distributions.png
+  <<: *test_notebook

@@ -36,13 +36,13 @@ _baseconfig = {
         "population class": "AccuratePopulation",
         # Social circle pdf:
         "social circle pdf": {
-            "class": "Gamma",
-            "mean": 20,
+            "class": "TruncatedNormal",
+            "mean": 40,
             "sd": 5,
         },
         "social circle interactions pdf": {
-            "class": "Gamma",
-            "mean": 11,
+            "class": "TruncatedNormal",
+            "mean": 6,
             "sd": 0.2,
         },
         "interaction intensity pdf": {
@@ -50,34 +50,34 @@ _baseconfig = {
             "lower": 0,
             "upper": 1,
         }
-
     },
     "infection": {
         # The number of starting infections
         "infected": 10,
         "infection probability pdf":
         {
-            "class": "Beta",
-            "mean": 0.2,
-            "sd": 0.2
+            "class": "Gamma",
+            "mean": 2.,
+            "sd": 1.,
+            "max_val": 0.3
         },
         "infectious duration pdf":
         {
             "class": "Gamma",
-            "mean": 3,
-            "sd": 2
+            "mean": 3.,
+            "sd": 2.
         },
         "latency duration pdf":
         {
             "class": "Gamma",
-            "mean": 5,
-            "sd": 2
+            "mean": 2.52,
+            "sd": 1.
         },
         "incubation duration pdf":
         {
             "class": "Gamma",
-            "mean": 5,
-            "sd": 2
+            "mean": 7.47522,
+            "sd": 4.27
         },
         "hospitalization probability pdf":
         {
@@ -88,20 +88,20 @@ _baseconfig = {
         "hospitalization duration pdf":
         {
             "class": "Gamma",
-            "mean": 28,
-            "sd": 5
+            "mean": 2.,
+            "sd": 2.
         },
         "time until hospitalization pdf":
         {
             "class": "Gamma",
-            "mean": 5,
-            "sd": 2
+            "mean": 2.,
+            "sd": 2.
         },
         "time incubation death pdf":
         {
             "class": "Gamma",
-            "mean": 32,
-            "sd": 5
+            "mean": 2.,
+            "sd": 2.
         },
         "mortality prob pdf":
         {
@@ -112,8 +112,8 @@ _baseconfig = {
         "recovery time pdf":
         {
             "class": "Gamma",
-            "mean": 11,
-            "sd": 5
+            "mean": 2.,
+            "sd": 2.
         },
     },
     "measures": {
