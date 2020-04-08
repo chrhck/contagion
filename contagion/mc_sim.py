@@ -98,7 +98,7 @@ class MC_Sim(object):
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
-                "duration_of_can_infect":0
+                "duration_of_can_infect": 0
 
             },
             index=np.arange(self.__pop_size),

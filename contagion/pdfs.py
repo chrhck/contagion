@@ -290,7 +290,7 @@ class Gamma(ScipyPDF):
             maximum_loc = (
                 scipy.optimize.minimize_scalar(
                     lambda x: -local_gamma.pdf(x),
-                    bounds=[0,1e2], method='bounded')
+                    bounds=[0, 1e2], method='bounded')
             ).x
             norm = local_gamma.pdf(maximum_loc) / max_val
             self._pdf = instance_ga(
