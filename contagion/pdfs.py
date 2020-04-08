@@ -288,7 +288,7 @@ class Gamma(ScipyPDF):
             instance_ga = GammaMaxVal(name='GammaMaxVal')
             # TODO: Optimize this
             maximum_loc = (
-                scipy.optimize.minimize_scalar(
+                minimize_scalar(
                     lambda x: -local_gamma.pdf(x),
                     bounds=[0, 1e2], method='bounded')
             ).x
