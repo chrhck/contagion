@@ -6,9 +6,8 @@ import scipy.stats  # type: ignore
 from scipy.special import gamma as Gamma_Func
 import numpy as np  # type: ignore
 
-from .config import config
-
 _log = logging.getLogger(__name__)
+
 
 class GammaMaxVal(scipy.stats.rv_continuous):
     """
