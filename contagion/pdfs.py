@@ -4,10 +4,12 @@ This module provided interfaces to PDFs and RNG
 import abc
 import logging
 from typing import Optional, Union, Dict, Any
+from scipy.optimize import minimize_scalar
 import scipy.stats  # type: ignore
 import numpy as np  # type: ignore
 
 from .config import config
+from .functions import GammaMaxVal
 
 _log = logging.getLogger(__name__)
 
@@ -71,7 +73,6 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     """
     class: ScipyPDF
     Class pdf classes are inheriting from.
-    Deals with rvs currently
     Parameters:
         -None
     Returns:
@@ -110,28 +111,6 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
         Returns:
             -np.array pdf:
                 The calculated pdfs
-        """
-        pdf = self._pdf.pdf(
-            points
-        )
-
-        if dtype is not None:
-            pdf = np.asarray(pdf, dtype=dtype)
-        return pdf
-
-    def cdf(self, points: Union[float, np.ndarray],
-            dtype: Optional[type] = None) -> np.ndarray:
-        """
-        function: cdf
-        Calculates the cdf for given values
-        Parameters:
-            -float points:
-                Points to check probability for
-            -optional dtype:
-                Type of the output
-        Returns:
-            -np.array cdf:
-                The calculated cdf
         """
         pdf = self._pdf.pdf(
             points
@@ -264,8 +243,12 @@ class Gamma(ScipyPDF):
     Parameters:
         -Union[float, np.array] mean:
             The mean value
-        -Union[float, np.array] sd:
-            Standard deviation
+        -Union[float, np.array] std:
+            The std
+        -Union[float, np.array] scale:
+            The scale parameters
+        -optional float max_val:
+            The maximum value of the pdf
     Returns:
         -None
     """
@@ -282,14 +265,39 @@ class Gamma(ScipyPDF):
             -Union[float, np.array] mean:
                 The mean value
             -Union[float, np.array] sd:
-                Standard deviation
+                The sd
+            -optional float max_val:
+                The maximum value of the pdf
         Returns:
             -None
         """
-        self._sd = sd
         self._mean = mean
-        loc = self._mean - self._sd
-        self._pdf = scipy.stats.gamma(self._sd, loc=loc)
+        self._sd = sd
+        self._beta = self._mean / self._sd**2.
+        self._alpha = self._mean**2. / self._sd**2.
+        # scipy parameters
+        self._shape = self._alpha
+        self._scale = 1. / self._beta
+        local_gamma = scipy.stats.gamma(
+            self._shape,
+            scale=self._scale
+        )
+        if max_val is None:
+            self._pdf = local_gamma
+        else:
+            instance_ga = GammaMaxVal(name='GammaMaxVal')
+            # TODO: Optimize this
+            maximum_loc = (
+                scipy.optimize.minimize_scalar(
+                    lambda x: -local_gamma.pdf(x),
+                    bounds=[0,1e2], method='bounded')
+            ).x
+            norm = local_gamma.pdf(maximum_loc) / max_val
+            self._pdf = instance_ga(
+                self._shape,
+                self._scale,
+                norm,
+            )
 
 
 class NormalizedProbability(Probability):
