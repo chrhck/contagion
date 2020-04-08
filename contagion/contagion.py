@@ -49,7 +49,10 @@ class Contagion(object):
         """
         # Inputs
         if userconfig is not None:
-            config.from_yaml(userconfig)
+            if isinstance(userconfig, dict):
+                config.from_dict(userconfig)
+            else:
+                config.from_yaml(userconfig)
    
         self.__infected = config['infected']
 
