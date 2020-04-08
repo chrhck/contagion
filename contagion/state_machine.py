@@ -1190,9 +1190,9 @@ class ContagionStateMachine(StateMachine):
                 len(contact_strength) / len(infectious_dur)
             ))
             for duration in infectious_dur
-        ])
+        ]).flatten()
         # Adding last elements if required
-        if len(infectious_dur_reshape) != len(contact_strength):
+        if len(infectious_dur_reshape) < len(contact_strength):
             infectious_dur_reshape = np.insert(
                 infectious_dur_reshape,
                 len(infectious_dur_reshape),
@@ -1200,6 +1200,10 @@ class ContagionStateMachine(StateMachine):
                 len(contact_strength) % len(infectious_dur)
                 )
             )
+        elif len(infectious_dur_reshape) > len(contact_strength):
+            infectious_dur_reshape = infectious_dur_reshape[
+                :len(contact_strength)
+            ]
         # Weighted with the contact strength
         # TODO: Removed contact strength for now
         infection_prob = (
@@ -1207,7 +1211,6 @@ class ContagionStateMachine(StateMachine):
         ) #  * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
-
         newly_infected_mask = self._rstate.binomial(1, infection_prob)
         newly_infected_mask = np.asarray(newly_infected_mask, bool)
         if config['trace spread']:
