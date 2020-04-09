@@ -25,7 +25,6 @@ _baseconfig = {
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
-
         },
     "population": {
         "population size": 1000,
@@ -33,15 +32,15 @@ _baseconfig = {
         # store population
         "store population": False,
         "population storage": "../populations/generic.pkl",
-        "population class": "AccuratePopulation",
+        "population class": "HomogeneousPopulation",
         # Social circle pdf:
         "social circle pdf": {
-            "class": "TruncatedNormal",
+            "class": "Gamma",
             "mean": 40,
             "sd": 5,
         },
         "social circle interactions pdf": {
-            "class": "TruncatedNormal",
+            "class": "Gamma",
             "mean": 6,
             "sd": 0.2,
         },
@@ -57,63 +56,63 @@ _baseconfig = {
         "infection probability pdf":
         {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 1.,
-            "max_val": 0.3
+            "mean": 3.,
+            "sd": 2.42,
+            "max_val": 1.
         },
         "infectious duration pdf":
         {
             "class": "Gamma",
-            "mean": 3.,
-            "sd": 2.
+            "mean":8.,
+            "sd": 2.42
         },
         "latency duration pdf":
+        {
+            "class": "Gamma",
+            "mean": 4.7,
+            "sd": 3.
+        },
+        "incubation duration pdf":
+        {
+            "class": "Gamma",
+            "mean": 3.,
+            "sd": 0.01
+        },
+        "hospitalization probability pdf":
+        {
+            "class": "Beta",
+            "mean": 0.1,
+            "sd": 0.01
+        },
+        "hospitalization duration pdf":
+        {
+            "class": "Gamma",
+            "mean": 14.,
+            "sd": 0.01
+        },
+        "time until hospitalization pdf":
         {
             "class": "Gamma",
             "mean": 2.52,
             "sd": 1.
         },
-        "incubation duration pdf":
-        {
-            "class": "Gamma",
-            "mean": 7.47522,
-            "sd": 4.27
-        },
-        "hospitalization probability pdf":
-        {
-            "class": "Beta",
-            "mean": 0.2,
-            "sd": 0.1
-        },
-        "hospitalization duration pdf":
-        {
-            "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
-        },
-        "time until hospitalization pdf":
-        {
-            "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
-        },
         "time incubation death pdf":
         {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
+            "mean": 32.,
+            "sd": 5.
         },
         "mortality prob pdf":
         {
             "class": "Beta",
-            "mean": 0.1,
-            "sd": 0.1
+            "mean": 0.01,
+            "sd": 0.01
         },
         "recovery time pdf":
         {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
+            "mean": 11.,
+            "sd": 5.
         },
     },
     "measures": {
