@@ -1189,11 +1189,11 @@ class ContagionStateMachine(StateMachine):
             infected_indices[contact_rows[successful_contacts_mask]]
         ]
         # TODO: Add infection probability depending on current status
-        contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
+        # contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
         # Weighted with the contact strength
         infection_prob = (
             self._infection.pdf_infection_prob.pdf(infectious_dur)
-        ) * contact_strength
+        ) #  * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
 
