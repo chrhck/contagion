@@ -1193,7 +1193,7 @@ class ContagionStateMachine(StateMachine):
         # Weighted with the contact strength
         infection_prob = (
             self._infection.pdf_infection_prob.pdf(infectious_dur)
-        ) #  * contact_strength
+        )  # * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
 
