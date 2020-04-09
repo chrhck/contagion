@@ -63,7 +63,7 @@ _baseconfig = {
         "infectious duration pdf":
         {
             "class": "Gamma",
-            "mean":8.,
+            "mean": 8.,
             "sd": 2.42
         },
         "latency duration pdf":
