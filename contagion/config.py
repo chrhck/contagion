@@ -25,8 +25,7 @@ _baseconfig = {
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
-
-        },
+    },
     "population": {
         "population size": 1000,
         "re-use population": False,
@@ -49,78 +48,57 @@ _baseconfig = {
             "class": "Uniform",
             "lower": 0,
             "upper": 1,
-        }
+        },
     },
     "infection": {
         # The number of starting infections
         "infected": 10,
-        "infection probability pdf":
-        {
+        "infection probability pdf": {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 1.,
-            "max_val": 0.3
+            "mean": 2.0,
+            "sd": 1.0,
+            "max_val": 0.3,
         },
-        "infectious duration pdf":
-        {
-            "class": "Gamma",
-            "mean": 3.,
-            "sd": 2.
-        },
-        "latency duration pdf":
-        {
-            "class": "Gamma",
-            "mean": 2.52,
-            "sd": 1.
-        },
-        "incubation duration pdf":
-        {
+        "infectious duration pdf": {"class": "Gamma", "mean": 3.0, "sd": 2.0},
+        "latency duration pdf": {"class": "Gamma", "mean": 2.52, "sd": 1.0},
+        "incubation duration pdf": {
             "class": "Gamma",
             "mean": 7.47522,
-            "sd": 4.27
+            "sd": 4.27,
         },
-        "hospitalization probability pdf":
-        {
+        "hospitalization probability pdf": {
             "class": "Beta",
             "mean": 0.2,
-            "sd": 0.1
+            "sd": 0.1,
         },
-        "hospitalization duration pdf":
-        {
+        "hospitalization duration pdf": {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
+            "mean": 2.0,
+            "sd": 2.0,
         },
-        "time until hospitalization pdf":
-        {
+        "time until hospitalization pdf": {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
+            "mean": 2.0,
+            "sd": 2.0,
         },
-        "time incubation death pdf":
-        {
+        "time incubation death pdf": {
             "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
+            "mean": 2.0,
+            "sd": 2.0,
         },
-        "mortality prob pdf":
-        {
-            "class": "Beta",
-            "mean": 0.1,
-            "sd": 0.1
-        },
-        "recovery time pdf":
-        {
-            "class": "Gamma",
-            "mean": 2.,
-            "sd": 2.
-        },
+        "mortality prob pdf": {"class": "Beta", "mean": 0.1, "sd": 0.1},
+        "recovery time pdf": {"class": "Gamma", "mean": 2.0, "sd": 2.0},
     },
     "measures": {
-        "measures": None,
+        # Measures implemented (None, contact_tracing, social_distancing, all)
+        "type": None,
         # fraction of population tracked
         "tracked fraction": 0.2,
-    }
+        # duration of the quarantine
+        "quarantine duration": 14.0,
+        # social distancing
+        "distanced fraction": 0.0,
+    },
 }
 
 
@@ -135,6 +113,7 @@ class ConfigClass(dict):
     Returns:
         -None
     """
+
     def __init__(self, *args, **kwargs):
         """
         function: __init__
