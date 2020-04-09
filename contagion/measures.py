@@ -44,9 +44,10 @@ class Measures(object):
         else:
             self.__rstate = config["runtime"]["random state"]
 
-        if config["measures"]["type"] == "none":
+        if config["measures"]["type"] == None:
             _log.info("No measure taken")
             self.__tracked = None
+            self.__distanced = None
         elif config["measures"]["type"] == "contact_tracing":
             _log.info("Using contact tracing")
             self.__contact_tracing()
