@@ -1373,4 +1373,46 @@ class ContagionStateMachine(StateMachine):
 
         cond = np.logical_and(infected_mask, tracked_mask)
 
+        backtrack_length = self._measures.backtrack_length
+        # Get contact history
+        con_history = self.trace_contacts
+
+        if (backtrack_length > 0.0) and len(con_history) >= 1:
+
+            tracked_infected_indices = np.nonzero(cond)[0]
+
+            # Only check contacts of tracked infected people
+            history_mask = np.asarray(
+                [
+                    [
+                        True if (i[0] in tracked_infected_indices) else False
+                        for i in np.squeeze(t)
+                    ]
+                    for t in con_history
+                ]
+            )
+
+            if np.sum(np.hstack(np.squeeze(history_mask))) > 0.0:
+
+                contacted_indices = np.unique(
+                    np.hstack(
+                        [
+                            np.vstack(np.squeeze(t)[history_mask[i]])[:, 1]
+                            for i, t in enumerate(con_history)
+                            if (
+                                (i >= len(con_history) - backtrack_length)
+                                and (t.shape[1] > 0)
+                                and (np.sum(history_mask[i]) > 0)
+                            )
+                        ]
+                    )
+                )
+            else:
+                contacted_indices = np.zeros_like(infected_mask, dtype=np.bool)
+
+            contacted_mask = np.zeros_like(infected_mask, dtype=np.bool)
+            contacted_mask[contacted_indices] = True
+
+            cond = np.logical_or(cond, contacted_mask)
+
         return cond

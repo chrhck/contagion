@@ -65,6 +65,8 @@ class Measures(object):
             _log.error("measure not implemented!")
             exit("Please check the config file what measures are allowed")
 
+        self.__backtrack_length = config["measures"]["backtrack length"]
+
         self.__def_quarantine_pdf()
 
     @property
@@ -105,6 +107,18 @@ class Measures(object):
                 The pdf of the quarantine duration
         """
         return self.__quarantine_duration
+
+    @property
+    def backtrack_length(self):
+        """
+        function: backtrack_length
+        Getter function for the length of the contact backtracing
+        Parameters:
+            -None
+        Returns:
+            -Int
+        """
+        return np.int(self.__backtrack_length)
 
     # TODO: Not 100% of participants will report correctly
     def __contact_tracing(self):
