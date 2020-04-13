@@ -45,8 +45,8 @@ def profiling(c):
 def setup():
     # config paths are optimized for examples/*.ipynb, but crash when used
     # from script
-    config['log file handler'] = 'contagion.log'
-    config['config location'] = 'config.txt'
+    config["general"]['log file handler'] = 'contagion.log'
+    config["general"]['config location'] = 'config.txt'
 
     print('Creating simulation')
     c = Contagion()

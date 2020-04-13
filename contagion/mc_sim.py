@@ -7,14 +7,13 @@ Runs a monte-carlo (random walk) simulation
 for the social interactions.
 """
 from collections import defaultdict
-from sys import exit
+
 from time import time
 import logging
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 from .config import config
-from .pdfs import Uniform
 from .state_machine import ContagionStateMachine, StatCollector
 
 
@@ -44,7 +43,7 @@ class MC_Sim(object):
         function: __init__
         Initializes the class.
         Parameters:
-            -scipy.sparse population:
+            -Population population:
                 The population
             -obj infection:
                 The infection object
@@ -54,43 +53,19 @@ class MC_Sim(object):
             -None
         """
         # Inputs
-        self.__infected = config["infected"]
+        self.__infected = config["infection"]["infected"]
         self.__infect = infection
-        self.__dt = config["time step"]
-        self.__pop_matrix = population
-        self.__t = np.arange(0.0, config["simulation length"], step=self.__dt)
+        self.__pop = population
 
-        _log.debug("The interaction intensity pdf")
-        if config["interaction intensity"] == "uniform":
-            self.__intense_pdf = Uniform(0, 1)
-            # The Reproductive Number
-            self.__R0 = (
-                config["mean social circle interactions"]
-                * (config["infectious duration mean"] +
-                   config["incubation duration mean"])
-                * 0.5
-            )
-        else:
-            _log.error(
-                "Unrecognized intensity pdf! Set to " +
-                config["interaction intensity"]
-            )
-            exit("Check the interaction intensity in the config file!")
+        self.__rstate = config["runtime"]["random state"]
 
-        # Checking random state
-        if config["random state"] is None:
-            _log.warning("No random state given, constructing new state")
-            self.__rstate = np.random.RandomState()
-        else:
-            self.__rstate = config["random state"]
+        self.__pop_size = config["population"]["population size"]
 
-        _log.debug("Constructing simulation population")
-        _log.debug("The infected ids and durations...")
-
-        self.__pop_size = population.shape[0]
+        self._sim_length = config["general"]["simulation length"]
 
         _log.debug("Constructing the population array")
 
+        # TODO: doesn't actually have to be a DataFrame anymore
         self.__population = pd.DataFrame(
             {
                 "is_infected": False,
@@ -102,6 +77,7 @@ class MC_Sim(object):
                 "is_infectious": False,
                 "is_new_infectious": False,
                 "can_infect": False,
+                "is_new_can_infect": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
@@ -122,6 +98,7 @@ class MC_Sim(object):
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
+                "duration_of_can_infect": 0
 
             },
             index=np.arange(self.__pop_size),
@@ -143,8 +120,9 @@ class MC_Sim(object):
         # TODO: Add a switch if these people have symptoms or not
         self.__population.loc[infect_id, "can_infect"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
+        self.__population.loc[infect_id, "duration_of_can_infect"] = 1
 
-        _log.info("There will be %d simulation steps" % len(self.__t))
+        _log.info("There will be %d simulation steps", self._sim_length)
 
         # Set tracking
         if tracked is not None:
@@ -173,10 +151,9 @@ class MC_Sim(object):
         self._sm = ContagionStateMachine(
             self.__population,
             stat_collector,
-            self.__pop_matrix,
+            self.__pop,
             self.__infect,
-            self.__intense_pdf,
-            self.__rstate)
+            )
         _log.debug("Finished the state machine")
         # Running the simulation
         _log.debug("Launching the simulation")
@@ -240,7 +217,7 @@ class MC_Sim(object):
             np.array __t:
                 The time array
         """
-        return self.__t
+        return np.arange(self._sim_length)
 
     @property
     def R0(self):
@@ -272,9 +249,9 @@ class MC_Sim(object):
 
         start = time()
 
-        for step, _ in enumerate(self.__t):
+        for step in range(self._sim_length):
             self._sm.tick()
-            if step % (int(len(self.__t) / 10)) == 0:
+            if step % (self._sim_length / 10) == 0:
                 end = time()
                 _log.debug("In step %d" % step)
                 _log.debug(

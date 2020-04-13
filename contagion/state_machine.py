@@ -13,18 +13,21 @@ import functools
 import logging
 from typing import Callable, Union, List, Tuple, Dict, Optional
 
-import numpy as np
-import pandas as pd
-from scipy import sparse
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 
+from .config import config
 from .infection import Infection
 from .pdfs import PDF
-from .config import config
+from .population import Population
 
 
 _log = logging.getLogger(__name__)
 
 DEBUG = False
+
+if DEBUG:
+    _log.warn("DEBUG flag enabled. This will drastically slow down the code")
 
 
 class DataDict(dict):
@@ -524,6 +527,39 @@ class DecreaseTimerTransition(_Transition, ConditionalMixin):
         self._state_a.change_state(data, cur_state-1, cond)
 
 
+class IncreaseTimerTransition(_Transition, ConditionalMixin):
+    """
+    Increase the value of a FloatState by one
+
+    Parameters:
+        name: str
+        state_a: FloatState
+        condition: Optional[TCondition]
+    """
+    def __init__(
+            self,
+            name: str,
+            state_a: FloatState,
+            condition: TCondition = None,
+            *args, **kwargs
+           ):
+        _Transition.__init__(self, name, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition, *args, **kwargs)
+        self._state_a = state_a
+
+    @log_call
+    def __call__(
+            self,
+            data: DataDict):
+        cond = unify_condition(self._condition, data)
+        state_condition = self._state_a(data)
+
+        # Current state value
+        cur_state = self._state_a.get_state_value(data)[
+            cond & state_condition]
+        self._state_a.change_state(data, cur_state+1, cond)
+
+
 class InitializeTimerTransition(_Transition, ConditionalMixin):
     """
     Initialize a timer state to values drawn from a PDF
@@ -561,6 +597,42 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         num_zero_rows = zero_rows.sum(axis=0)
 
         initial_vals = self._initialization_pdf.rvs(num_zero_rows)
+        (~self._state_a).change_state(
+            data, initial_vals, cond)
+
+
+class InitializeCounterTransition(_Transition, ConditionalMixin):
+    """
+    Initialize a counter state
+
+    Parameters:
+        name: str
+        state_a: FloatState
+        start: int
+        condition: Optional[TCondition]
+    """
+    def __init__(
+            self,
+            name: str,
+            state_a: FloatState,
+            start: int,
+            condition: TCondition = None,
+            *args,
+            **kwargs
+           ):
+
+        _Transition.__init__(self, name, *args, **kwargs)
+        ConditionalMixin.__init__(self, condition)
+        self._state_a = state_a
+
+    @log_call
+    def __call__(
+            self,
+            data: DataDict):
+
+        cond = self.unify_condition(data)
+
+        initial_vals = 1  # Initializes counter at 1
         (~self._state_a).change_state(
             data, initial_vals, cond)
 
@@ -672,8 +744,8 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         else:
             self._data = data
         self._stat_collector = stat_collector
-        if config['trace spread']:
-            _log.debug('Tracing the population')
+        if config["general"]["trace spread"]:
+            _log.debug("Tracing the population")
             self._trace_contacts = []
             self._trace_infection = []
 
@@ -721,17 +793,15 @@ class ContagionStateMachine(StateMachine):
             self,
             data: Union[pd.DataFrame, DataDict],
             stat_colletor: Optional[StatCollector],
-            interactions: sparse.spmatrix,
+            population: Population,
             infection: Infection,
-            intensity_pdf: PDF,
-            rstate: np.random.RandomState,
             *args, **kwargs):
         super().__init__(data, stat_colletor, *args, **kwargs)
 
-        self._interactions = interactions.tocsr()
-        self._rstate = rstate
+        self._population = population
+        self._rstate = config["runtime"]["random state"]
         self._infection = infection
-        self._intensity_pdf = intensity_pdf
+        self._intensity_pdf = population.interaction_intensity
         self._statistics = defaultdict(list)
 
         # Boolean states
@@ -742,7 +812,8 @@ class ContagionStateMachine(StateMachine):
             "is_recovering", "is_new_recovering",
             "is_incubation", "is_new_incubation",
             "is_recovered", "will_be_hospitalized", "will_be_hospitalized_new",
-            "will_die", "will_die_new", 'can_infect']
+            "will_die", "will_die_new",
+            "can_infect", "is_new_can_infect"]
 
         boolean_states = {name: BooleanState.from_boolean(name)
                                  for name in boolean_state_names}
@@ -751,7 +822,7 @@ class ContagionStateMachine(StateMachine):
         timer_state_names = [
             "incubation_duration", "hospitalization_duration", "recovery_time",
             "time_until_hospitalization", "infectious_duration",
-            "time_until_death", "latent_duration"]
+            "time_until_death", "latent_duration", "duration_of_can_infect"]
 
         timer_states = {name: FloatState.from_timer(name)
                         for name in timer_state_names}
@@ -785,7 +856,7 @@ class ContagionStateMachine(StateMachine):
             "is_new_hospitalized", "is_new_hospitalized",
             "will_be_hospitalized_new", "is_new_incubation",
             "is_new_recovering", "is_new_infectious", "is_new_infected",
-            "will_die_new", "is_new_latent"
+            "will_die_new", "is_new_latent", "is_new_can_infect"
             ]
 
         # Timer name, tick when not in this state
@@ -798,6 +869,11 @@ class ContagionStateMachine(StateMachine):
             ("hospitalization_duration", "is_new_hospitalized"),
             ("time_until_death", "will_die_new"),
             ("latent_duration", "is_new_latent")
+        ]
+
+        # Counter name, tick when not in this state
+        counter_ticks = [
+            ("duration_of_can_infect", "is_new_can_infect")
         ]
 
         # Transitions
@@ -930,7 +1006,8 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["is_latent"],
                 [boolean_states["is_incubation"],
                  boolean_states["is_new_incubation"],
-                 boolean_states["can_infect"]],
+                 boolean_states["can_infect"],
+                 boolean_states["is_new_can_infect"]],
                 ~(timer_states["latent_duration"])
             ),
             # Intialize incubation_duration timer
@@ -941,6 +1018,15 @@ class ContagionStateMachine(StateMachine):
                 self._infection.incubation_duration,
                 boolean_states["is_new_incubation"]
             ),
+            # Intialize can infect timer
+            # This starts when incubation starts
+            InitializeCounterTransition(
+                "can_infect_timer_initialization",
+                timer_states["duration_of_can_infect"],
+                0,
+                boolean_states["is_new_can_infect"]
+            ),
+
             # incubation - infectious
             # Transition from incubation to:
             #   -is_infectious
@@ -996,7 +1082,7 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["is_recovering"],
                 [boolean_states["is_recovered"],
                  (~boolean_states["is_infected"], False),
-                 (~boolean_states['can_infect'], False)],
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["recovery_time"])
             ),
 
@@ -1005,7 +1091,7 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["is_hospitalized"],
                 [boolean_states["is_recovered"],
                  (~boolean_states["is_infected"], False),
-                 (~boolean_states['can_infect'], False)],
+                 (~boolean_states["can_infect"], False)],
                 ~(timer_states["hospitalization_duration"])
             ),
         ]
@@ -1014,6 +1100,15 @@ class ContagionStateMachine(StateMachine):
             self._transitions.append(
                 DecreaseTimerTransition(
                     "decrease_{}".format(state),
+                    timer_states[state],
+                    ~(boolean_states[dont_tick_when])
+                )
+            )
+
+        for (state, dont_tick_when) in counter_ticks:
+            self._transitions.append(
+                IncreaseTimerTransition(
+                    "increase_{}".format(state),
                     timer_states[state],
                     ~(boolean_states[dont_tick_when])
                 )
@@ -1046,7 +1141,6 @@ class ContagionStateMachine(StateMachine):
         return self._states
 
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
-        pop_csr = self._interactions
 
         infected_mask = self.states["can_infect"](data)
         infected_indices = np.nonzero(infected_mask)[0]
@@ -1055,16 +1149,18 @@ class ContagionStateMachine(StateMachine):
         # rows are the ids / indices of the infected
         # columns are the people they have contact with
 
-        infected_sub_mtx = pop_csr[infected_indices]
-        if config['trace spread']:
+        # TODO: Use an attribute instad of directly invoking config
+        if config["general"]["trace spread"]:
             # here we need the rows
             # NOTE: This is ~2times slower
-
-            contact_rows, contact_cols, contact_strengths =\
-                sparse.find(infected_sub_mtx)
+            contact_cols, contact_strengths, contact_rows =\
+                self._population.get_contacts(
+                    infected_indices, return_rows=True)
         else:
-            contact_cols = infected_sub_mtx.indices  # nonzero column indices
-            contact_strengths = infected_sub_mtx.data  # nonzero data
+
+            contact_cols, contact_strengths, contact_rows =\
+                self._population.get_contacts(
+                    infected_indices, return_rows=True)
 
         # Based on the contact rate, sample a poisson rvs
         # for the number of interactions per timestep.
@@ -1078,7 +1174,7 @@ class ContagionStateMachine(StateMachine):
         # if a person is successfully contacted by multiple people.
         successful_contacts_indices = contact_cols[successful_contacts_mask]
         # TODO: Add this as a state not seperate list
-        if config['trace spread']:
+        if config["general"]["trace spread"]:
             self._trace_contacts.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask]],
                 contact_cols[successful_contacts_mask]
@@ -1088,18 +1184,22 @@ class ContagionStateMachine(StateMachine):
             num_succesful_contacts)
 
         # Calculate infection probability for all contacts
+        # The duration of each infection
+        infectious_dur = data["duration_of_can_infect"][
+            infected_indices[contact_rows[successful_contacts_mask]]
+        ]
         # TODO: Add infection probability depending on current status
-        contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
+        # contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
         # Weighted with the contact strength
         infection_prob = (
-            self._infection.pdf_infection_prob.rvs(len(contact_strength))
-        ) * contact_strength
+            self._infection.pdf_infection_prob.pdf(infectious_dur)
+        )  # * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
 
         newly_infected_mask = self._rstate.binomial(1, infection_prob)
         newly_infected_mask = np.asarray(newly_infected_mask, bool)
-        if config['trace spread']:
+        if config["general"]["trace spread"]:
             self._trace_infection.append(np.dstack((
                 infected_indices[contact_rows[successful_contacts_mask][
                     newly_infected_mask

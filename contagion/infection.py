@@ -7,10 +7,10 @@ Constructs the infection.
 """
 
 # Imports
-import numpy as np  # type: ignore
-from .pdfs import TruncatedNormal, Beta, Gamma
 import logging
+
 from .config import config
+from .pdfs import construct_pdf
 
 _log = logging.getLogger(__name__)
 
@@ -33,143 +33,71 @@ class Infection(object):
         Returns:
             -None
         """
-        # Standard pdfs, used most often
-        self.__std_pdfs = {
-            'gauss': TruncatedNormal,
-            'gamma': Gamma,
-            'beta': Beta
-        }
+
         # TODO: Set up standard parameters for different diseases, which
         #   can be loaded by only setting the disease
-        if config['random state'] is None:
-            _log.warning("No random state given, constructing new state")
-            self.__rstate = np.random.RandomState()
-        else:
-            self.__rstate = config['random state']
+        self._rstate = config["runtime"]["random state"]
+
         # Infection probability
-        _log.debug('The infection probability pdf')
-        try:
-            infection_prob_pdf = (
-                self.__std_pdfs[config['infection probability pdf']](
-                    config['infection probability mean'],
-                    config['infection probability variance']
-                )
-            )
-            self.__pdf_infection_prob = infection_prob_pdf
-        except ValueError:
-            _log.error('Unrecognized infection probability pdf! Set to ' +
-                             config['infection probability pdf'])
-            exit('Check the infection probability pdf in the config file!')
-# -----------------------------------------------------------------------------
-        _log.debug('The infection duration pdfs')
-        try:
-            dur_infectious_pdf = (
-                self.__std_pdfs[config['infectious duration pdf']](
-                    config['infectious duration mean'],
-                    config['infectious duration variance']))
-            self.__infectious_duration = dur_infectious_pdf
-        except ValueError:
-            _log.error('Unrecognized infectious duration pdf! Set to ' +
-                             config['infectious duration pdf'])
-            exit('Check the infectious duration pdf in the config file!')
+        _log.debug("The infection probability pdf")
 
-        try:
-            dur_incubation_pdf = (
-                self.__std_pdfs[config['incubation duration pdf']](
-                    config['incubation duration mean'],
-                    config['incubation duration variance']))
-            self.__incubation_duration = dur_incubation_pdf
-        except ValueError:
-            _log.error('Unrecognized incubation duration pdf! Set to ' +
-                             config['incubation duration pdf'])
-            exit('Check the incubation duration pdf in the config file!')
+        infection_prob_pdf = construct_pdf(
+            config["infection"]["infection probability pdf"])
 
-        try:
-            dur_latent_pdf = (
-                self.__std_pdfs[config['latency duration pdf']](
-                    config['latency duration mean'],
-                    config['latency duration variance']))
-            self.__latent_duration = dur_latent_pdf
-        except ValueError:
-            _log.error('Unrecognized latency duration pdf! Set to ' +
-                             config['latency duration pdf'])
-            exit('Check the latency duration pdf in the config file!')
+        self.__pdf_infection_prob = infection_prob_pdf
 
-        _log.debug('The recovery time pdf')
-        try:
-            recovery_time_pdf = (
-                self.__std_pdfs[config['recovery time pdf']](
-                    config['recovery time mean'],
-                    config['recovery time sd']
-                ))
-            self.__recovery_time = recovery_time_pdf
-        except ValueError:
-            _log.error('Unrecognized recovery duration pdf! Set to ' +
-                             config['recovery time pdf'])
-            exit('Check the recovery duration pdf in the config file!')
-# -----------------------------------------------------------------------------
-        _log.debug('The hospitalization pdfs')
+        _log.debug("The infection duration pdf")
 
-        try:
-            hospit_prob_pdf = (
-                self.__std_pdfs[config['hospitalization probability pdf']](
-                    config['hospitalization probability mean'],
-                    config['hospitalization probability sd']
-                ))
-            self._hospitalization_prob = hospit_prob_pdf
-        except ValueError:
-            _log.error('Unrecognized hospitalization duration pdf! Set to ' +
-                             config['hospitalization duration pdf'])
-            exit('Check the hospitalization duration pdf in the config file!')
+        # Infectious duration
+        dur_infectious_pdf = construct_pdf(
+            config["infection"]["infectious duration pdf"])
+        self.__infectious_duration = dur_infectious_pdf
 
-        try:
-            hospit_dur_pdf = (
-                self.__std_pdfs[config['hospitalization duration pdf']](
-                    config['hospitalization duration mean'],
-                    config['hospitalization duration sd']
-                ))
-            self.__hospitalization_duration = hospit_dur_pdf
-        except ValueError:
-            _log.error('Unrecognized hospitalization duration pdf! Set to ' +
-                             config['hospitalization duration pdf'])
-            exit('Check the hospitalization duration pdf in the config file!')
-        try:
-            hospit_dur_until_pdf = (
-                self.__std_pdfs[config['time until hospitalization pdf']](
-                    config['time until hospitalization mean'],
-                    config['time until hospitalization sd']
-                ))
-            self.__time_until_hospitalization = hospit_dur_until_pdf
-        except ValueError:
-            _log.error('Unrecognized time until hospitalization pdf pdf!' +
-                       ' Set to ' + config['time until hospitalization pdf'])
-            exit('Check the time until hospitalization pdf ' +
-                 'in the config file!')
-# -----------------------------------------------------------------------------
-        _log.debug('The mortality pdfs')
-        try:
-            time_till_death_pdf = (
-                self.__std_pdfs[config['time incubation death pdf']](
-                    config['time incubation death mean'],
-                    config['time incubation death sd']
-                ))
-            self.__time_incubation_death = time_till_death_pdf
-        except ValueError:
-            _log.error('Unrecognized time incubation death pdf! Set to ' +
-                             config['time incubation death pdf'])
-            exit('Check the time incubation death pdf in the config file!')
-        try:
-            death_prob_pdf = (
-                self.__std_pdfs[config['mortality prob pdf']](
-                    config['mortality rate mean'],
-                    config['mortality rate sd']
-                ))
-            self.__death_prob = death_prob_pdf
-        except ValueError:
-            _log.error('Unrecognized mortality prob pdf! Set to ' +
-                             config['mortality prob pdf'])
-            exit('Check the mortality prob pdf in the config file!')
-# -----------------------------------------------------------------------------
+        # Incubation duration
+        _log.debug("The incubation duration pdf")
+        dur_incubation_pdf = construct_pdf(
+            config["infection"]["incubation duration pdf"])
+        self.__incubation_duration = dur_incubation_pdf
+
+        # Latency
+        _log.debug("The latency duration pdf")
+        dur_latent_pdf = construct_pdf(
+            config["infection"]["latency duration pdf"])
+        self.__latent_duration = dur_latent_pdf
+
+        # Recovery
+        _log.debug("The recovery time pdf")
+
+        recovery_time_pdf = construct_pdf(
+            config["infection"]["recovery time pdf"])
+        self.__recovery_time = recovery_time_pdf
+
+        # Hospitalization
+        _log.debug("The hospitalization pdfs")
+
+        hospit_prob_pdf = construct_pdf(
+            config["infection"]["hospitalization probability pdf"])
+        self._hospitalization_prob = hospit_prob_pdf
+
+        hospit_dur_pdf = construct_pdf(
+            config["infection"]["hospitalization duration pdf"])
+        self.__hospitalization_duration = hospit_dur_pdf
+
+        hospit_dur_until_pdf = construct_pdf(
+            config["infection"]["time until hospitalization pdf"])
+        self.__time_until_hospitalization = hospit_dur_until_pdf
+
+        # Mortality
+        _log.debug("The mortality pdfs")
+
+        time_till_death_pdf = construct_pdf(
+            config["infection"]["time incubation death pdf"])
+        self.__time_incubation_death = time_till_death_pdf
+
+        death_prob_pdf = construct_pdf(
+            config["infection"]["mortality prob pdf"])
+        self.__death_prob = death_prob_pdf
+
     @property
     def pdf_infection_prob(self):
         """
