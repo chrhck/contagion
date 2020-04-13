@@ -69,7 +69,7 @@ if __name__ == "__main__":
     # distance = make_chi2_distance(fields)
     
     prior = pyabc.Distribution(
-        {"infectious duration mean": pyabc.RV("uniform", 1, 20),
+        {"latent duration mean": pyabc.RV("uniform", 1, 20),
          "incubation duration mean": pyabc.RV("uniform", 1, 20),     
           "mortality rate mean":  pyabc.RV("uniform", 0.05, 0.5)
         })
