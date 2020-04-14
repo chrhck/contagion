@@ -972,7 +972,6 @@ class ContagionStateMachine(StateMachine):
                 ],
                 ~(timer_states["time_until_hospitalization"]),
             ),
-
             # Initialize hospitalization_duration_timer
             # for newly hospitalized
             InitializeTimerTransition(
@@ -1297,8 +1296,8 @@ class ContagionStateMachine(StateMachine):
         # TODO: Add infection probability depending on current status
         # contact_strength = self._intensity_pdf.rvs(num_succesful_contacts)
         # Weighted with the contact strength
-        infection_prob = (
-            self._infection.pdf_infection_prob.pdf(infectious_dur)
+        infection_prob = self._infection.pdf_infection_prob.pdf(
+            infectious_dur
         )  # * contact_strength
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
@@ -1369,8 +1368,9 @@ class ContagionStateMachine(StateMachine):
         # roll the dice
         symptomatic_list = (
             self._rstate.binomial(
-                1, config["infection"]["symptomatic probability"],
-                size=num_new_inf
+                1,
+                config["infection"]["symptomatic probability"],
+                size=num_new_inf,
             )
             == 1
         )
@@ -1411,5 +1411,56 @@ class ContagionStateMachine(StateMachine):
             tracked_mask = np.zeros_like(infected_mask, dtype=np.bool)
 
         cond = np.logical_and(infected_mask, tracked_mask)
+        if np.any(cond):
 
-        return cond
+            backtrack_length = self._measures.backtrack_length
+
+            if backtrack_length == 0:
+                return cond
+            else:
+                # Get contact history
+                con_history = self.trace_contacts
+                len_history = len(con_history)
+
+                if len_history < backtrack_length:
+                    backtrack_length = len_history
+
+                con_history = np.squeeze(
+                    np.hstack(con_history[-backtrack_length:])
+                )
+
+                if con_history.size == 0:
+                    return cond
+                else:
+                    tracked_infected_indices = np.nonzero(cond)[0]
+                    if tracked_infected_indices.size == 0:
+                        return cond
+
+                    # Only check contacts of tracked infected people
+                    if len(con_history) > 2:
+                        history_mask = [
+                            True
+                            if (i[0] in tracked_infected_indices)
+                            else False
+                            for i in con_history
+                        ]
+
+                        con_history = con_history[history_mask]
+
+                        contacted_indices = np.unique(con_history[:, 1])
+                    else:
+                        contacted_indices = np.unique(con_history)
+
+                    if contacted_indices.size == 0:
+                        return cond
+                    else:
+                        contacted_mask = np.zeros_like(
+                            infected_mask, dtype=np.bool
+                        )
+                        contacted_mask[contacted_indices] = True
+
+                        cond = np.logical_or(cond, contacted_mask)
+
+                        return cond
+        else:
+            return cond

@@ -69,6 +69,8 @@ _baseconfig = {
         "type": None,
         # fraction of population tracked
         "tracked fraction": 0.2,
+        # days of back tracking
+        "backtrack length": 0.0,
         # duration of the quarantine
         "quarantine duration": 14.0,
         # social distancing
