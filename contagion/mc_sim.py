@@ -79,6 +79,7 @@ class MC_Sim(object):
                 "is_new_infectious": False,
                 "can_infect": False,
                 "is_new_can_infect": False,
+                "is_symptomatic": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
@@ -123,6 +124,7 @@ class MC_Sim(object):
         self.__population.loc[infect_id, "is_infectious"] = True
         # TODO: Add a switch if these people have symptoms or not
         self.__population.loc[infect_id, "can_infect"] = True
+        self.__population.loc[infect_id, "is_symptomatic"] = True
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
         self.__population.loc[infect_id, "duration_of_can_infect"] = 1
 
@@ -168,6 +170,7 @@ class MC_Sim(object):
                 "is_recovered",
                 "is_dead",
                 "is_quarantined",
+                "is_symptomatic"
             ]
         )
         # The state machine

@@ -43,6 +43,8 @@ _baseconfig = {
     "infection": {
         # The number of starting infections
         "infected": 10,
+        # Symptom probability
+        "symptomatic probability": 0.6,
         # Infection properties
         "infection probability pdf": {"class": "Gamma", "mean": 3., "sd": 2.42,
                                       "max_val": 1.},

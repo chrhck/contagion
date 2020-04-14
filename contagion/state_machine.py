@@ -830,6 +830,7 @@ class ContagionStateMachine(StateMachine):
             "is_quarantined",
             "is_new_quarantined",
             "is_tracked",
+            "is_symptomatic",
         ]
 
         boolean_states = {
@@ -863,6 +864,9 @@ class ContagionStateMachine(StateMachine):
 
         # Only people who are not removed are infectable
         is_infectable = infected_condition & (~boolean_states["is_removed"])
+
+        # Symptomatic
+        is_symptomatic_cond = Condition(self.__is_symptomatic)
 
         # Condition that stores people who will be hostpialized
         will_be_hospitalized_cond = Condition(self.__will_be_hospitalized)
@@ -968,6 +972,7 @@ class ContagionStateMachine(StateMachine):
                 ],
                 ~(timer_states["time_until_hospitalization"]),
             ),
+
             # Initialize hospitalization_duration_timer
             # for newly hospitalized
             InitializeTimerTransition(
@@ -1014,6 +1019,7 @@ class ContagionStateMachine(StateMachine):
                     (~boolean_states["is_hospitalized"], False),
                     (~boolean_states["is_new_hospitalized"], False),
                     (~boolean_states["can_infect"], False),
+                    (~boolean_states["is_symptomatic"], False),
                 ],
                 ~(timer_states["time_until_death"]),
             ),
@@ -1071,6 +1077,12 @@ class ContagionStateMachine(StateMachine):
                 ],
                 ~(timer_states["incubation_duration"]),
             ),
+            # Symptomatic
+            ChangeStatesConditionalTransition(
+                "symptomatic",
+                [~boolean_states["is_symptomatic"]],
+                is_symptomatic_cond,
+            ),
             # Intialize infectious_duration timer
             # if the is_new_infectious condition is true
             InitializeTimerTransition(
@@ -1092,6 +1104,7 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_recovering"],
                     boolean_states["is_new_recovering"],
                     boolean_states["is_removed"],
+                    (~boolean_states["is_symptomatic"], False),
                 ],
                 normal_recovery_condition,
             ),
@@ -1125,6 +1138,7 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_recovered"],
                     (~boolean_states["is_infected"], False),
                     (~boolean_states["can_infect"], False),
+                    (~boolean_states["is_symptomatic"], False),
                 ],
                 ~(timer_states["hospitalization_duration"]),
             ),
@@ -1155,6 +1169,7 @@ class ContagionStateMachine(StateMachine):
                 [
                     (~boolean_states["is_infected"], False),
                     (~boolean_states["can_infect"], False),
+                    (~boolean_states["is_symptomatic"], False),
                 ],
                 ~(timer_states["quarantine_duration"]),
             ),
@@ -1339,6 +1354,30 @@ class ContagionStateMachine(StateMachine):
         will_be_hospitalized_indices = new_incub_indices[will_be_hospitalized]
         cond = np.zeros(data.field_len, dtype=np.bool)
         cond[will_be_hospitalized_indices] = True
+
+        return cond
+
+    def __is_symptomatic(self, data: DataDict) -> np.ndarray:
+        new_infect_indices = np.nonzero(
+            self.states["is_new_infectious"](data)
+        )[0]
+        if len(new_infect_indices) == 0:
+            return np.zeros(data.field_len, dtype=np.bool)
+
+        num_new_inf = len(new_infect_indices)
+
+        # roll the dice
+        symptomatic_list = (
+            self._rstate.binomial(
+                1, config["infection"]["symptomatic probability"],
+                size=num_new_inf
+            )
+            == 1
+        )
+
+        symptomatic = new_infect_indices[symptomatic_list]
+        cond = np.zeros(data.field_len, dtype=np.bool)
+        cond[symptomatic] = True
 
         return cond
 
