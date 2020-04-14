@@ -44,7 +44,7 @@ class Measures(object):
         else:
             self.__rstate = config["runtime"]["random state"]
 
-        if config["measures"]["type"] == None:
+        if config["measures"]["type"] is None:
             _log.info("No measure taken")
             self.__tracked = None
             self.__distanced = None

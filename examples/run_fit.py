@@ -5,7 +5,6 @@ from pyabc.sampler import DaskDistributedSampler
 import numpy as np
 import os
 from contagion import Contagion
-import contagion
 from dask.distributed import Client
 from summary_stats import make_sum_stats
 
@@ -53,7 +52,6 @@ if __name__ == "__main__":
             distances.append(distance)
         return pyabc.distance.AggregatedDistance(distances)
 
-
     sum_stat_func = make_sum_stats(fields)
 
     distance = pyabc.AdaptivePNormDistance(
@@ -64,13 +62,12 @@ if __name__ == "__main__":
     # distance = make_chi2_distance(fields)
 
     prior = pyabc.Distribution(
-        {"infectious duration mean": pyabc.RV("uniform", 1, 20),
-         "incubation duration mean": pyabc.RV("uniform", 1, 20),     
-          "mortality rate mean":  pyabc.RV("uniform", 0.05, 0.5)
-        })
-
-
-
+        {
+            "infectious duration mean": pyabc.RV("uniform", 1, 20),
+            "incubation duration mean": pyabc.RV("uniform", 1, 20),
+            "mortality rate mean":  pyabc.RV("uniform", 0.05, 0.5)
+        }
+    )
 
     client = Client(scheduler_file="scheduler.json")
 
@@ -87,8 +84,11 @@ if __name__ == "__main__":
         client=client)
     population = 300
     epsilon = pyabc.epsilon.QuantileEpsilon()
-    abc = pyabc.ABCSMC(model, prior, distance, population_size=population, sampler=sampler,                 
-                       acceptor = pyabc.UniformAcceptor(use_complete_history=True),
+    abc = pyabc.ABCSMC(model, prior, distance,
+                       population_size=population, sampler=sampler,                 
+                       acceptor=pyabc.UniformAcceptor(
+                           use_complete_history=True
+                        ),
                        summary_statistics=sum_stat_func,
                        eps=epsilon
                        )
