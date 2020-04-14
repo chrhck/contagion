@@ -2,7 +2,7 @@
 
 """
 Name: state_machine.py
-Authors: Christian Haack, Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger, Andrea Turcati
 Constructs the state machine
 """
 
@@ -1255,7 +1255,7 @@ class ContagionStateMachine(StateMachine):
         )
         non_quarantined_contacts[
             np.intersect1d(
-                contact_rows, quarantined_indices, return_indices=True
+                contact_cols, quarantined_indices, return_indices=True
             )[1]
         ] = False
 
@@ -1404,7 +1404,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
-        infected_mask = self.states["is_incubation"](data)
+        infected_mask = self.states["is_infected"](data)
         if self._measures.tracked is not None:
             tracked_mask = self.states["is_tracked"](data)
         else:

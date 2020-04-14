@@ -2,7 +2,7 @@
 
 """
 Name: measures.py
-Authors: Stephan Meighen-Berger
+Authors: Stephan Meighen-Berger, Andrea Turcati
 The different measures one can take
 to suppress the spread.
 """

@@ -32,25 +32,43 @@ _log = logging.getLogger("contagion")
 
 class Contagion(object):
     """
-    class: Contagion
     Interace to the contagion package. This class
     stores all methods required to run the simulation
     of the infection spread
-    Parameters:
-        -None
-    Returns:
-        -None
+    Parameters
+    ----------
+    userconfig: dic, optional
+        -User config dictionary
+
+    Returns
+    -------
+    None: -
+        -
+
+    Raises
+    ------
+    ImportError
+        Population file wasn't found
     """
 
     def __init__(self, userconfig=None):
         """
-        function: __init__
         Initializes the class Contagion.
         Here all run parameters are set.
-        Parameters:
-            -None
-        Returns:
-            -None
+        Parameters
+        ----------
+        userconfig: dic, optional
+            -User config dictionary
+
+        Returns
+        -------
+        None: -
+            -
+
+        Raises
+        ------
+        ImportError
+            Population file wasn't found
         """
         # Inputs
         if userconfig is not None:
@@ -147,14 +165,20 @@ class Contagion(object):
     @property
     def statistics(self):
         """
-        function: statistics
         Getter functions for the simulation results
-        from the simulation
-        Parameters:
-            -None
-        Returns:
-            -dic statistics:
-                Stores the results from the simulation
+        Parameters
+        ----------
+        None: -
+            -
+
+        Returns
+        -------
+        statistics: dic
+            - The simulation results
+
+        Raises
+        ------
+        -
         """
         return self.__mc_run.statistics
 
@@ -224,7 +248,7 @@ class Contagion(object):
             -np.array infected:
                 The current population
         """
-        _log.debug("Realistic run")
+        _log.debug("Starting MC run")
         self.__mc_run = MC_Sim(self.pop, self.infection, self.measures)
         _log.info("Finished calculation")
         _log.info("The results are stored in a dictionary self.statistics")
