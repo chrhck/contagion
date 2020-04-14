@@ -9,6 +9,7 @@ a given population. It allows for the introduction
 of safety measures, such as social distancing and tracking.
 """
 
+
 # Native modules
 import sys
 import logging
@@ -53,7 +54,10 @@ class Contagion(object):
         """
         # Inputs
         if userconfig is not None:
-            config.from_yaml(userconfig)
+            if isinstance(userconfig, dict):
+                config.from_dict(userconfig)
+            else:
+                config.from_yaml(userconfig)
 
         # Create RandomState
         if config["general"]["random state seed"] is None:
