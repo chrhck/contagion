@@ -1,9 +1,8 @@
- # General imports
 import logging
 logging.basicConfig(level="WARN")
 
 import argparse
-import pyabc    
+import pyabc
 from pyabc.sampler import DaskDistributedSampler
 import numpy as np
 import sys
