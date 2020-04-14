@@ -81,9 +81,3 @@ con_distributions:
     NOTEBOOK: con_distributions
     FIGURE: Contagion_Distributions.png
   <<: *test_notebook
-
-con_measures:
-  variables:
-    NOTEBOOK: con_measures
-    FIGURE: Contagion_Measures.png
-  <<: *test_notebook
