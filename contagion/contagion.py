@@ -58,7 +58,7 @@ class Contagion(object):
                 config.from_dict(userconfig)
             else:
                 config.from_yaml(userconfig)
-   
+
         # Create RandomState
         if config["general"]["random state seed"] is None:
             _log.warning("No random state seed given, constructing new state")

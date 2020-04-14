@@ -1,35 +1,29 @@
 import logging
-logging.basicConfig(level="WARN")
-
 import argparse
 import pyabc
 from pyabc.sampler import DaskDistributedSampler
 import numpy as np
-import sys
-import scipy
 import os
-import itertools
-
-from contagion import Contagion, config
+from contagion import Contagion
 import contagion
-from contagion.config import ConfigClass, _baseconfig
-from dask.distributed import Client, LocalCluster
-
+from dask.distributed import Client
 from summary_stats import make_sum_stats
+
+logging.basicConfig(level="WARN")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", help="Continue runid", default=argparse.SUPPRESS, const=None, nargs="?", dest="cont")
+    parser.add_argument("-c", help="Continue runid",
+                        default=argparse.SUPPRESS,
+                        const=None, nargs="?", dest="cont")
     args = parser.parse_args()
     my_config = {
         "simulation length": 100,
         "population size": 10000
     }
-    
+
     if "cont" in args:
         my_config["re-use population"] = True
-        
-    
 
     contagion = Contagion(userconfig=my_config)
     contagion.sim()
@@ -47,7 +41,7 @@ if __name__ == "__main__":
         contagion.sim()
 
         return contagion.statistics
-    
+
     def make_chi2_distance(fields):
         distances = []
         for field in fields:
@@ -58,15 +52,17 @@ if __name__ == "__main__":
                 return np.sum((simulation - data)**2 / data)
             distances.append(distance)
         return pyabc.distance.AggregatedDistance(distances)
-    
-    
+
+
     sum_stat_func = make_sum_stats(fields)
 
     distance = pyabc.AdaptivePNormDistance(
-        p=2, scale_function=pyabc.distance.median_absolute_deviation_to_observation)
-    
+        p=2,
+        scale_function=pyabc.distance.median_absolute_deviation_to_observation
+    )
+
     # distance = make_chi2_distance(fields)
-    
+
     prior = pyabc.Distribution(
         {"infectious duration mean": pyabc.RV("uniform", 1, 20),
          "incubation duration mean": pyabc.RV("uniform", 1, 20),     
@@ -78,10 +74,10 @@ if __name__ == "__main__":
 
     client = Client(scheduler_file="scheduler.json")
 
-    #cluster = LocalCluster(n_workers=8, processes=True)
-    #client = Client(cluster)
+    # cluster = LocalCluster(n_workers=8, processes=True)
+    # client = Client(cluster)
 
-    #sampler = pyabc.sampler.MulticoreEvalParallelSampler(n_procs=8)
+    # sampler = pyabc.sampler.MulticoreEvalParallelSampler(n_procs=8)
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
     population=pyabc.populationstrategy.AdaptivePopulationSize(
         100,
@@ -104,7 +100,5 @@ if __name__ == "__main__":
         abc.load(db_path, args.cont)
     else:
         abc.new(db_path, sum_stat_func(data))
-        #abc.new(db_path, data)
+        # abc.new(db_path, data)
     history1 = abc.run(max_nr_populations=15)
-
-

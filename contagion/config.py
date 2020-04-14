@@ -48,8 +48,6 @@ _baseconfig = {
                                       "max_val": 1.},
         "infectious duration pdf": {"class": "Gamma", "mean": 8., "sd": 2.42},
         "latency duration pdf": {"class": "Gamma", "mean": 4.7, "sd": 3.},
-        "infectious duration pdf": {"class": "Gamma", "mean": 3.0, "sd": 2.0},
-        "latency duration pdf": {"class": "Gamma", "mean": 2.52, "sd": 1.0},
         "incubation duration pdf": {"class": "Gamma", "mean": 3., "sd": 0.01},
         # Hospitalization
         "hospitalization probability pdf": {"class": "Beta", "mean": 0.1,
@@ -61,10 +59,8 @@ _baseconfig = {
         # Mortality
         "time incubation death pdf": {"class": "Gamma", "mean": 32., "sd": 5.},
         "mortality prob pdf": {"class": "Beta", "mean": 0.01, "sd": 0.01},
-        "mortality prob pdf": {"class": "Beta", "mean": 0.1, "sd": 0.1},
         # Recovery
         "recovery time pdf": {"class": "Gamma", "mean": 11., "sd": 5.},
-        "recovery time pdf": {"class": "Gamma", "mean": 2.0, "sd": 2.0},
     },
     "measures": {
         # Measures implemented (None, contact_tracing, social_distancing, all)
