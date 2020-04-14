@@ -1404,7 +1404,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
-        infected_mask = self.states["is_infected"](data)
+        infected_mask = self.states["is_incubation"](data)
         if self._measures.tracked is not None:
             tracked_mask = self.states["is_tracked"](data)
         else:
