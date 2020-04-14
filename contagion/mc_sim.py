@@ -71,15 +71,9 @@ class MC_Sim(object):
             {
                 "is_infected": False,
                 "is_new_infected": False,
-                "is_incubation": False,
-                "is_new_incubation": False,
-                "is_latent": False,
-                "is_new_latent": False,
-                "is_infectious": False,
-                "is_new_infectious": False,
                 "can_infect": False,
                 "is_new_can_infect": False,
-                "is_symptomatic": False,
+                "has_symptoms": False,
                 "is_removed": False,
                 "is_critical": False,
                 "is_hospitalized": False,
@@ -95,14 +89,14 @@ class MC_Sim(object):
                 "is_new_dead": False,
                 "is_quarantined": False,
                 "is_new_quarantined": False,
-                "incubation_duration": 0,
-                "infectious_duration": 0,
+                "symptomless_duration": 0,
+                "symptom_duration": 0,
                 "latent_duration": 0,
                 "time_until_hospitalization": 0,
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
-                "duration_of_can_infect": 0,
+                "can_infect_duration": 0,
                 "quarantine_duration": 0,
                 "is_tracked": False,
             },
@@ -113,20 +107,21 @@ class MC_Sim(object):
         infect_id = self.__rstate.choice(
             range(self.__pop_size), size=self.__infected, replace=False
         )
-
-        # Their infection duration
-        infect_dur = np.around(
-            self.__infect.infectious_duration.rvs(self.__infected)
+        # TODO: Generalize this to allow a choice of what type of patient 0
+        # Their symptomless duration
+        symptom_less_dur = np.around(
+            self.__infect.symptomless_duration.rvs(self.__infected)
         )
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
-        self.__population.loc[infect_id, "is_infectious"] = True
         # TODO: Add a switch if these people have symptoms or not
         self.__population.loc[infect_id, "can_infect"] = True
-        self.__population.loc[infect_id, "is_symptomatic"] = True
-        self.__population.loc[infect_id, "infectious_duration"] = infect_dur
-        self.__population.loc[infect_id, "duration_of_can_infect"] = 1
+        self.__population.loc[infect_id, "has_symptoms"] = False
+        self.__population.loc[infect_id, "symptomless_duration"] = (
+            symptom_less_dur
+        )
+        self.__population.loc[infect_id, "can_infect_duration"] = 1
 
         _log.info("There will be %d simulation steps", self._sim_length)
 
@@ -138,40 +133,12 @@ class MC_Sim(object):
         else:
             _log.debug("Population is not tracked")
 
-        # Set Social Distancing
-        # if distanced is not None:
-        #    _log.debug("Constructiong social distancing people ids")
-        #    self.__distanced = True
-        #    distanced_df = pd.DataFrame(
-        #        {"is_distanced": False}, index=np.arange(self.__pop_size)
-        #    )
-        #    distanced_df.loc[distanced, "is_distanced"] = True
-        #    self.__population = pd.concat(
-        #        [self.__population, distanced_df], axis=1
-        #    )
-        #    self._distanced_size = int(self.__pop_size * config["distanced"])
-        # else:
-        #    _log.debug("Population is not Social Distancing")
-        #    self.__distanced = False
-
         # The storage dictionary
         self.__statistics = defaultdict(list)
 
         # The statistics of interest
         stat_collector = StatCollector(
-            [
-                "is_removed",
-                "is_incubation",
-                "is_latent",
-                "is_infectious",
-                "is_infected",
-                "can_infect",
-                "is_hospitalized",
-                "is_recovered",
-                "is_dead",
-                "is_quarantined",
-                "is_symptomatic"
-            ]
+            config['statistics']
         )
         # The state machine
         _log.debug("Setting up the state machine")
@@ -246,20 +213,6 @@ class MC_Sim(object):
                 The time array
         """
         return np.arange(self._sim_length)
-
-    @property
-    def R0(self):
-        """
-        function: reproductive number
-        Average number of infections due to
-        one patient (not assuming measures were taken)
-        Parameters:
-            -None
-        Returns:
-            -float R:
-                The reproductive number
-        """
-        return self.__R0
 
     @property
     def population(self):

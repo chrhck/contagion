@@ -48,9 +48,9 @@ _baseconfig = {
         # Infection properties
         "infection probability pdf": {"class": "Gamma", "mean": 3., "sd": 2.42,
                                       "max_val": 1.},
-        "infectious duration pdf": {"class": "Gamma", "mean": 8., "sd": 2.42},
-        "latency duration pdf": {"class": "Gamma", "mean": 4.7, "sd": 3.},
-        "incubation duration pdf": {"class": "Gamma", "mean": 3., "sd": 0.01},
+        "symptom duration pdf": {"class": "Gamma", "mean": 8., "sd": 2.42},
+        "latent duration pdf": {"class": "Gamma", "mean": 4.7, "sd": 3.},
+        "symptomless duration pdf": {"class": "Gamma", "mean": 3., "sd": 0.01},
         # Hospitalization
         "hospitalization probability pdf": {"class": "Beta", "mean": 0.1,
                                             "sd": 0.01},
@@ -75,6 +75,20 @@ _baseconfig = {
         "quarantine duration": 14.0,
         # social distancing
         "distanced fraction": 0.0,
+    },
+    # Defines the statistics of interest
+    # Each statistic has a name and a dictionary of properties
+    "statistics": {
+        # Here the properties of the statistics of interest are defined
+        "removed": {"is_removed": True},
+        "incubating": {"has_symptoms": False, "can_infect": True},
+        "latent": {"is_latent": True},
+        "infectious": {"has_symptoms": True, "can_infect": True},
+        "infected": {"is_infected": True},
+        "hospitalized": {"is_hospitalized": True},
+        "recovered": {"is_recovered": True},
+        "dead": {"is_dead": True},
+        "quarantined": {"is_quarantined": True},
     },
 }
 
