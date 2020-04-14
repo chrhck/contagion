@@ -1228,35 +1228,23 @@ class ContagionStateMachine(StateMachine):
 
         infected_indices = np.nonzero(infected_mask)[0]
 
-        # TODO: Use an attribute instad of directly invoking config
-        if config["general"]["trace spread"]:
-            # here we need the rows
-            # NOTE: This is ~2times slower
-            (
-                contact_cols,
-                contact_strengths,
-                contact_rows,
-            ) = self._population.get_contacts(
+        # NOTE: This is ~2times slower
+        (
+            contact_cols,
+            contact_strengths,
+            contact_rows,
+        ) = self._population.get_contacts(
                 infected_indices, return_rows=True
-            )
-        else:
-
-            (
-                contact_cols,
-                contact_strengths,
-                contact_rows,
-            ) = self._population.get_contacts(
-                infected_indices, return_rows=True
-            )
+                )
 
         # Find all the contacts who are not in quarantine
         quarantined_indices = np.nonzero(quarantined_mask)[0]
         non_quarantined_contacts = np.ones_like(
             contact_strengths, dtype=np.bool
-        )
+            )
         non_quarantined_contacts[
             np.intersect1d(
-                contact_rows, quarantined_indices, return_indices=True
+                contact_cols, quarantined_indices, return_indices=True
             )[1]
         ] = False
 
