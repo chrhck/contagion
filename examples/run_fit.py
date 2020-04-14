@@ -22,13 +22,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", help="Continue runid", default=argparse.SUPPRESS, const=None, nargs="?", dest="cont")
     args = parser.parse_args()
-    my_config = {
-        "simulation length": 100,
-        "population size": 10000
-    }
-    
+    my_config = dict(_baseconfig)
+    my_config["general"]["simulation length"] = 100
+    my_config["population"]["population size"] = 10000
+    my_config["population"]["store population"] = True
+       
     if "cont" in args:
-        my_config["re-use population"] = True
+        my_config["population"]["re-use population"] = True
         
     
 
@@ -38,12 +38,15 @@ if __name__ == "__main__":
     fields = ["is_dead", "is_hospitalized"]
     data = {field: np.asarray(contagion.statistics[field]) for field in fields}
 
+    
+    
     def model(parameters):
-        this_config = dict(my_config)
-        for key, val in parameters.items():
-            key = key.replace("_", " ")
-            this_config[key] = val
-        this_config["re-use population"] = True
+        this_config = dict(_baseconfig)
+        this_config.update(my_config)
+        this_config["infection"]["latency duration pdf"]["mean"] = parameters["latency mean"]
+        this_config["infection"]["incubation duration pdf"]["mean"] = parameters["incubation mean"]
+        this_config["infection"]["mortality prob pdf"]["mean"] = parameters["mortality mean"]
+        this_config["population"]["re-use population"] = True
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
 
@@ -69,9 +72,9 @@ if __name__ == "__main__":
     # distance = make_chi2_distance(fields)
     
     prior = pyabc.Distribution(
-        {"latent duration mean": pyabc.RV("uniform", 1, 20),
-         "incubation duration mean": pyabc.RV("uniform", 1, 20),     
-          "mortality rate mean":  pyabc.RV("uniform", 0.05, 0.5)
+        {"latency mean": pyabc.RV("uniform", 1, 20),
+         "incubation mean": pyabc.RV("uniform", 1, 20),     
+          "mortality mean":  pyabc.RV("uniform", 0.011, 0.2)
         })
 
 
@@ -86,11 +89,11 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
     population=pyabc.populationstrategy.AdaptivePopulationSize(
         100,
-        max_population_size=5000,
+        max_population_size=2000,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
-    population = 300
+    #population = 300
     epsilon = pyabc.epsilon.QuantileEpsilon()
     abc = pyabc.ABCSMC(model, prior, distance, population_size=population, sampler=sampler,                 
                        acceptor = pyabc.UniformAcceptor(use_complete_history=True),
@@ -104,6 +107,7 @@ if __name__ == "__main__":
     if "cont" in args:
         abc.load(db_path, args.cont)
     else:
+        print(sum_stat_func(data))
         abc.new(db_path, sum_stat_func(data))
         #abc.new(db_path, data)
     history1 = abc.run(max_nr_populations=15)

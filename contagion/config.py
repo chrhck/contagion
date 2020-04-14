@@ -105,8 +105,8 @@ _baseconfig = {
         "mortality prob pdf":
         {
             "class": "Beta",
-            "mean": 0.01,
-            "sd": 0.01
+            "mean": 0.1,
+            "sd": 0.1
         },
         "recovery time pdf":
         {
