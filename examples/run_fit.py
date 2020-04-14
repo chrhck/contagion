@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     # sampler = pyabc.sampler.MulticoreEvalParallelSampler(n_procs=8)
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
-    population=pyabc.populationstrategy.AdaptivePopulationSize(
+    population = pyabc.populationstrategy.AdaptivePopulationSize(
         100,
         max_population_size=5000,
         mean_cv=0.1,
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     population = 300
     epsilon = pyabc.epsilon.QuantileEpsilon()
     abc = pyabc.ABCSMC(model, prior, distance,
-                       population_size=population, sampler=sampler,                 
+                       population_size=population, sampler=sampler,
                        acceptor=pyabc.UniformAcceptor(
                            use_complete_history=True
                         ),
