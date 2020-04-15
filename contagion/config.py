@@ -21,7 +21,6 @@ _baseconfig = {
         "log file handler": "../run/contagion.log",
         # Dump experiment config to this location
         "config location": "../run/config.txt",
-        "simulation length": 200,
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
@@ -74,6 +73,10 @@ _baseconfig = {
         # social distancing
         "distanced fraction": 0.0,
     },
+    "scenario": {
+        "class": "StandardScenario",
+        "sim_length": 200,
+    }
 }
 
 

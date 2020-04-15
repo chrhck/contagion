@@ -15,6 +15,7 @@ import pandas as pd  # type: ignore
 
 from .config import config
 from .state_machine import ContagionStateMachine, StatCollector
+from . import scenario
 
 
 _log = logging.getLogger(__name__)
@@ -61,8 +62,6 @@ class MC_Sim(object):
         self.__rstate = config["runtime"]["random state"]
 
         self.__pop_size = config["population"]["population size"]
-
-        self._sim_length = config["general"]["simulation length"]
 
         _log.debug("Constructing the population array")
 
@@ -128,8 +127,6 @@ class MC_Sim(object):
         self.__population.loc[infect_id, "infectious_duration"] = infect_dur
         self.__population.loc[infect_id, "duration_of_can_infect"] = 1
 
-        _log.info("There will be %d simulation steps", self._sim_length)
-
         # Set Contact Tracing
         tracked = self.__measures.tracked
         if tracked is not None:
@@ -182,6 +179,15 @@ class MC_Sim(object):
             self.__infect,
             self.__measures,
         )
+
+        _log.debug("Setting simulation scenario")
+
+        scenario_conf = dict(config["scenario"])
+        scenario_class = scenario_conf.pop("class")
+
+        self._scenario = getattr(scenario, scenario_class)(
+            state_machine=self._sm, **scenario_conf)
+
         _log.debug("Finished the state machine")
         # Running the simulation
         _log.debug("Launching the simulation")
@@ -245,7 +251,7 @@ class MC_Sim(object):
             np.array __t:
                 The time array
         """
-        return np.arange(self._sim_length)
+        return np.arange(self._scenario._sim_length)
 
     @property
     def R0(self):
@@ -275,14 +281,4 @@ class MC_Sim(object):
             -None
         """
 
-        start = time()
-
-        for step in range(self._sim_length):
-            self._sm.tick()
-            if step % (self._sim_length / 10) == 0:
-                end = time()
-                _log.debug("In step %d" % step)
-                _log.debug(
-                    "Last round of simulations took %f seconds" % (end - start)
-                )
-                start = time()
+        self._scenario.run()
