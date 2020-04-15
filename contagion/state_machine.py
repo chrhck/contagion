@@ -701,18 +701,15 @@ class StatCollector(object, metaclass=abc.ABCMeta):
     _statistics: Dict[str, List[float]]
 
     def __init__(self, data_fields: List[str]):
-        self._stat_cond = defaultdict(list)
+        self._stat_cond = data_fields
         self._statistics = defaultdict(list)
-        # Constructing conditions for each statistic
-        for key in data_fields:
-            self._stat_cond[key] = (
-                
-            )
-        infected_mask = self.states["can_infect"](data)
 
     def __call__(self, data: DataDict):
         for field in self._data_fields:
-            masks = 
+            # TODO: This should be required in loop
+            masks = []
+            for condition in field.keys():
+                if field
             self._statistics[field].append(data[field].sum())
 
     @property
