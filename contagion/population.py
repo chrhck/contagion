@@ -98,7 +98,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
 
-        for i, row_ind in enumerate(rows):
+        for i, _ in enumerate(rows):
             sel_indices.append(
                 self._rstate.randint(
                     0, self._pop_size, size=int(n_contacts[i])))
