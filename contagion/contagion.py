@@ -118,12 +118,24 @@ class Contagion(object):
         _log.info("Welcome to contagion!")
         _log.info("This package will help you model the spread of infections")
 
+
+        def is_same_config(pop_conf_a, pop_conf_b):
+            pop_conf_a = dict(pop_conf_a)
+            pop_conf_b = dict(pop_conf_b)
+
+            del pop_conf_a["re-use population"]
+            del pop_conf_b["re-use population"]
+            del pop_conf_a["store population"]
+            del pop_conf_b["store population"]
+
+            return pop_conf_a == pop_conf_b
+
         if config["population"]["re-use population"]:
             try:
                 self.pop, pop_config = pickle.load(
                     open(config["population"]["population storage"], "rb")
                 )
-                if pop_config != config["population"]:
+                if not is_same_config(pop_config, config["population"]):
                     _log.warn(
                         "Attempting to reuse population with a "
                         "different config. Continue at own risk."
@@ -143,6 +155,7 @@ class Contagion(object):
             if config["population"]["store population"]:
                 # Storing for later
                 _log.debug("Storing for later use")
+                
                 pickle.dump(
                     (self.pop, config["population"]),
                     open(config["population"]["population storage"], "wb"),

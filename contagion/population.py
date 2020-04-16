@@ -35,6 +35,7 @@ class Population(object, metaclass=abc.ABCMeta):
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -76,6 +77,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -98,28 +100,28 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
 
-        for i, _ in enumerate(rows):
+        succesful_rows = []
+        for i, row_index in enumerate(rows):
+            n_contact = min(int(n_contacts[i]), len(cols))
             sel_indices.append(
-                self._rstate.randint(
-                    0, self._pop_size, size=int(n_contacts[i])))
+                self._rstate.choice(cols, size=n_contact,
+                                    replace=False))
             contact_rates.append(
-                np.ones(int(n_contacts[i]), dtype=np.float)*contact_rate[i])
-        if return_rows:
-            succesful_rows = [
-                np.ones(len(contact_rates[i]), dtype=np.int)*i
-                for i in range(len(rows))
-                if len(contact_rates[i]) > 0]
-            if succesful_rows:
-                succesful_rows = np.concatenate(succesful_rows)
+                np.ones(n_contact, dtype=np.float)*contact_rate[i])
+            if np.any(contact_rate[i] > 0):
+                succesful_rows.append(
+                    np.ones(int(n_contact), dtype=int) * row_index)
             else:
-                succesful_rows = np.empty(0, dtype=int)
+                succesful_rows.append(np.empty(0, dtype=int))
 
         if sel_indices:
             sel_indices = np.concatenate(sel_indices)
             contact_rates = np.concatenate(contact_rates)
+            succesful_rows = np.concatenate(succesful_rows)
         else:
             sel_indices = np.empty(0, dtype=int)
             contact_rates = np.empty(0, dtype=int)
+            succesful_rows = np.empty(0, dtype=int)
 
         if return_rows:
             return sel_indices, contact_rates, succesful_rows
@@ -249,6 +251,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -264,8 +267,9 @@ class AccuratePopulation(PopulationWithSocialCircles):
             contact_indices: np.ndarray
             contact_strengths: np.ndarray
         """
-
         infected_sub_mtx = self.__interaction_matrix[rows]
+        infected_sub_mtx = infected_sub_mtx[:, cols]
+
         if return_rows:
             # here we need the rows
             # NOTE: This is ~2times slower
@@ -276,7 +280,10 @@ class AccuratePopulation(PopulationWithSocialCircles):
             contact_cols = infected_sub_mtx.indices  # nonzero column indices
             contact_strengths = infected_sub_mtx.data  # nonzero data
 
+        contact_cols = cols[contact_cols]
+
         if return_rows:
+            contact_rows = rows[contact_rows]
             return contact_cols, contact_strengths, contact_rows
         else:
             return contact_cols, contact_strengths

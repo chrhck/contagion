@@ -15,6 +15,7 @@ import pandas as pd  # type: ignore
 
 from .config import config
 from .state_machine import ContagionStateMachine, StatCollector
+from . import scenario
 
 
 _log = logging.getLogger(__name__)
@@ -62,8 +63,6 @@ class MC_Sim(object):
 
         self.__pop_size = config["population"]["population size"]
 
-        self._sim_length = config["general"]["simulation length"]
-
         _log.debug("Constructing the population array")
 
         # TODO: doesn't actually have to be a DataFrame anymore
@@ -71,11 +70,18 @@ class MC_Sim(object):
             {
                 "is_infected": False,
                 "is_new_infected": False,
-                "can_infect": False,
-                "is_new_can_infect": False,
-                "has_symptoms": False,
+               
+                "is_latent": False,
+                "is_new_latent": False,
+                "is_infectious": False,
+                "is_new_infectious": False,
+               
+                "will_have_symptoms": False,
+                "will_have_symptoms_new": False,
+                "is_symptomatic": False,
+
                 "is_removed": False,
-                "is_critical": False,
+               
                 "is_hospitalized": False,
                 "is_new_hospitalized": False,
                 "is_recovering": False,
@@ -89,16 +95,19 @@ class MC_Sim(object):
                 "is_new_dead": False,
                 "is_quarantined": False,
                 "is_new_quarantined": False,
-                "symptomless_duration": 0,
-                "symptom_duration": 0,
+
+                "is_tracked": False,
+
+                "infectious_duration": 0,
                 "latent_duration": 0,
                 "time_until_hospitalization": 0,
+                "time_since_infectious": -np.inf,
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
-                "can_infect_duration": 0,
+                "time_until_symptoms": 0,
                 "quarantine_duration": 0,
-                "is_tracked": False,
+
             },
             index=np.arange(self.__pop_size),
         )
@@ -107,23 +116,17 @@ class MC_Sim(object):
         infect_id = self.__rstate.choice(
             range(self.__pop_size), size=self.__infected, replace=False
         )
-        # TODO: Generalize this to allow a choice of what type of patient 0
-        # Their symptomless duration
-        symptom_less_dur = np.around(
-            self.__infect.symptomless_duration.rvs(self.__infected)
+
+        # Their infection duration
+        latent_dur = np.around(
+            self.__infect.latent_duration.rvs(self.__infected)
         )
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
+        self.__population.loc[infect_id, "is_latent"] = True
+        self.__population.loc[infect_id, "latent_duration"] = latent_dur
         # TODO: Add a switch if these people have symptoms or not
-        self.__population.loc[infect_id, "can_infect"] = True
-        self.__population.loc[infect_id, "has_symptoms"] = False
-        self.__population.loc[infect_id, "symptomless_duration"] = (
-            symptom_less_dur
-        )
-        self.__population.loc[infect_id, "can_infect_duration"] = 1
-
-        _log.info("There will be %d simulation steps", self._sim_length)
 
         # Set Contact Tracing
         tracked = self.__measures.tracked
@@ -138,7 +141,17 @@ class MC_Sim(object):
 
         # The statistics of interest
         stat_collector = StatCollector(
-            config['statistics']
+            [
+                "is_removed",
+                "is_latent",
+                "is_infectious",
+                "is_infected",
+                "is_hospitalized",
+                "is_recovered",
+                "is_dead",
+                "is_quarantined",
+                "is_symptomatic"
+            ]
         )
         # The state machine
         _log.debug("Setting up the state machine")
@@ -149,6 +162,15 @@ class MC_Sim(object):
             self.__infect,
             self.__measures,
         )
+
+        _log.debug("Setting simulation scenario")
+
+        scenario_conf = dict(config["scenario"])
+        scenario_class = scenario_conf.pop("class")
+
+        self._scenario = getattr(scenario, scenario_class)(
+            state_machine=self._sm, **scenario_conf)
+
         _log.debug("Finished the state machine")
         # Running the simulation
         _log.debug("Launching the simulation")
@@ -212,7 +234,7 @@ class MC_Sim(object):
             np.array __t:
                 The time array
         """
-        return np.arange(self._sim_length)
+        return np.arange(self._scenario._sim_length)
 
     @property
     def population(self):
@@ -228,14 +250,4 @@ class MC_Sim(object):
             -None
         """
 
-        start = time()
-
-        for step in range(self._sim_length):
-            self._sm.tick()
-            if step % (self._sim_length / 10) == 0:
-                end = time()
-                _log.debug("In step %d" % step)
-                _log.debug(
-                    "Last round of simulations took %f seconds" % (end - start)
-                )
-                start = time()
+        self._scenario.run()

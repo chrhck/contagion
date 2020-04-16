@@ -21,7 +21,6 @@ _baseconfig = {
         "log file handler": "../run/contagion.log",
         # Dump experiment config to this location
         "config location": "../run/config.txt",
-        "simulation length": 200,
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
@@ -44,25 +43,56 @@ _baseconfig = {
         # The number of starting infections
         "infected": 10,
         # Symptom probability
-        "symptomatic probability": 0.6,
+        "will have symptoms prob pdf": {
+            "class": "Beta",
+            "mean": 0.6,
+            "sd": 0.1
+        },
         # Infection properties
-        "infection probability pdf": {"class": "Gamma", "mean": 3., "sd": 2.42,
-                                      "max_val": 1.},
-        "symptom duration pdf": {"class": "Gamma", "mean": 8., "sd": 2.42},
-        "latent duration pdf": {"class": "Gamma", "mean": 4.7, "sd": 3.},
-        "symptomless duration pdf": {"class": "Gamma", "mean": 3., "sd": 0.01},
+        "infection probability pdf": {
+            "class": "Gamma",
+            "mean": 3.,
+            "sd": 2.42,
+            "max_val": 1.},
+        "infectious duration pdf": {
+            "class": "Gamma",
+            "mean": 8.,
+            "sd": 2.42},
+        "latency duration pdf": {
+            "class": "Gamma",
+            "mean": 4.7,
+            "sd": 3.},
+        "incubation duration pdf": {
+            "class": "Gamma",
+            "mean": 3.,
+            "sd": 0.01},
         # Hospitalization
-        "hospitalization probability pdf": {"class": "Beta", "mean": 0.1,
-                                            "sd": 0.01},
-        "hospitalization duration pdf": {"class": "Gamma", "mean": 14.,
-                                         "sd": 0.01},
-        "time until hospitalization pdf": {"class": "Gamma", "mean": 2.52,
-                                           "sd": 1.},
+        "hospitalization probability pdf": {
+            "class": "Beta",
+            "mean": 0.1,
+            "sd": 0.01},
+        "hospitalization duration pdf": {
+            "class": "Gamma",
+            "mean": 14.,
+            "sd": 0.01},
+        "time until hospitalization pdf": {
+            "class": "Gamma",
+            "mean": 2.52,
+            "sd": 1.},
         # Mortality
-        "time incubation death pdf": {"class": "Gamma", "mean": 32., "sd": 5.},
-        "mortality prob pdf": {"class": "Beta", "mean": 0.01, "sd": 0.01},
+        "time incubation death pdf": {
+            "class": "Gamma",
+            "mean": 32.,
+            "sd": 5.},
+        "mortality prob pdf": {
+            "class": "Beta",
+            "mean": 0.01,
+            "sd": 0.01},
         # Recovery
-        "recovery time pdf": {"class": "Gamma", "mean": 11., "sd": 5.},
+        "recovery time pdf": {
+            "class": "Gamma",
+            "mean": 11.,
+            "sd": 5.},
     },
     "measures": {
         # Measures implemented (None, contact_tracing, social_distancing, all)
@@ -76,20 +106,10 @@ _baseconfig = {
         # social distancing
         "distanced fraction": 0.0,
     },
-    # Defines the statistics of interest
-    # Each statistic has a name and a dictionary of properties
-    "statistics": {
-        # Here the properties of the statistics of interest are defined
-        "removed": {"is_removed": True},
-        "incubating": {"has_symptoms": False, "can_infect": True},
-        "latent": {"is_latent": True},
-        "infectious": {"has_symptoms": True, "can_infect": True},
-        "infected": {"is_infected": True},
-        "hospitalized": {"is_hospitalized": True},
-        "recovered": {"is_recovered": True},
-        "dead": {"is_dead": True},
-        "quarantined": {"is_quarantined": True},
-    },
+    "scenario": {
+        "class": "StandardScenario",
+        "sim_length": 200,
+    }
 }
 
 
