@@ -237,6 +237,20 @@ class MC_Sim(object):
         return np.arange(self._scenario._sim_length)
 
     @property
+    def R0(self):
+        """
+        function: reproductive number
+        Average number of infections due to
+        one patient (not assuming measures were taken)
+        Parameters:
+            -None
+        Returns:
+            -float R:
+                The reproductive number
+        """
+        return self.__R0
+
+    @property
     def population(self):
         return self.__population
 

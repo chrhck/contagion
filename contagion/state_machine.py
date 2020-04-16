@@ -729,15 +729,11 @@ class StatCollector(object, metaclass=abc.ABCMeta):
     _statistics: Dict[str, List[float]]
 
     def __init__(self, data_fields: List[str]):
-        self._stat_cond = data_fields
+        self._data_fields = data_fields
         self._statistics = defaultdict(list)
 
     def __call__(self, data: DataDict):
         for field in self._data_fields:
-            # TODO: This should be required in loop
-            masks = []
-            for condition in field.keys():
-                if field
             self._statistics[field].append(data[field].sum())
 
     @property

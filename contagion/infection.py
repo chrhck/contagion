@@ -48,21 +48,21 @@ class Infection(object):
 
         _log.debug("The infection duration pdf")
 
-        # Symptom duration
-        dur_symptoms_pdf = construct_pdf(
-            config["infection"]["symptom duration pdf"])
-        self.__symptom_duration = dur_symptoms_pdf
+        # Infectious duration
+        dur_infectious_pdf = construct_pdf(
+            config["infection"]["infectious duration pdf"])
+        self.__infectious_duration = dur_infectious_pdf
 
-        # Symptomless duration
+        # Incubation duration
         _log.debug("The incubation duration pdf")
-        dur_symptomless_pdf = construct_pdf(
-            config["infection"]["symptomless duration pdf"])
-        self.__symptomless_duration = dur_symptomless_pdf
+        dur_incubation_pdf = construct_pdf(
+            config["infection"]["incubation duration pdf"])
+        self.__incubation_duration = dur_incubation_pdf
 
         # Latency
         _log.debug("The latency duration pdf")
         dur_latent_pdf = construct_pdf(
-            config["infection"]["latent duration pdf"])
+            config["infection"]["latency duration pdf"])
         self.__latent_duration = dur_latent_pdf
 
         # Recovery
@@ -135,7 +135,7 @@ class Infection(object):
         return self.__latent_duration
 
     @property
-    def symptomless_duration(self):
+    def incubation_duration(self):
         """
         function: incubation_duration
         Getter function for the incubation duration
@@ -146,10 +146,10 @@ class Infection(object):
             -int incubation_duration:
                 The duration of incubation
         """
-        return self.__symptomless_duration
+        return self.__incubation_duration
 
     @property
-    def symptom_duration(self):
+    def infectious_duration(self):
         """
         function: infectious_duration
         Getter function for the incubation duration
@@ -160,7 +160,7 @@ class Infection(object):
             -int infectious_duration:
                 The duration of infection
         """
-        return self.__symptom_duration
+        return self.__infectious_duration
 
     @property
     def hospitalization_prob(self):
