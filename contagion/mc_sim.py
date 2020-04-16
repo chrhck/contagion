@@ -70,17 +70,18 @@ class MC_Sim(object):
             {
                 "is_infected": False,
                 "is_new_infected": False,
-                "is_incubation": False,
-                "is_new_incubation": False,
+               
                 "is_latent": False,
                 "is_new_latent": False,
                 "is_infectious": False,
                 "is_new_infectious": False,
-                "can_infect": False,
-                "is_new_can_infect": False,
+               
+                "will_have_symptoms": False,
+                "will_have_symptoms_new": False,
                 "is_symptomatic": False,
+
                 "is_removed": False,
-                "is_critical": False,
+               
                 "is_hospitalized": False,
                 "is_new_hospitalized": False,
                 "is_recovering": False,
@@ -94,16 +95,19 @@ class MC_Sim(object):
                 "is_new_dead": False,
                 "is_quarantined": False,
                 "is_new_quarantined": False,
-                "incubation_duration": 0,
+
+                "is_tracked": False,
+
                 "infectious_duration": 0,
                 "latent_duration": 0,
                 "time_until_hospitalization": 0,
+                "time_since_infectious": -np.inf,
                 "hospitalization_duration": 0,
                 "recovery_time": 0,
                 "time_until_death": 0,
-                "duration_of_can_infect": 0,
+                "time_until_symptoms": 0,
                 "quarantine_duration": 0,
-                "is_tracked": False,
+
             },
             index=np.arange(self.__pop_size),
         )
@@ -114,18 +118,15 @@ class MC_Sim(object):
         )
 
         # Their infection duration
-        infect_dur = np.around(
-            self.__infect.infectious_duration.rvs(self.__infected)
+        latent_dur = np.around(
+            self.__infect.latent_duration.rvs(self.__infected)
         )
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
-        self.__population.loc[infect_id, "is_infectious"] = True
+        self.__population.loc[infect_id, "is_latent"] = True
+        self.__population.loc[infect_id, "latent_duration"] = latent_dur
         # TODO: Add a switch if these people have symptoms or not
-        self.__population.loc[infect_id, "can_infect"] = True
-        self.__population.loc[infect_id, "is_symptomatic"] = True
-        self.__population.loc[infect_id, "infectious_duration"] = infect_dur
-        self.__population.loc[infect_id, "duration_of_can_infect"] = 1
 
         # Set Contact Tracing
         tracked = self.__measures.tracked
@@ -135,22 +136,6 @@ class MC_Sim(object):
         else:
             _log.debug("Population is not tracked")
 
-        # Set Social Distancing
-        # if distanced is not None:
-        #    _log.debug("Constructiong social distancing people ids")
-        #    self.__distanced = True
-        #    distanced_df = pd.DataFrame(
-        #        {"is_distanced": False}, index=np.arange(self.__pop_size)
-        #    )
-        #    distanced_df.loc[distanced, "is_distanced"] = True
-        #    self.__population = pd.concat(
-        #        [self.__population, distanced_df], axis=1
-        #    )
-        #    self._distanced_size = int(self.__pop_size * config["distanced"])
-        # else:
-        #    _log.debug("Population is not Social Distancing")
-        #    self.__distanced = False
-
         # The storage dictionary
         self.__statistics = defaultdict(list)
 
@@ -158,11 +143,9 @@ class MC_Sim(object):
         stat_collector = StatCollector(
             [
                 "is_removed",
-                "is_incubation",
                 "is_latent",
                 "is_infectious",
                 "is_infected",
-                "can_infect",
                 "is_hospitalized",
                 "is_recovered",
                 "is_dead",
