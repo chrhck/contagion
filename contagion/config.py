@@ -33,11 +33,22 @@ _baseconfig = {
         "population storage": "../populations/generic.pkl",
         "population class": "HomogeneousPopulation",
         # Social circle pdf:
-        "social circle pdf": {"class": "Gamma", "mean": 40, "sd": 5},
-        "social circle interactions pdf": {"class": "Gamma", "mean": 6,
-                                           "sd": 0.2},
-        "interaction intensity pdf": {"class": "Uniform", "lower": 0,
-                                      "upper": 1},
+        "social circle pdf": {
+            "class": "Gamma",
+            "mean": 40,
+            "sd": 5},
+        "social circle interactions pdf": {
+            "class": "Gamma",
+            "mean": 6,
+            "sd": 0.2},
+        "random interactions pdf": {
+            "class": "Gamma",
+            "mean": 1,
+            "sd": 1},
+        "random interactions intensity pdf": {
+            "class": "Gamma",
+            "mean": 0.1,
+            "sd": 0.5},
     },
     "infection": {
         # The number of starting infections
