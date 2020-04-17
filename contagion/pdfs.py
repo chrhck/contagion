@@ -245,8 +245,6 @@ class Gamma(ScipyPDF):
             The mean value
         -Union[float, np.array] std:
             The std
-        -Union[float, np.array] scale:
-            The scale parameters
         -optional float max_val:
             The maximum value of the pdf
     Returns:
@@ -311,6 +309,46 @@ class Gamma(ScipyPDF):
                 self._scale,
                 norm,
             )
+
+class Gamma_Benchmark(ScipyPDF):
+    """
+    class: Gamma
+    Class for the benchmark gamma distribution
+    Parameters:
+        -Union[float, np.array] shape:
+            The shape value
+        -Union[float, np.array] loc:
+            The loc
+        -Union[float, np.array] scale:
+            The scale parameters
+        -optional float max_val:
+            The maximum value of the pdf
+    Returns:
+        -None
+    """
+
+    def __init__(
+            self,
+            shape: Union[float, np.ndarray],
+            loc: Union[float, np.ndarray],
+            scale: Union[float, np.ndarray]) -> None:
+        """
+        function: __init__
+        Initializes the Gamma class
+        Parameters:
+            -Union[float, np.array] mean:
+                The mean value
+            -Union[float, np.array] sd:
+                The sd
+            -Union[float, np.array] scale:
+                The scale parameters
+        Returns:
+            -None
+        """
+        self._pdf = scipy.stats.gamma(
+            shape, loc=loc,
+            scale=scale
+        )
 
 
 class NormalizedProbability(Probability):
