@@ -5,6 +5,7 @@ from pyabc.sampler import DaskDistributedSampler
 import numpy as np
 import os
 from contagion import Contagion
+from contagion.config import _baseconfig
 from dask.distributed import Client
 from summary_stats import make_sum_stats
 
@@ -21,11 +22,9 @@ if __name__ == "__main__":
     my_config["population"]["population size"] = 10000
     my_config["population"]["store population"] = True
     my_config["population"]["population class"] = "AccuratePopulation"
-       
+
     if "cont" in args:
         my_config["population"]["re-use population"] = True
-        
-    
 
     contagion = Contagion(userconfig=my_config)
     contagion.sim()
@@ -33,15 +32,17 @@ if __name__ == "__main__":
     fields = ["is_dead", "is_hospitalized"]
     data = {field: np.asarray(contagion.statistics[field]) for field in fields}
 
-    
-    
     def model(parameters):
         this_config = dict(_baseconfig)
         this_config.update(my_config)
-        this_config["infection"]["latency duration pdf"]["mean"] = parameters["latency mean"]
-        this_config["infection"]["time incubation death pdf"]["mean"] = parameters["death mean"]
-        this_config["infection"]["mortality prob pdf"]["mean"] = parameters["mortality mean"]
-        this_config["infection"]["infection probability pdf"]["mean"] = parameters["infection mean"]
+        this_config["infection"]["latency duration pdf"]["mean"] =\
+            parameters["latency mean"]
+        this_config["infection"]["time incubation death pdf"]["mean"] =\
+            parameters["death mean"]
+        this_config["infection"]["mortality prob pdf"]["mean"] =\
+            parameters["mortality mean"]
+        this_config["infection"]["infection probability pdf"]["mean"] =\
+            parameters["infection mean"]
         this_config["population"]["re-use population"] = True
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
@@ -62,17 +63,17 @@ if __name__ == "__main__":
     sum_stat_func = make_sum_stats(fields)
 
     distance = pyabc.AdaptivePNormDistance(
-        p=2, scale_function=pyabc.distance.median_absolute_deviation_to_observation)
-    
+        p=2,
+        scale_function=pyabc.distance.median_absolute_deviation_to_observation)
+
     # distance = make_chi2_distance(fields)
-    
+
     prior = pyabc.Distribution(
         {"latency mean": pyabc.RV("uniform", 1, 20),
-         "death mean": pyabc.RV("uniform", 10, 50),         
+         "death mean": pyabc.RV("uniform", 10, 50),
          "mortality mean":  pyabc.RV("uniform", 0.011, 0.2),
          "infection mean":  pyabc.RV("uniform", 2.5, 5)
-        })
-
+         })
 
     # distance = make_chi2_distance(fields)
 
@@ -97,7 +98,7 @@ if __name__ == "__main__":
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
-    #population = 300
+    # population = 300
     epsilon = pyabc.epsilon.QuantileEpsilon()
     abc = pyabc.ABCSMC(model, prior, distance,
                        population_size=population, sampler=sampler,
