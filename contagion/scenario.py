@@ -52,19 +52,25 @@ class SocialDistancing(StandardScenario):
     def run(self):
         start = time()
 
-        old_contact_func = None
+        # old_contact_func = None
         for step in range(self._sim_length):
 
             if step == self._t_start:
                 _log.debug("Start social distancing")
 
+                old_rate_scale = self._sm._population.interaction_rate_scaling
+                self._sm._population.interaction_rate_scaling =\
+                        self._contact_rate_scaling
+
+                """
                 old_contact_func = self._sm._population.get_contacts
 
                 def wrapped_get_contacts(
                         rows: np.ndarray,
+                        cols: np.ndarray,
                         return_rows=False):
 
-                    res = old_contact_func(rows, return_rows)
+                    res = old_contact_func(rows, cols, return_rows)
 
                     if return_rows:
                         sel_indices, contact_rates, succesful_rows = res
@@ -74,9 +80,12 @@ class SocialDistancing(StandardScenario):
                             contact_rates*self._contact_rate_scaling)
 
                 self._sm._population.get_contacts = wrapped_get_contacts
+                """
 
             if step == self._t_stop:
-                self._sm._population.get_contacts = old_contact_func
+                # self._sm._population.get_contacts = old_contact_func
+                self._sm._population.interaction_rate_scaling =\
+                    old_rate_scale
 
             self._sm.tick()
             if step % (self._sim_length / 10) == 0:

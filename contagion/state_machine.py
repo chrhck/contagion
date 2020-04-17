@@ -816,19 +816,18 @@ class ContagionStateMachine(StateMachine):
     def __init__(
         self,
         data: Union[pd.DataFrame, DataDict],
-        stat_colletor: Optional[StatCollector],
+        stat_collector: Optional[StatCollector],
         population: Population,
         infection: Infection,
         measures: Measures,
         *args,
         **kwargs,
     ):
-        super().__init__(data, stat_colletor, *args, **kwargs)
+        super().__init__(data, stat_collector, *args, **kwargs)
 
         self._population = population
         self._rstate = config["runtime"]["random state"]
         self._infection = infection
-        self._intensity_pdf = population.interaction_intensity
         self._statistics = defaultdict(list)
         self._measures = measures
 

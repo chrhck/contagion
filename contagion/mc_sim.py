@@ -151,7 +151,7 @@ class MC_Sim(object):
                 "is_recovered",
                 "is_dead",
                 "is_quarantined",
-                "is_symptomatic"
+                "is_symptomatic",
             ]
         )
         # The state machine
