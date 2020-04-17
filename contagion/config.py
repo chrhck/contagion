@@ -41,6 +41,49 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 6,
             "sd": 0.2},
+
+
+        "hierarchy": [{
+            # Close contacts (family)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 2,
+                "sd": 2},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 3,
+                "sd": 1},
+            # A person can only be in one of these circles
+            # -> Not interactions between circles of this type
+            "interconnectivity": 0
+            },
+            {
+            # Friends
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 10,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 30 % of people in this group can be in other groups
+            "interconnectivity": 0.3
+            },
+            {
+            # Loose contacts (work, ...)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 20,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 10 % of people in this group can be in other groups
+            "interconnectivity": 0.1
+            }],
+
         "random interactions pdf": {
             "class": "Gamma",
             "mean": 1,
