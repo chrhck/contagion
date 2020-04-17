@@ -97,7 +97,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         with np.errstate(all="ignore"):
             contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
-        contact_rate[self._social_circles[rows] == 0] = 0
 
         # n_contacts is the number of contacts for each infected
         # we also want the number of times the infected person
@@ -122,12 +121,23 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             if n_contact == 0:
                 continue
             this_sel_indices = self._rstate.randint(
-                0, len(cols), size=n_contact, dtype=np.int)
-            sel_indices.append(cols[this_sel_indices])
+                0, self._pop_size, size=n_contact, dtype=np.int)
+
+            unique_indices, counts = np.unique(
+                this_sel_indices, return_counts=True)
+            this_sel_indices, pos, _ = np.intersect1d(
+                unique_indices, cols, assume_unique=True, return_indices=True)
+
+            counts = counts[pos]
+
+            sel_indices.append(this_sel_indices)
             contact_rates.append(
-                np.ones(n_contact, dtype=np.float)*contact_rate[i])
+                np.ones(
+                    len(this_sel_indices),
+                    dtype=np.float)
+                *contact_rate[i]*counts)
             succesful_rows.append(
-                    np.ones(int(n_contact), dtype=int) * row_index)
+                    np.ones(len(this_sel_indices), dtype=int) * row_index)
 
         """
         for i, row_index in enumerate(rows):

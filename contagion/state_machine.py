@@ -1219,12 +1219,14 @@ class ContagionStateMachine(StateMachine):
                 quarantine_condition,
             ),
 
+            # TODO: Does coming out of qurantine mean that you are healed?
             # Go out of quarantine
             MultiStateConditionalTransition(
                 "quarantined_free",
                 boolean_states["is_quarantined"],
                 [
                     (~boolean_states["is_infected"], False),
+                    boolean_states["is_recovered"],
                     (~boolean_states["is_symptomatic"], False),
                     (~boolean_states["is_infectious"], False),
                     (~boolean_states["will_be_hospitalized"], False),
