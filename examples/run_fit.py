@@ -26,6 +26,7 @@ if __name__ == "__main__":
     my_config["general"]["simulation length"] = 100
     my_config["population"]["population size"] = 10000
     my_config["population"]["store population"] = True
+    my_config["population"]["population class"] = "AccuratePopulation"
        
     if "cont" in args:
         my_config["population"]["re-use population"] = True
@@ -44,8 +45,9 @@ if __name__ == "__main__":
         this_config = dict(_baseconfig)
         this_config.update(my_config)
         this_config["infection"]["latency duration pdf"]["mean"] = parameters["latency mean"]
-        this_config["infection"]["incubation duration pdf"]["mean"] = parameters["incubation mean"]
+        this_config["infection"]["time incubation death pdf"]["mean"] = parameters["death mean"]
         this_config["infection"]["mortality prob pdf"]["mean"] = parameters["mortality mean"]
+        this_config["infection"]["infection probability pdf"]["mean"] = parameters["infection mean"]
         this_config["population"]["re-use population"] = True
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
@@ -73,8 +75,9 @@ if __name__ == "__main__":
     
     prior = pyabc.Distribution(
         {"latency mean": pyabc.RV("uniform", 1, 20),
-         "incubation mean": pyabc.RV("uniform", 1, 20),     
-          "mortality mean":  pyabc.RV("uniform", 0.011, 0.2)
+         "death mean": pyabc.RV("uniform", 10, 50),         
+         "mortality mean":  pyabc.RV("uniform", 0.011, 0.2),
+         "infection mean":  pyabc.RV("uniform", 2.5, 5)
         })
 
 
