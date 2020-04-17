@@ -134,7 +134,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
                 np.ones(
                     len(this_sel_indices),
                     dtype=np.float)
-                *contact_rate[i])
+                * contact_rate[i])
 
         if all_sel_indices:
             all_sel_indices = np.concatenate(all_sel_indices)

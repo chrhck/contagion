@@ -74,8 +74,6 @@ _baseconfig = {
             "shape": 3.93,
             "loc": -4.,
             "scale": 2.154},
-            # "mean": 4.7,
-            # "sd": 3.},
         "incubation duration pdf": {
             "class": "Gamma",
             "mean": 3.,

@@ -118,7 +118,6 @@ class Contagion(object):
         _log.info("Welcome to contagion!")
         _log.info("This package will help you model the spread of infections")
 
-
         def is_same_config(pop_conf_a, pop_conf_b):
             pop_conf_a = dict(pop_conf_a)
             pop_conf_b = dict(pop_conf_b)
@@ -155,7 +154,7 @@ class Contagion(object):
             if config["population"]["store population"]:
                 # Storing for later
                 _log.debug("Storing for later use")
-                
+
                 pickle.dump(
                     (self.pop, config["population"]),
                     open(config["population"]["population storage"], "wb"),

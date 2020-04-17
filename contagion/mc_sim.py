@@ -70,18 +70,18 @@ class MC_Sim(object):
             {
                 "is_infected": False,
                 "is_new_infected": False,
-               
+
                 "is_latent": False,
                 "is_new_latent": False,
                 "is_infectious": False,
                 "is_new_infectious": False,
-               
+
                 "will_have_symptoms": False,
                 "will_have_symptoms_new": False,
                 "is_symptomatic": False,
 
                 "is_removed": False,
-               
+
                 "is_hospitalized": False,
                 "is_new_hospitalized": False,
                 "is_recovering": False,
