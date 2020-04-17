@@ -310,6 +310,7 @@ class Gamma(ScipyPDF):
                 norm,
             )
 
+
 class Gamma_Benchmark(ScipyPDF):
     """
     class: Gamma
