@@ -116,6 +116,9 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         contact_rates = []
         # NOTE: This calculation will producde duplicate contacts
 
+        all_sel_indices = []
+        idx_ptrs = [0]
+        succesful_rows = []
         for i, row_index in enumerate(rows):
             n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
             if n_contact == 0:
@@ -123,23 +126,53 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             this_sel_indices = self._rstate.randint(
                 0, self._pop_size, size=n_contact, dtype=np.int)
 
-            unique_indices, counts = np.unique(
-                this_sel_indices, return_counts=True)
-            this_sel_indices, pos, _ = np.intersect1d(
-                unique_indices, cols, assume_unique=True, return_indices=True)
-
-            counts = counts[pos]
-
-            sel_indices.append(this_sel_indices)
+            all_sel_indices.append(this_sel_indices)
+            idx_ptrs.append(idx_ptrs[-1]+n_contact)
+            succesful_rows.append(np.ones(
+                    len(this_sel_indices), dtype=np.int)*row_index)
             contact_rates.append(
                 np.ones(
                     len(this_sel_indices),
                     dtype=np.float)
-                *contact_rate[i]*counts)
-            succesful_rows.append(
-                    np.ones(len(this_sel_indices), dtype=int) * row_index)
+                *contact_rate[i])
+
+        if all_sel_indices:
+            all_sel_indices = np.concatenate(all_sel_indices)
+            contact_rates = np.concatenate(contact_rates)
+            succesful_rows = np.concatenate(succesful_rows)
+
+            unique_indices, ind, reverse_ind, counts = np.unique(
+                all_sel_indices, return_index=True,
+                return_inverse=True, return_counts=True)
+
+            sel_indices, pos, _ = np.intersect1d(
+                unique_indices, cols, assume_unique=True, return_indices=True)
+
+            counts = counts[pos]
+            contact_rates = contact_rates[ind][pos] * counts
+            succesful_rows = succesful_rows[ind][pos]
+        else:
+            sel_indices = np.empty(0, dtype=int)
+            contact_rates = np.empty(0, dtype=int)
+            succesful_rows = np.empty(0, dtype=int)
 
         """
+        unique_indices, counts = np.unique(
+            this_sel_indices, return_counts=True)
+        this_sel_indices, pos, _ = np.intersect1d(
+            unique_indices, cols, assume_unique=True, return_indices=True)
+
+        counts = counts[pos]
+
+        sel_indices.append(this_sel_indices)
+        contact_rates.append(
+            np.ones(
+                len(this_sel_indices),
+                dtype=np.float)
+            *contact_rate[i]*counts)
+        succesful_rows.append(
+                np.ones(len(this_sel_indices), dtype=int) * row_index)
+
         for i, row_index in enumerate(rows):
             n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
 
@@ -159,7 +192,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
                     np.ones(int(n_contact), dtype=int) * row_index)
             else:
                 succesful_rows.append(np.empty(0, dtype=int))
-        """
+
 
         if sel_indices:
             sel_indices = np.concatenate(sel_indices)
@@ -169,7 +202,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             sel_indices = np.empty(0, dtype=int)
             contact_rates = np.empty(0, dtype=int)
             succesful_rows = np.empty(0, dtype=int)
-
+        """
         contact_rates = contact_rates * self.interaction_rate_scaling
         if return_rows:
             return sel_indices, contact_rates, succesful_rows

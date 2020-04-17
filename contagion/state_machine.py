@@ -1350,6 +1350,7 @@ class ContagionStateMachine(StateMachine):
         infectious_dur = data["time_since_infectious"][
             successful_contactee_indices
             ]
+
         infection_prob = self._infection.pdf_infection_prob.pdf(
             infectious_dur
         )
