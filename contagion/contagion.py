@@ -32,24 +32,43 @@ _log = logging.getLogger("contagion")
 
 class Contagion(object):
     """
-    class: Contagion
     Interace to the contagion package. This class
     stores all methods required to run the simulation
     of the infection spread
-    Parameters:
-        -None
-    Returns:
-        -None
+    Parameters
+    ----------
+    userconfig: dic, optional
+        -User config dictionary
+
+    Returns
+    -------
+    None: -
+        -
+
+    Raises
+    ------
+    ImportError
+        Population file wasn't found
     """
+
     def __init__(self, userconfig=None):
         """
-        function: __init__
         Initializes the class Contagion.
         Here all run parameters are set.
-        Parameters:
-            -None
-        Returns:
-            -None
+        Parameters
+        ----------
+        userconfig: dic, optional
+            -User config dictionary
+
+        Returns
+        -------
+        None: -
+            -
+
+        Raises
+        ------
+        ImportError
+            Population file wasn't found
         """
         # Inputs
         if userconfig is not None:
@@ -57,25 +76,25 @@ class Contagion(object):
                 config.from_dict(userconfig)
             else:
                 config.from_yaml(userconfig)
-   
+
         # Create RandomState
         if config["general"]["random state seed"] is None:
             _log.warning("No random state seed given, constructing new state")
             rstate = np.random.RandomState()
         else:
             rstate = np.random.RandomState(
-                 config["general"]["random state seed"])
+                config["general"]["random state seed"]
+            )
 
-        config["runtime"] = {
-            "random state": rstate
-            }
+        config["runtime"] = {"random state": rstate}
 
         self.__infected = config["infection"]["infected"]
 
         # Logger
         # creating file handler with debug messages
-        fh = logging.FileHandler(config["general"]["log file handler"],
-                                 mode="w")
+        fh = logging.FileHandler(
+            config["general"]["log file handler"], mode="w"
+        )
         fh.setLevel(logging.DEBUG)
         # console logger with a higher log level
         ch = logging.StreamHandler(sys.stdout)
@@ -99,31 +118,48 @@ class Contagion(object):
         _log.info("Welcome to contagion!")
         _log.info("This package will help you model the spread of infections")
 
+
+        def is_same_config(pop_conf_a, pop_conf_b):
+            pop_conf_a = dict(pop_conf_a)
+            pop_conf_b = dict(pop_conf_b)
+
+            del pop_conf_a["re-use population"]
+            del pop_conf_b["re-use population"]
+            del pop_conf_a["store population"]
+            del pop_conf_b["store population"]
+
+            return pop_conf_a == pop_conf_b
+
         if config["population"]["re-use population"]:
             try:
                 self.pop, pop_config = pickle.load(
                     open(config["population"]["population storage"], "rb")
                 )
-                if pop_config != config["population"]:
+                if not is_same_config(pop_config, config["population"]):
                     _log.warn(
                         "Attempting to reuse population with a "
-                        "different config. Continue at own risk.")
+                        "different config. Continue at own risk."
+                    )
                 _log.debug("Population loaded")
             except ImportError:
                 _log.error("Population file not found!")
                 raise ImportError(
-                    "Population file not found! Check the config file.")
+                    "Population file not found! Check the config file."
+                )
         else:
             _log.info("Starting population construction")
             population_class = getattr(
-                population, config["population"]["population class"])
+                population, config["population"]["population class"]
+            )
             self.pop = population_class()
             if config["population"]["store population"]:
                 # Storing for later
                 _log.debug("Storing for later use")
+                
                 pickle.dump(
                     (self.pop, config["population"]),
-                    open(config["population"]["population storage"], "wb"))
+                    open(config["population"]["population storage"], "wb"),
+                )
         _log.info("Finished the population")
 
         _log.info("Starting the infection construction")
@@ -131,7 +167,7 @@ class Contagion(object):
         _log.info("Finished the infection construction")
 
         _log.info("Starting the measure construction")
-        self.tracked = Measures().tracked
+        self.measures = Measures()
         _log.info("Finished the measure construction")
 
         _log.info("Setting the simulation framework")
@@ -142,14 +178,20 @@ class Contagion(object):
     @property
     def statistics(self):
         """
-        function: statistics
         Getter functions for the simulation results
-        from the simulation
-        Parameters:
-            -None
-        Returns:
-            -dic statistics:
-                Stores the results from the simulation
+        Parameters
+        ----------
+        None: -
+            -
+
+        Returns
+        -------
+        statistics: dic
+            - The simulation results
+
+        Raises
+        ------
+        -
         """
         return self.__mc_run.statistics
 
@@ -219,19 +261,16 @@ class Contagion(object):
             -np.array infected:
                 The current population
         """
-        _log.debug("Realistic run")
-        self.__mc_run = MC_Sim(
-            self.pop,
-            self.infection,
-            self.tracked
-        )
+        _log.debug("Starting MC run")
+        self.__mc_run = MC_Sim(self.pop, self.infection, self.measures)
         _log.info("Finished calculation")
         _log.info("The results are stored in a dictionary self.statistics")
         _log.info("Structure of dictionray:")
         _log.info(self.statistics.keys())
         _log.debug(
             "Dumping run settings into %s",
-            config["general"]["config location"])
+            config["general"]["config location"],
+        )
         with open(config["general"]["config location"], "w") as f:
             yaml.dump(config, f)
         _log.debug("Finished dump")

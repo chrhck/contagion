@@ -1,14 +1,16 @@
 import numpy as np
 import itertools
+
+
 def make_sum_stats(fields):
 
     def gen_summary_stats(simulation):
         sum_stats = {}
 
         for field in fields:
-            
+
             this_sim = np.asarray(simulation[field])
-            
+
             sum_stats[field+"_xmax_diff"] = np.argmax(np.diff(this_sim))
             sum_stats[field+"_ymax_diff"] = np.max(np.diff(this_sim))
             sum_stats[field+"_xmax"] = np.argmax(this_sim)

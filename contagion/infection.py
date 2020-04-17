@@ -64,13 +64,21 @@ class Infection(object):
         dur_latent_pdf = construct_pdf(
             config["infection"]["latency duration pdf"])
         self.__latent_duration = dur_latent_pdf
-
+ 
         # Recovery
         _log.debug("The recovery time pdf")
 
         recovery_time_pdf = construct_pdf(
             config["infection"]["recovery time pdf"])
         self.__recovery_time = recovery_time_pdf
+
+        # Symptoms
+        _log.debug("Symptoms pdf")
+
+        will_have_symptoms_pdf = construct_pdf(
+            config["infection"]["will have symptoms prob pdf"])
+        
+        self.__will_have_symptoms_prob = will_have_symptoms_pdf
 
         # Hospitalization
         _log.debug("The hospitalization pdfs")
@@ -237,3 +245,8 @@ class Infection(object):
                 Incubation and death time
         """
         return self.__time_incubation_death
+
+    @property
+    def will_have_symptoms_prob(self):
+
+        return self.__will_have_symptoms_prob

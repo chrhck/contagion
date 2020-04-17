@@ -20,7 +20,7 @@ _log = logging.getLogger(__name__)
 
 
 class Population(object, metaclass=abc.ABCMeta):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Checking random state
 
         self._pop_size = config["population"]["population size"]
@@ -28,27 +28,22 @@ class Population(object, metaclass=abc.ABCMeta):
 
         _log.debug("The interaction intensity pdf")
 
-        self._interaction_intensity = construct_pdf(
-            config["population"]["interaction intensity pdf"])
-
     @abc.abstractmethod
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         pass
 
-    @property
-    def interaction_intensity(self):
-        return self._interaction_intensity
-
 
 class PopulationWithSocialCircles(Population):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._interaction_rate_scaling = interaction_rate_scaling
 
         _log.info("Constructing social circles for the population")
 
@@ -67,15 +62,21 @@ class PopulationWithSocialCircles(Population):
     def social_circles(self):
         return self._social_circles
 
+    @property
+    def interaction_rate_scaling(self):
+        return self._interaction_rate_scaling
+
+    @interaction_rate_scaling.setter
+    def interaction_rate_scaling(self, val):
+        self._interaction_rate_scaling = val
+
 
 class HomogeneousPopulation(PopulationWithSocialCircles):
-
-    def __init__(self):
-        super().__init__()
 
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -92,41 +93,90 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_strengths: np.ndarray
         """
 
-        sel_indices = []
-        contact_rates = []
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
-        contact_rate = n_contacts / self._social_circles[rows]
+        with np.errstate(all="ignore"):
+            contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
 
-        for i, row_ind in enumerate(rows):
-            sel_indices.append(
-                self._rstate.randint(
-                    0, self._pop_size, size=int(n_contacts[i])))
+        # n_contacts is the number of contacts for each infected
+        # we also want the number of times the infected person
+        # is contacted by others. For the ad-hoc calculation,
+        # we use the contact rate of each infected person
+        # Number of people who can contact each infected:
+        # n_candidates = pop_size - n_infected
+        # contact_rate = 1 / pop_size * n_candidates * contact_rate
+
+        n_candidates = self._pop_size - len(rows)
+        contact_rate_others = 1 / self._pop_size * n_candidates * contact_rate
+        n_contacts_others = self._rstate.poisson(
+            contact_rate_others, size=len(rows))
+
+        succesful_rows = []
+        sel_indices = []
+        contact_rates = []
+        # NOTE: This calculation will producde duplicate contacts
+
+        for i, row_index in enumerate(rows):
+            n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
+            if n_contact == 0:
+                continue
+            this_sel_indices = self._rstate.randint(
+                0, self._pop_size, size=n_contact, dtype=np.int)
+
+            unique_indices, counts = np.unique(
+                this_sel_indices, return_counts=True)
+            this_sel_indices, pos, _ = np.intersect1d(
+                unique_indices, cols, assume_unique=True, return_indices=True)
+
+            counts = counts[pos]
+
+            sel_indices.append(this_sel_indices)
             contact_rates.append(
-                np.ones(int(n_contacts[i]), dtype=np.float)*contact_rate[i])
-        if return_rows:
-            succesful_rows = [
-                np.ones(len(contact_rates[i]), dtype=np.int)*i
-                for i in range(len(rows))
-                if len(contact_rates[i]) > 0]
-            if succesful_rows:
-                succesful_rows = np.concatenate(succesful_rows)
+                np.ones(
+                    len(this_sel_indices),
+                    dtype=np.float)
+                *contact_rate[i]*counts)
+            succesful_rows.append(
+                    np.ones(len(this_sel_indices), dtype=int) * row_index)
+
+        """
+        for i, row_index in enumerate(rows):
+            n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
+
+            this_sel_indices = set()
+            for _ in range(n_contact):
+                while True:
+                    ind = self._rstate.randint(0, len(cols), dtype=np.int)
+                    if ind not in this_sel_indices:
+                        this_sel_indices.add(ind)
+                        break
+
+            sel_indices.append(list(this_sel_indices))
+            contact_rates.append(
+                np.ones(n_contact, dtype=np.float)*contact_rate[i])
+            if np.any(contact_rate[i] > 0):
+                succesful_rows.append(
+                    np.ones(int(n_contact), dtype=int) * row_index)
             else:
-                succesful_rows = np.empty(0, dtype=int)
+                succesful_rows.append(np.empty(0, dtype=int))
+        """
 
         if sel_indices:
             sel_indices = np.concatenate(sel_indices)
             contact_rates = np.concatenate(contact_rates)
+            succesful_rows = np.concatenate(succesful_rows)
         else:
             sel_indices = np.empty(0, dtype=int)
             contact_rates = np.empty(0, dtype=int)
+            succesful_rows = np.empty(0, dtype=int)
 
+        contact_rates = contact_rates * self.interaction_rate_scaling
         if return_rows:
             return sel_indices, contact_rates, succesful_rows
         return sel_indices, contact_rates
 
 
-class AccuratePopulation(PopulationWithSocialCircles):
+class PureSocialCirclePopulation(PopulationWithSocialCircles):
     """
     class: Population
     Class to help with the construction of a realistic population
@@ -137,7 +187,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
         -None
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         function: __init__
         Initializes the class Population
@@ -149,7 +199,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
         # Inputs
 
         start = time()
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         self.__sc_interactions = self._soc_circ_interact_pdf.rvs(
             self._pop_size)
@@ -249,6 +299,7 @@ class AccuratePopulation(PopulationWithSocialCircles):
     def get_contacts(
             self,
             rows: np.ndarray,
+            cols: np.ndarray,
             return_rows=False)\
             -> Union[Tuple[np.ndarray, np.ndarray],
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -264,8 +315,9 @@ class AccuratePopulation(PopulationWithSocialCircles):
             contact_indices: np.ndarray
             contact_strengths: np.ndarray
         """
-
         infected_sub_mtx = self.__interaction_matrix[rows]
+        infected_sub_mtx = infected_sub_mtx[:, cols]
+
         if return_rows:
             # here we need the rows
             # NOTE: This is ~2times slower
@@ -276,7 +328,77 @@ class AccuratePopulation(PopulationWithSocialCircles):
             contact_cols = infected_sub_mtx.indices  # nonzero column indices
             contact_strengths = infected_sub_mtx.data  # nonzero data
 
+        contact_strengths = contact_strengths * self.interaction_rate_scaling
+        contact_cols = cols[contact_cols]
+
         if return_rows:
+            contact_rows = rows[contact_rows]
             return contact_cols, contact_strengths, contact_rows
         else:
             return contact_cols, contact_strengths
+
+
+class AccuratePopulation(PureSocialCirclePopulation):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._random_interact_pdf = construct_pdf(
+                config["population"]["random interactions pdf"])
+
+        self._random_interact_intensity_pdf = construct_pdf(
+                config["population"]["random interactions intensity pdf"])
+
+    def get_contacts(
+            self,
+            rows: np.ndarray,
+            cols: np.ndarray,
+            return_rows=False)\
+            -> Union[Tuple[np.ndarray, np.ndarray],
+                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+
+        res_soc_cir = super().get_contacts(
+            rows, cols, return_rows)
+
+        n_rnd_contacts = self._random_interact_pdf.rvs(rows.shape[0])
+        # TODO: Random contacts are not yet symmetric
+        sel_indices = []
+        succesful_rows = []
+        for i, row_index in enumerate(rows):
+
+            n_contact = min(int(n_rnd_contacts[i]), len(cols))
+            if n_contact == 0:
+                continue
+            """
+            for _ in range(n_contact):
+                while True:
+                    ind = self._rstate.randint(0, len(cols))
+                    if ind not in this_sel_indices:
+                        this_sel_indices.add(ind)
+                        break
+            """
+            # NOTE: This *will* produce duplicates
+            this_sel_indices = self._rstate.randint(
+                0, len(cols), size=n_contact, dtype=np.int)
+            sel_indices.append(cols[this_sel_indices])
+
+            succesful_rows.append(
+                np.ones(int(n_contact), dtype=int) * row_index)
+
+        if sel_indices:
+            sel_indices = np.concatenate(sel_indices)
+            succesful_rows = np.concatenate(succesful_rows)
+        else:
+            sel_indices = np.empty(0, dtype=int)
+            succesful_rows = np.empty(0, dtype=int)
+
+        contact_rates = self._random_interact_intensity_pdf.rvs(
+            len(sel_indices))
+        sel_indices = np.concatenate([sel_indices, res_soc_cir[0]])
+
+        # Only the social circle rates have been scaled!
+        contact_rates = np.concatenate([contact_rates, res_soc_cir[1]])
+        if return_rows:
+            succesful_rows = np.concatenate([succesful_rows, res_soc_cir[2]])
+            return sel_indices, contact_rates, succesful_rows
+        return sel_indices, contact_rates
