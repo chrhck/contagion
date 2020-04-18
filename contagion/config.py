@@ -21,7 +21,6 @@ _baseconfig = {
         "log file handler": "../run/contagion.log",
         # Dump experiment config to this location
         "config location": "../run/config.txt",
-        "simulation length": 200,
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
@@ -34,35 +33,121 @@ _baseconfig = {
         "population storage": "../populations/generic.pkl",
         "population class": "HomogeneousPopulation",
         # Social circle pdf:
-        "social circle pdf": {"class": "Gamma", "mean": 40, "sd": 5},
-        "social circle interactions pdf": {"class": "Gamma", "mean": 6,
-                                           "sd": 0.2},
-        "interaction intensity pdf": {"class": "Uniform", "lower": 0,
-                                      "upper": 1},
+        "social circle pdf": {
+            "class": "Gamma",
+            "mean": 40,
+            "sd": 5},
+        "social circle interactions pdf": {
+            "class": "Gamma",
+            "mean": 6,
+            "sd": 0.2},
+
+
+        "hierarchy": [{
+            # Close contacts (family)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 2,
+                "sd": 2},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 3,
+                "sd": 1},
+            # A person can only be in one of these circles
+            # -> Not interactions between circles of this type
+            "interconnectivity": 0
+            },
+            {
+            # Friends
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 10,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 30 % of people in this group can be in other groups
+            "interconnectivity": 0.3
+            },
+            {
+            # Loose contacts (work, ...)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 20,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 10 % of people in this group can be in other groups
+            "interconnectivity": 0.1
+            }],
+
+        "random interactions pdf": {
+            "class": "Gamma",
+            "mean": 1,
+            "sd": 1},
+        "random interactions intensity pdf": {
+            "class": "Gamma",
+            "mean": 0.1,
+            "sd": 0.5},
     },
     "infection": {
         # The number of starting infections
         "infected": 10,
         # Symptom probability
-        "symptomatic probability": 0.6,
+        "will have symptoms prob pdf": {
+            "class": "Beta",
+            "mean": 0.6,
+            "sd": 0.1
+        },
         # Infection properties
-        "infection probability pdf": {"class": "Gamma", "mean": 3., "sd": 2.42,
-                                      "max_val": 1.},
-        "infectious duration pdf": {"class": "Gamma", "mean": 8., "sd": 2.42},
-        "latency duration pdf": {"class": "Gamma", "mean": 4.7, "sd": 3.},
-        "incubation duration pdf": {"class": "Gamma", "mean": 3., "sd": 0.01},
+        "infection probability pdf": {
+            "class": "Gamma",
+            "mean": 3.,
+            "sd": 2.42,
+            "max_val": 1.},
+        "infectious duration pdf": {
+            "class": "Gamma",
+            "mean": 8.,
+            "sd": 2.42},
+        "latency duration pdf": {
+            "class": "Gamma_Benchmark",
+            "shape": 3.93,
+            "loc": -4.,
+            "scale": 2.154},
+        "incubation duration pdf": {
+            "class": "Gamma",
+            "mean": 3.,
+            "sd": 0.01},
         # Hospitalization
-        "hospitalization probability pdf": {"class": "Beta", "mean": 0.1,
-                                            "sd": 0.01},
-        "hospitalization duration pdf": {"class": "Gamma", "mean": 14.,
-                                         "sd": 0.01},
-        "time until hospitalization pdf": {"class": "Gamma", "mean": 2.52,
-                                           "sd": 1.},
+        "hospitalization probability pdf": {
+            "class": "Beta",
+            "mean": 0.1,
+            "sd": 0.01},
+        "hospitalization duration pdf": {
+            "class": "Gamma",
+            "mean": 14.,
+            "sd": 0.01},
+        "time until hospitalization pdf": {
+            "class": "Gamma",
+            "mean": 2.52,
+            "sd": 1.},
         # Mortality
-        "time incubation death pdf": {"class": "Gamma", "mean": 32., "sd": 5.},
-        "mortality prob pdf": {"class": "Beta", "mean": 0.01, "sd": 0.01},
+        "time incubation death pdf": {
+            "class": "Gamma",
+            "mean": 32.,
+            "sd": 5.},
+        "mortality prob pdf": {
+            "class": "Beta",
+            "mean": 0.01,
+            "sd": 0.01},
         # Recovery
-        "recovery time pdf": {"class": "Gamma", "mean": 11., "sd": 5.},
+        "recovery time pdf": {
+            "class": "Gamma",
+            "mean": 11.,
+            "sd": 5.},
     },
     "measures": {
         # Measures implemented (None, contact_tracing, social_distancing, all)
@@ -70,12 +155,16 @@ _baseconfig = {
         # fraction of population tracked
         "tracked fraction": 0.2,
         # days of back tracking
-        "backtrack length": 0.0,
+        "backtrack length": 0.,
         # duration of the quarantine
         "quarantine duration": 14.0,
         # social distancing
         "distanced fraction": 0.0,
     },
+    "scenario": {
+        "class": "StandardScenario",
+        "sim_length": 200,
+    }
 }
 
 

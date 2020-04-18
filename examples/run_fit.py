@@ -5,6 +5,7 @@ from pyabc.sampler import DaskDistributedSampler
 import numpy as np
 import os
 from contagion import Contagion
+from contagion.config import _baseconfig
 from dask.distributed import Client
 from summary_stats import make_sum_stats
 
@@ -16,13 +17,14 @@ if __name__ == "__main__":
                         default=argparse.SUPPRESS,
                         const=None, nargs="?", dest="cont")
     args = parser.parse_args()
-    my_config = {
-        "simulation length": 100,
-        "population size": 10000
-    }
+    my_config = dict(_baseconfig)
+    my_config["general"]["simulation length"] = 100
+    my_config["population"]["population size"] = 10000
+    my_config["population"]["store population"] = True
+    my_config["population"]["population class"] = "AccuratePopulation"
 
     if "cont" in args:
-        my_config["re-use population"] = True
+        my_config["population"]["re-use population"] = True
 
     contagion = Contagion(userconfig=my_config)
     contagion.sim()
@@ -31,11 +33,17 @@ if __name__ == "__main__":
     data = {field: np.asarray(contagion.statistics[field]) for field in fields}
 
     def model(parameters):
-        this_config = dict(my_config)
-        for key, val in parameters.items():
-            key = key.replace("_", " ")
-            this_config[key] = val
-        this_config["re-use population"] = True
+        this_config = dict(_baseconfig)
+        this_config.update(my_config)
+        this_config["infection"]["latency duration pdf"]["mean"] =\
+            parameters["latency mean"]
+        this_config["infection"]["time incubation death pdf"]["mean"] =\
+            parameters["death mean"]
+        this_config["infection"]["mortality prob pdf"]["mean"] =\
+            parameters["mortality mean"]
+        this_config["infection"]["infection probability pdf"]["mean"] =\
+            parameters["infection mean"]
+        this_config["population"]["re-use population"] = True
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
 
@@ -56,8 +64,16 @@ if __name__ == "__main__":
 
     distance = pyabc.AdaptivePNormDistance(
         p=2,
-        scale_function=pyabc.distance.median_absolute_deviation_to_observation
-    )
+        scale_function=pyabc.distance.median_absolute_deviation_to_observation)
+
+    # distance = make_chi2_distance(fields)
+
+    prior = pyabc.Distribution(
+        {"latency mean": pyabc.RV("uniform", 1, 20),
+         "death mean": pyabc.RV("uniform", 10, 50),
+         "mortality mean":  pyabc.RV("uniform", 0.011, 0.2),
+         "infection mean":  pyabc.RV("uniform", 2.5, 5)
+         })
 
     # distance = make_chi2_distance(fields)
 
@@ -78,11 +94,11 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
     population = pyabc.populationstrategy.AdaptivePopulationSize(
         100,
-        max_population_size=5000,
+        max_population_size=2000,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
-    population = 300
+    # population = 300
     epsilon = pyabc.epsilon.QuantileEpsilon()
     abc = pyabc.ABCSMC(model, prior, distance,
                        population_size=population, sampler=sampler,
@@ -99,6 +115,7 @@ if __name__ == "__main__":
     if "cont" in args:
         abc.load(db_path, args.cont)
     else:
+        print(sum_stat_func(data))
         abc.new(db_path, sum_stat_func(data))
         # abc.new(db_path, data)
     history1 = abc.run(max_nr_populations=15)

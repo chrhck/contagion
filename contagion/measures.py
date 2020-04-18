@@ -2,7 +2,7 @@
 
 """
 Name: measures.py
-Authors: Stephan Meighen-Berger
+Authors: Stephan Meighen-Berger, Andrea Turcati
 The different measures one can take
 to suppress the spread.
 """
@@ -38,11 +38,7 @@ class Measures(object):
         Returns:
             -None
         """
-        if config["runtime"]["random state"] is None:
-            _log.warning("No random state given, constructing new state")
-            self.__rstate = np.random.RandomState()
-        else:
-            self.__rstate = config["runtime"]["random state"]
+        self.__rstate = config["runtime"]["random state"]
 
         if config["measures"]["type"] is None:
             _log.info("No measure taken")
@@ -135,7 +131,7 @@ class Measures(object):
             * config["measures"]["tracked fraction"]
         )
         _log.debug("Number of people tracked is %d" % tracked_pop)
-        self.__tracked = np.random.choice(
+        self.__tracked = self.__rstate.choice(
             range(config["population"]["population size"]),
             size=tracked_pop,
             replace=False,
@@ -155,7 +151,7 @@ class Measures(object):
             * config["measures"]["distanced fraction"]
         )
         _log.debug("Number of people social distancing is %d" % distanced_pop)
-        self.__distanced = np.random.choice(
+        self.__distanced = self.__rstate.choice(
             range(config["population"]["population size"]),
             size=distanced_pop,
             replace=False,
