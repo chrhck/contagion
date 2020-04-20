@@ -43,20 +43,9 @@ class Measures(object):
         if config["measures"]["type"] is None:
             _log.info("No measure taken")
             self.__tracked = None
-            self.__distanced = None
         elif config["measures"]["type"] == "contact_tracing":
             _log.info("Using contact tracing")
             self.__contact_tracing()
-            self.__distanced = None
-        elif config["measures"]["type"] == "social_distancing":
-            _log.info("Using social distancing")
-            self.__social_distancing()
-            self.__tracked = None
-        elif config["measures"]["type"] == "all":
-            _log.info("Using social distancing")
-            _log.info("Using contact tracing")
-            self.__contact_tracing()
-            self.__social_distancing()
         else:
             _log.error("measure not implemented!")
             exit("Please check the config file what measures are allowed")
@@ -77,19 +66,6 @@ class Measures(object):
                 The ids of the tracked population
         """
         return self.__tracked
-
-    @property
-    def distanced(self):
-        """
-        function: distanced
-        Getter function for the distanced population
-        Parameters:
-            -None
-        Returns:
-            -np.array distanced:
-                The ids of the distanced population
-        """
-        return self.__distanced
 
     @property
     def quarantine_duration(self):
@@ -116,6 +92,18 @@ class Measures(object):
         """
         return np.int(self.__backtrack_length)
 
+    @property
+    def is_SOT_active(self):
+        """
+        function: is_SOT_active
+        Getter function for the Second Order Tracing
+        Parameters:
+            -None
+        Returns:
+            -Bool
+        """
+        return self.__second_order_tracing
+
     # TODO: Not 100% of participants will report correctly
     def __contact_tracing(self):
         """
@@ -137,25 +125,14 @@ class Measures(object):
             replace=False,
         ).flatten()
 
-    def __social_distancing(self):
-        """
-        function: __social_distancing
-        Implements the measure social distancing
-        Parameters:
-            -None
-        Returns:
-            -None
-        """
-        distanced_pop = int(
-            config["population"]["population size"]
-            * config["measures"]["distanced fraction"]
-        )
-        _log.debug("Number of people social distancing is %d" % distanced_pop)
-        self.__distanced = self.__rstate.choice(
-            range(config["population"]["population size"]),
-            size=distanced_pop,
-            replace=False,
-        ).flatten()
+        if type(config["measures"]["second order"]) == np.bool:
+            self.__second_order_tracing = config["measures"]["second order"]
+            _log.debug(
+                "Second order tracing: {0}".format(self.__second_order_tracing)
+            )
+        else:
+            _log.error("Second order tracing must be True or False.")
+            exit("Please check the config file.")
 
     def __def_quarantine_pdf(self):
         """

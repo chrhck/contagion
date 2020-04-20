@@ -1410,15 +1410,15 @@ class ContagionStateMachine(StateMachine):
         else:
             tracked_mask = np.zeros_like(infected_mask, dtype=np.bool)
 
-        cond = infected_mask & tracked_mask
-        if not np.any(cond):
-            return cond
+        tracked_infected_mask = infected_mask & tracked_mask
+        if not np.any(tracked_infected_mask):
+            return tracked_infected_mask
 
-        tracked_infected_indices = np.nonzero(cond)[0]
+        tracked_infected_indices = np.nonzero(tracked_infected_mask)[0]
 
         backtrack_length = self._measures.backtrack_length
         if backtrack_length == 0:
-            return cond
+            return tracked_infected_mask
 
         # Get contact history
         con_history = self.trace_contacts
@@ -1428,12 +1428,12 @@ class ContagionStateMachine(StateMachine):
             backtrack_length = len_history
 
         if backtrack_length == 0:
-            return cond
+            return tracked_infected_mask
 
         con_history = np.squeeze(np.hstack(con_history[-backtrack_length:]))
 
         if con_history.size == 0:
-            return cond
+            return tracked_infected_mask
 
         # Only check contacts of tracked infected people
         if len(con_history) > 2:
@@ -1448,12 +1448,44 @@ class ContagionStateMachine(StateMachine):
             contacted_indices = np.unique(con_history)
 
         if contacted_indices.size == 0:
-            return cond
+            return tracked_infected_mask
 
         contacted_mask = np.zeros_like(infected_mask, dtype=np.bool)
         contacted_mask[contacted_indices] = True
         contacted_mask[~tracked_mask] = False
 
-        # cond = np.logical_or(cond, contacted_mask)
+        if self._measures.is_SOT_active:
+
+            removed_mask = self.states["is_removed"](data)
+            is_contactable = tracked_mask & (~removed_mask)
+            is_contactable_indices = np.nonzero(is_contactable)[0]
+
+            SOT_contacts_mask = np.zeros_like(infected_mask, dtype=np.bool)
+            if len(is_contactable_indices) > 0:
+                for i in range(backtrack_length):
+
+                    (
+                        contact_cols,
+                        contact_strengths,
+                    ) = self._population.get_contacts(
+                        contacted_indices,
+                        is_contactable_indices,
+                        return_rows=False,
+                    )
+
+                    successful_contacts_mask = (
+                        self._rstate.poisson(contact_strengths) >= 1
+                    )
+
+                    successful_contacts_indices = contact_cols[
+                        successful_contacts_mask
+                    ]
+
+                    if len(successful_contacts_indices) > 0:
+                        SOT_contacts_mask[successful_contacts_indices] = True
+
+            contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
+
+        # cond = np.logical_or(tracked_infected_mask, contacted_mask)
 
         return contacted_mask
