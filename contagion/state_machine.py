@@ -1486,6 +1486,6 @@ class ContagionStateMachine(StateMachine):
 
             contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
 
-        # cond = np.logical_or(tracked_infected_mask, contacted_mask)
+        cond = np.logical_or(tracked_infected_mask, contacted_mask)
 
-        return contacted_mask
+        return cond
