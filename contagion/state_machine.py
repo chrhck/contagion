@@ -1456,8 +1456,7 @@ class ContagionStateMachine(StateMachine):
 
         if self._measures.is_SOT_active:
 
-            removed_mask = self.states["is_removed"](data)
-            is_contactable = tracked_mask & (~removed_mask)
+            is_contactable = tracked_mask
             is_contactable_indices = np.nonzero(is_contactable)[0]
 
             SOT_contacts_mask = np.zeros_like(infected_mask, dtype=np.bool)
@@ -1484,6 +1483,8 @@ class ContagionStateMachine(StateMachine):
                     if len(successful_contacts_indices) > 0:
                         SOT_contacts_mask[successful_contacts_indices] = True
 
+            removed_mask = self.states["is_removed"](data)
+            SOT_contacts_mask = SOT_contacts_mask & (~removed_mask)
             contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
 
         cond = np.logical_or(tracked_infected_mask, contacted_mask)
