@@ -143,8 +143,12 @@ _baseconfig = {
         "backtrack length": 0.0,
         # duration of the quarantine
         "quarantine duration": 14.0,
+        # Time until testing
+        "time until test": 1.0,
+        # Time until test results
+        "time until result": 1.0,
     },
-    "scenario": {"class": "StandardScenario", "sim_length": 200,},
+    "scenario": {"class": "StandardScenario", "sim_length": 200},
 }
 
 
