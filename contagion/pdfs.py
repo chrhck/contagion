@@ -279,12 +279,12 @@ class Gamma(ScipyPDF):
         self._mode = (self._alpha-1) / self._beta
         self._max_val = max_val
 
-        local_gamma = scipy.stats.gamma(
+        self._pdf = scipy.stats.gamma(
             self._shape,
             scale=self._scale
         )
 
-        self._val_at_mode = local_gamma.pdf(self._mode)
+        self._val_at_mode = self._pdf.pdf(self._mode)
 
     def pdf(self, points: Union[float, np.ndarray],
             dtype: Optional[type] = None) -> np.ndarray:
