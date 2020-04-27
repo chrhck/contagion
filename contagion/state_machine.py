@@ -1607,6 +1607,6 @@ class ContagionStateMachine(StateMachine):
         contacted_mask[contacted_indices] = True
         contacted_mask[~tracked_mask] = False
 
-        # cond = np.logical_or(cond, contacted_mask)
+        cond = np.logical_or(cond, contacted_mask)
 
         return contacted_mask

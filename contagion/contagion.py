@@ -85,7 +85,6 @@ class Contagion(object):
             rstate = np.random.RandomState(
                 config["general"]["random state seed"]
             )
-
         config["runtime"] = {"random state": rstate}
 
         self.__infected = config["infection"]["infected"]

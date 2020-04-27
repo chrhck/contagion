@@ -40,11 +40,11 @@ def plot_infection_history(
         if "is_infected" in g.nodes[node]["history"]:
             state_history = g.nodes[node]["history"]["is_infected"]
             max_val = max(max_val, state_history[0][0])
-
     ax2.set_xlim(0, max_val)
-    ax2.set_ylim(0, max(stats["is_infected"])*1.1)
+    ax2.set_ylim(0, max(stats["is_recovered"])*1.1)
     ax2.set_xlabel("Time")
     ax2.set_ylabel("Infected")
+    ax3.set_ylabel("Infected")
 
     pcol = nx.draw_networkx_nodes(
         g,
