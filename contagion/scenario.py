@@ -21,7 +21,10 @@ class StandardScenario(object):
         start = time()
 
         for step in range(self._sim_length):
-            self._sm.tick()
+            stop = self._sm.tick()
+            if stop:
+                _log.debug("Early stopping at %d", step)
+                break
             if step % (self._sim_length / 10) == 0:
                 end = time()
                 _log.debug("In step %d" % step)

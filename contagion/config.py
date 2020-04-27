@@ -24,6 +24,7 @@ _baseconfig = {
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
+        "track graph history": True
     },
     "population": {
         "population size": 1000,
@@ -55,7 +56,8 @@ _baseconfig = {
                 "sd": 1},
             # A person can only be in one of these circles
             # -> Not interactions between circles of this type
-            "interconnectivity": 0
+            "interconnectivity": 0,
+            "fully_connected": True,
             },
             {
             # Friends
@@ -68,7 +70,8 @@ _baseconfig = {
                 "mean": 5,
                 "sd": 2},
             # 30 % of people in this group can be in other groups
-            "interconnectivity": 0.3
+            "interconnectivity": 0.3,
+            "fully_connected": True,
             },
             {
             # Loose contacts (work, ...)
@@ -81,7 +84,8 @@ _baseconfig = {
                 "mean": 5,
                 "sd": 2},
             # 10 % of people in this group can be in other groups
-            "interconnectivity": 0.1
+            "interconnectivity": 0.1,
+            "fully_connected": True,
             }],
 
         "random interactions pdf": {
@@ -92,6 +96,31 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 0.1,
             "sd": 0.5},
+
+        "nx": {
+            "func": "lfr_benchmark",
+            "kwargs": {
+                "tau1": 3,
+                "tau2": 1.5,
+                "mu": 0.1,
+                "average_degree": 7,
+                "min_community": 8,
+                "max_iters": 200,
+            },
+            "inter freq pdf": {
+                "class": "Gamma",
+                "mean": 10,
+                "sd": 3
+            },
+            "intra freq pdf": {
+                "class": "Gamma",
+                "mean": 3,
+                "sd": 3
+            }
+
+        }
+
+
     },
     "infection": {
         # The number of starting infections
@@ -107,20 +136,20 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 3.,
             "sd": 2.42,
-            "max_val": 1.},
+            "max_val": 0.15},
         "infectious duration pdf": {
             "class": "Gamma",
             "mean": 8.,
             "sd": 2.42},
         "latency duration pdf": {
-            "class": "Gamma_Benchmark",
-            "shape": 3.93,
-            "loc": -4.,
-            "scale": 2.154},
+            "class": "Gamma",
+            "mean": 6,
+            "sd": 3,
+            },
         "incubation duration pdf": {
             "class": "Gamma",
-            "mean": 3.,
-            "sd": 0.01},
+            "mean": 7.47522,
+            "sd": 4.27014},
         # Hospitalization
         "hospitalization probability pdf": {
             "class": "Beta",

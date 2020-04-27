@@ -117,6 +117,11 @@ class MC_Sim(object):
             range(self.__pop_size), size=self.__infected, replace=False
         )
 
+        if hasattr(self.__pop, "_graph"):
+            g = self.__pop._graph
+            for inf_id in infect_id:
+                g.nodes[inf_id]["initial_infected"] = True
+
         # Their infection duration
         infec_dur = np.around(
             self.__infect.infectious_duration.rvs(self.__infected)
