@@ -18,30 +18,30 @@ if __name__ == "__main__":
                         const=None, nargs="?", dest="cont")
     args = parser.parse_args()
     my_config = dict(_baseconfig)
-    my_config["general"]["simulation length"] = 150
-    my_config["population"]["population size"] = 9999
-    my_config["population"]["store population"] = True
-    #my_config["population"]["population class"] = "AccuratePopulation"
-    my_config["population"]['population class'] = 'HomogeneousPopulation'
+    my_config["population"]["population size"] = 10000
+    my_config["population"]["store population"] = False
     # Infection
+    my_config["scenario"]["sim_length"] = 1000
     my_config['infection']['infected'] = 1
-    my_config['infection']['infection probability pdf']['mean'] = 3.
-    my_config['infection']['infection probability pdf']['sd'] = 2.42
-    my_config['infection']['infection probability pdf']['max_val'] = 0.15
-    my_config['infection']["latency duration pdf"] = {
-        "class": "Gamma",
-        "sd": 3,
-        "mean": 3}
-    my_config['infection']["incubation duration pdf"]['mean'] = 3 
-    my_config['infection']["incubation duration pdf"]['sd'] = 0.01 # 4.270138625384426
     my_config['infection']["hospitalization probability pdf"]['mean'] = 0.0001
     my_config['infection']["hospitalization probability pdf"]['sd'] = 0.00001
     my_config['infection']['will have symptoms prob pdf']['mean'] = 0.5
     my_config['infection']['will have symptoms prob pdf']['sd'] = 0.1
-    # Quarantine
+    my_config["population"]["random interactions pdf"]["mean"] = 0.001
+    my_config["population"]["random interactions pdf"]["sd"] = 0.001
+    my_config["population"]["random interactions intensity pdf"]["mean"] = 0.0001
+    my_config["population"]["random interactions intensity pdf"]["sd"] = 0.0001
+    my_config["population"]['population class'] = 'HomogeneousPopulation'
     my_config['measures']['type'] = 'contact_tracing'
     my_config['measures']["tracked fraction"] = 1.
+    my_config['infection']['will have symptoms prob pdf']['mean'] = 0.5
+    my_config['infection']['will have symptoms prob pdf']['sd'] = 0.1
+    my_config["population"]["random interactions pdf"]["mean"] = 0.001
+    my_config["population"]["random interactions pdf"]["sd"] = 0.001
+    my_config["population"]["random interactions intensity pdf"]["mean"] = 0.0001
+    my_config["population"]["random interactions intensity pdf"]["sd"] = 0.0001
 
+    
     if "cont" in args:
         my_config["population"]["re-use population"] = True
         
@@ -60,8 +60,15 @@ if __name__ == "__main__":
         this_config = dict(_baseconfig)
         this_config.update(my_config)
         this_config['population']['social circle pdf']["mean"] = parameters["soc circ mean"]
+        this_config['population']['social circle pdf']["sd"] = np.sqrt(parameters["soc circ mean"])
         this_config['population']['social circle interactions pdf']["mean"] = parameters["soc circ mean"]
+        this_config['population']['social circle interactions pdf']["sd"] = np.sqrt(parameters["soc circ mean"])
         this_config['infection']["latency duration pdf"]['mean'] =  parameters["latency mean"]
+        this_config['infection']["latency duration pdf"]['sd'] =  np.sqrt(parameters["latency mean"])
+        this_config['infection']["infectious duration pdf"]['mean'] =  parameters["infectious dur mean"]
+        this_config['infection']["infectious duration pdf"]['sd'] =  np.sqrt(parameters["infectious dur mean"])
+        this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incub dur mean"]
+        this_config['infection']["incubation duration pdf"]['sd'] =  np.sqrt(parameters["incub dur mean"])
         #this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incubation mean"]
         
         this_config["population"]["re-use population"] = False
@@ -90,7 +97,9 @@ if __name__ == "__main__":
     
     prior = pyabc.Distribution(
         {"soc circ mean": pyabc.RV("uniform", 5, 15),
-         "latency mean": pyabc.RV("uniform", 1, 10)        
+         "latency mean": pyabc.RV("uniform", 1, 10) ,
+         "infectious dur mean": pyabc.RV("uniform", 1, 15),
+         "incub dur mean": pyabc.RV("uniform", 1, 15)
         })
 
     client = Client(scheduler_file="scheduler.json")
