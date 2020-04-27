@@ -8,6 +8,7 @@ from contagion import Contagion
 from contagion.config import _baseconfig
 from dask.distributed import Client
 from summary_stats import make_sum_stats
+import yaml
 
 logging.basicConfig(level="WARN")
 
@@ -17,29 +18,8 @@ if __name__ == "__main__":
                         default=argparse.SUPPRESS,
                         const=None, nargs="?", dest="cont")
     args = parser.parse_args()
-    my_config = dict(_baseconfig)
-    my_config["population"]["population size"] = 10000
-    my_config["population"]["store population"] = False
-    # Infection
-    my_config["scenario"]["sim_length"] = 1000
-    my_config['infection']['infected'] = 1
-    my_config['infection']["hospitalization probability pdf"]['mean'] = 0.0001
-    my_config['infection']["hospitalization probability pdf"]['sd'] = 0.00001
-    my_config['infection']['will have symptoms prob pdf']['mean'] = 0.5
-    my_config['infection']['will have symptoms prob pdf']['sd'] = 0.1
-    my_config["population"]["random interactions pdf"]["mean"] = 0.001
-    my_config["population"]["random interactions pdf"]["sd"] = 0.001
-    my_config["population"]["random interactions intensity pdf"]["mean"] = 0.0001
-    my_config["population"]["random interactions intensity pdf"]["sd"] = 0.0001
-    my_config["population"]['population class'] = 'HomogeneousPopulation'
-    my_config['measures']['type'] = 'contact_tracing'
-    my_config['measures']["tracked fraction"] = 1.
-    my_config['infection']['will have symptoms prob pdf']['mean'] = 0.5
-    my_config['infection']['will have symptoms prob pdf']['sd'] = 0.1
-    my_config["population"]["random interactions pdf"]["mean"] = 0.001
-    my_config["population"]["random interactions pdf"]["sd"] = 0.001
-    my_config["population"]["random interactions intensity pdf"]["mean"] = 0.0001
-    my_config["population"]["random interactions intensity pdf"]["sd"] = 0.0001
+    my_config = yaml.safe_load(open("benchmark_config.yaml"))
+   
 
     if "cont" in args:
         my_config["population"]["re-use population"] = True
@@ -66,6 +46,7 @@ if __name__ == "__main__":
         this_config['infection']["infectious duration pdf"]['sd'] =  np.sqrt(parameters["infectious dur mean"])
         this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incub dur mean"]
         this_config['infection']["incubation duration pdf"]['sd'] =  np.sqrt(parameters["incub dur mean"])
+        this_config['infection']["infection probability pdf"]['maxval'] =  parameters["inf prob max"]
         #this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incubation mean"]
         
         this_config["population"]["re-use population"] = False
@@ -97,7 +78,8 @@ if __name__ == "__main__":
         {"soc circ mean": pyabc.RV("uniform", 5, 15),
          "latency mean": pyabc.RV("uniform", 1, 10) ,
          "infectious dur mean": pyabc.RV("uniform", 1, 15),
-         "incub dur mean": pyabc.RV("uniform", 1, 15)
+         "incub dur mean": pyabc.RV("uniform", 1, 15),
+         "inf prob max": pyabc.RV("uniform", 0.01, 0.5)
         })
 
     client = Client(scheduler_file="scheduler.json")
