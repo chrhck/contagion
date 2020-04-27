@@ -41,11 +41,8 @@ if __name__ == "__main__":
     my_config["population"]["random interactions intensity pdf"]["mean"] = 0.0001
     my_config["population"]["random interactions intensity pdf"]["sd"] = 0.0001
 
-    
     if "cont" in args:
         my_config["population"]["re-use population"] = True
-        
-    
 
     #contagion = Contagion(userconfig=my_config)
     #contagion.sim()
@@ -91,10 +88,11 @@ if __name__ == "__main__":
     sum_stat_func = make_sum_stats(fields)
 
     distance = pyabc.AdaptivePNormDistance(
-        p=2, scale_function=pyabc.distance.median_absolute_deviation_to_observation)
-    
+        p=2,
+        scale_function=pyabc.distance.median_absolute_deviation_to_observation)
+
     # distance = make_chi2_distance(fields)
-    
+
     prior = pyabc.Distribution(
         {"soc circ mean": pyabc.RV("uniform", 5, 15),
          "latency mean": pyabc.RV("uniform", 1, 10) ,

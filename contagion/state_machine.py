@@ -963,7 +963,7 @@ class ContagionStateMachine(StateMachine):
         normal_recovery_condition = (
                 Condition.from_state(
                     ~(boolean_states["is_hospitalized"])) &
-                Condition.from_state(~timer_states["infectious_duration"]) & 
+                Condition.from_state(~timer_states["infectious_duration"]) &
                 Condition.from_state(~boolean_states["is_new_infectious"])
                 )
 

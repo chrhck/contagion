@@ -64,7 +64,7 @@ class Infection(object):
         dur_latent_pdf = construct_pdf(
             config["infection"]["latency duration pdf"])
         self.__latent_duration = dur_latent_pdf
- 
+
         # Recovery
         _log.debug("The recovery time pdf")
 
@@ -77,7 +77,7 @@ class Infection(object):
 
         will_have_symptoms_pdf = construct_pdf(
             config["infection"]["will have symptoms prob pdf"])
-        
+
         self.__will_have_symptoms_prob = will_have_symptoms_pdf
 
         # Hospitalization

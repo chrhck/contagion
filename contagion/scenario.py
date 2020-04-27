@@ -1,8 +1,6 @@
 import logging
 from time import time
 
-import numpy as np
-
 from .state_machine import StateMachine
 _log = logging.getLogger(__name__)
 
