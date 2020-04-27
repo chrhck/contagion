@@ -15,7 +15,7 @@ def make_sum_stats(fields):
             sum_stats[field+"_ymax_diff"] = np.max(np.diff(this_sim))
             sum_stats[field+"_xmax"] = np.argmax(this_sim)
             sum_stats[field+"_ymax"] = np.max(this_sim)
-            if np.sum(this_sim != 0) > 2:
+            if (np.sum(this_sim != 0) > 2) and (np.argmax(this_sim) > 2) :
                 sum_stats[field+"_avg_growth_rate"] = np.average(np.diff(this_sim[:np.argmax(this_sim)]))
             else:
                 sum_stats[field+"_avg_growth_rate"] = 0
