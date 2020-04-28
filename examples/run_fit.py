@@ -55,6 +55,8 @@ if __name__ == "__main__":
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
 
+        stats = contagion.statistics
+        stats["is_recovered"] = stats["is_recovered"] + stats["is_recovering"]
         return contagion.statistics
 
     def make_chi2_distance(fields):
@@ -79,10 +81,10 @@ if __name__ == "__main__":
     prior = pyabc.Distribution(
         {"soc circ mean": pyabc.RV("uniform", 5, 15),
          "latency mean": pyabc.RV("uniform", 1, 10) ,
-         "infectious dur mean": pyabc.RV("uniform", 1, 15),
+         "infectious dur mean": pyabc.RV("uniform", 1, 10),
          "incub dur mean": pyabc.RV("uniform", 1, 15),
-         "recovery dur mean": pyabc.RV("uniform", 1, 15),
-         "inf prob max": pyabc.RV("uniform", 0.01, 0.5)
+         "recovery dur mean": pyabc.RV("uniform", 1, 10),
+         "inf prob max": pyabc.RV("uniform", 0.1, 0.3)
         })
 
     client = Client(scheduler_file="scheduler.json")
@@ -94,12 +96,12 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
     population = pyabc.populationstrategy.AdaptivePopulationSize(
         50,
-        max_population_size=300,
+        max_population_size=600,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
     #population = 300
-    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.4)
+    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.35)
     abc = pyabc.ABCSMC(model, prior, distance,
                        population_size=population, sampler=sampler,
                        acceptor=pyabc.UniformAcceptor(
