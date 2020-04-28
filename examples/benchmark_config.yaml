@@ -23,7 +23,7 @@ infection:
     class: Gamma
     mean: 3.42
     sd: 2.38
-    maxval: 0.15
+    max_val: 0.15
   infectious duration pdf:
     class: Gamma
     mean: 3.3708391476183848

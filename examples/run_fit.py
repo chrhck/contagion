@@ -28,9 +28,9 @@ if __name__ == "__main__":
     #contagion.sim()
     data = np.loadtxt("cpp_model.csv", delimiter=",")
     
-    fields = ["is_recovered", "is_infectious"]
+    fields = ["is_recovered", "is_infectious", "is_latent"]
     #data = {field: np.asarray(contagion.statistics[field]) for field in fields}
-    data = {"is_recovered": data[:, 1], "is_infectious": data[:, 0]}
+    data = {"is_recovered": data[:, 1], "is_infectious": data[:, 0], "is_latent": data[:, 2]}
     
     
     def model(parameters):
@@ -44,9 +44,11 @@ if __name__ == "__main__":
         this_config['infection']["latency duration pdf"]['sd'] =  np.sqrt(parameters["latency mean"])
         this_config['infection']["infectious duration pdf"]['mean'] =  parameters["infectious dur mean"]
         this_config['infection']["infectious duration pdf"]['sd'] =  np.sqrt(parameters["infectious dur mean"])
+        this_config['infection']["recovery time pdf"]['mean'] =  parameters["recovery dur mean"]
+        this_config['infection']["recovery time pdf"]['sd'] =  np.sqrt(parameters["recovery dur mean"])
         this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incub dur mean"]
         this_config['infection']["incubation duration pdf"]['sd'] =  np.sqrt(parameters["incub dur mean"])
-        this_config['infection']["infection probability pdf"]['maxval'] =  parameters["inf prob max"]
+        this_config['infection']["infection probability pdf"]['max_val'] =  parameters["inf prob max"]
         #this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incubation mean"]
         
         this_config["population"]["re-use population"] = False
@@ -79,6 +81,7 @@ if __name__ == "__main__":
          "latency mean": pyabc.RV("uniform", 1, 10) ,
          "infectious dur mean": pyabc.RV("uniform", 1, 15),
          "incub dur mean": pyabc.RV("uniform", 1, 15),
+         "recovery dur mean": pyabc.RV("uniform", 1, 15),
          "inf prob max": pyabc.RV("uniform", 0.01, 0.5)
         })
 
@@ -91,7 +94,7 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=400)
     population = pyabc.populationstrategy.AdaptivePopulationSize(
         50,
-        max_population_size=200,
+        max_population_size=300,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
