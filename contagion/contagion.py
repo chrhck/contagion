@@ -91,10 +91,12 @@ class Contagion(object):
 
         # Logger
         # creating file handler with debug messages
+        """
         fh = logging.FileHandler(
             config["general"]["log file handler"], mode="w"
         )
-        fh.setLevel(logging.DEBUG)
+        fh.setLevel(logging.WARN)
+        """
         # console logger with a higher log level
         ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(config["general"]["debug level"])
@@ -103,7 +105,7 @@ class Contagion(object):
         fmt = "%(levelname)s: %(message)s"
         fmt_with_name = "[%(name)s] " + fmt
         formatter_with_name = logging.Formatter(fmt=fmt_with_name)
-        fh.setFormatter(formatter_with_name)
+        # fh.setFormatter(formatter_with_name)
         # add class name to ch only when debugging
         if config["general"]["debug level"] == logging.DEBUG:
             ch.setFormatter(formatter_with_name)
@@ -111,9 +113,9 @@ class Contagion(object):
             formatter = logging.Formatter(fmt=fmt)
             ch.setFormatter(formatter)
 
-        _log.addHandler(fh)
+        # _log.addHandler(fh)
         _log.addHandler(ch)
-        _log.setLevel(logging.DEBUG)
+        _log.setLevel(logging.WARN)
         _log.info("Welcome to contagion!")
         _log.info("This package will help you model the spread of infections")
 

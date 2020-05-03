@@ -154,6 +154,7 @@ class MC_Sim(object):
                 "is_infected",
                 "is_hospitalized",
                 "is_recovered",
+                "is_recovering",
                 "is_dead",
                 "is_quarantined",
                 "is_symptomatic",
