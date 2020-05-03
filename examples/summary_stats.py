@@ -13,6 +13,8 @@ def make_sum_stats(fields):
 
             sum_stats[field+"_xmax_diff"] = np.argmax(np.diff(this_sim))
             sum_stats[field+"_ymax_diff"] = np.max(np.diff(this_sim))
+            sum_stats[field+"_xmin_diff"] = np.argmin(np.diff(this_sim))
+            sum_stats[field+"_ymin_diff"] = np.min(np.diff(this_sim))
             sum_stats[field+"_xmax"] = np.argmax(this_sim)
             sum_stats[field+"_ymax"] = np.max(this_sim)
             
