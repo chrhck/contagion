@@ -25,14 +25,14 @@ _log = logging.getLogger(__name__)
 
 
 class Population(object, metaclass=abc.ABCMeta):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
         # Checking random state
-
         self._pop_size = config["population"]["population size"]
         self._rstate = config["runtime"]["random state"]
         random.seed(config["general"]["random state seed"])
 
         _log.debug("The interaction intensity pdf")
+        self._interaction_rate_scaling = interaction_rate_scaling
 
     @abc.abstractmethod
     def get_contacts(
@@ -44,12 +44,21 @@ class Population(object, metaclass=abc.ABCMeta):
                      Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         pass
 
+    @property
+    def interaction_rate_scaling(self):
+        return self._interaction_rate_scaling
+
+    @interaction_rate_scaling.setter
+    def interaction_rate_scaling(self, val):
+        self._interaction_rate_scaling = val
+
 
 class PopulationWithSocialCircles(Population):
 
     def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._interaction_rate_scaling = interaction_rate_scaling
+        super().__init__(
+            interaction_rate_scaling=interaction_rate_scaling,
+            *args, **kwargs)
 
         _log.info("Constructing social circles for the population")
 
@@ -68,13 +77,7 @@ class PopulationWithSocialCircles(Population):
     def social_circles(self):
         return self._social_circles
 
-    @property
-    def interaction_rate_scaling(self):
-        return self._interaction_rate_scaling
-
-    @interaction_rate_scaling.setter
-    def interaction_rate_scaling(self, val):
-        self._interaction_rate_scaling = val
+  
 
 
 class HomogeneousPopulation(PopulationWithSocialCircles):
@@ -224,7 +227,7 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         -None
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
         """
         function: __init__
         Initializes the class Population
@@ -235,7 +238,9 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         """
         # Inputs
 
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            interaction_rate_scaling=interaction_rate_scaling,
+            *args, **kwargs)
 
         self.__sc_interactions = self._soc_circ_interact_pdf.rvs(
             self._pop_size)
@@ -380,8 +385,10 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
 
 class AccuratePopulation(PureSocialCirclePopulation):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
+        super().__init__(
+            interaction_rate_scaling=interaction_rate_scaling,
+            *args, **kwargs)
 
         self._random_interact_pdf = construct_pdf(
                 config["population"]["random interactions pdf"])
@@ -976,8 +983,10 @@ class NetworkXWrappers(object):
 
 
 class NetworkXPopulation(Population):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
+        super().__init__(
+            interaction_rate_scaling=interaction_rate_scaling,
+            *args, **kwargs)
 
         self._random_interact_pdf = construct_pdf(
                 config["population"]["random interactions pdf"])
@@ -1023,6 +1032,9 @@ class NetworkXPopulation(Population):
             if not contacts:
                 continue
 
+            for ctc_ind, props in contacts.items():
+                #if ctc_ind not in self._graph.nodes[row]["community"]:
+                props["weight"] *= self.interaction_rate_scaling
             sel_cols = []
             strs = []
             sel_rows = []
