@@ -147,6 +147,7 @@ class MC_Sim(object):
                 "is_latent",
                 "is_infectious",
                 "is_infected",
+                "is_recovering",
                 "is_hospitalized",
                 "is_recovered",
                 "is_dead",
