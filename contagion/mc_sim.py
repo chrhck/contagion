@@ -79,6 +79,7 @@ class MC_Sim(object):
                 "will_have_symptoms": False,
                 "will_have_symptoms_new": False,
                 "is_symptomatic": False,
+                "is_symptomatic_new": False,
 
                 "is_removed": False,
 

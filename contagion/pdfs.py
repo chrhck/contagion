@@ -69,6 +69,17 @@ class PDF(object, metaclass=abc.ABCMeta):
         pass
 
 
+class Delta(PDF):
+    def __init__(
+            self,
+            mean: Union[float, np.ndarray],
+            ):
+        self._mean = mean
+
+    def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
+        return np.ones(num, dtype=dtype)*self._mean
+
+
 class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     """
     class: ScipyPDF
@@ -295,6 +306,26 @@ class Gamma(ScipyPDF):
             pdf_vals = pdf_vals / self._val_at_mode * self._max_val
 
         return pdf_vals
+
+    def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
+        """
+        function: rvs
+        Calculates the random variates
+        Parameters:
+            -int num:
+                The number of samples
+            -optional dtype:
+                Type of the output
+        Returns:
+            -np.array rvs:
+                The drawn samples
+        """
+        # scipy rvs is slow
+        rstate = config["runtime"]["random state"]
+
+        rvs = rstate.standard_gamma(self._shape, size=num) * self._scale
+
+        return rvs
 
 
 class Gamma_Benchmark(ScipyPDF):

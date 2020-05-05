@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from time import time
 
 from .state_machine import StateMachine
@@ -40,53 +41,30 @@ class SocialDistancing(StandardScenario):
             self,
             state_machine: StateMachine,
             sim_length: int,
-            t_start: int,
-            t_stop: int,
-            contact_rate_scaling: float,
+            t_steps: List[int],
+            contact_rate_scalings: List[int],
             *args, **kwargs):
         super().__init__(state_machine, sim_length, *args, **kwargs)
 
-        self._t_start = t_start
-        self._t_stop = t_stop
-        self._contact_rate_scaling = contact_rate_scaling
+        self._t_steps = t_steps[::-1]
+        self._contact_rate_scalings = contact_rate_scalings[::-1]
 
     def run(self):
         start = time()
 
+        next_change = self._t_steps.pop()
+        next_scaling = self._contact_rate_scalings.pop()
+
         # old_contact_func = None
         for step in range(self._sim_length):
-
-            if step == self._t_start:
-                _log.debug("Start social distancing")
-
-                old_rate_scale = self._sm._population.interaction_rate_scaling
-                self._sm._population.interaction_rate_scaling =\
-                        self._contact_rate_scaling
-
-                """
-                old_contact_func = self._sm._population.get_contacts
-
-                def wrapped_get_contacts(
-                        rows: np.ndarray,
-                        cols: np.ndarray,
-                        return_rows=False):
-
-                    res = old_contact_func(rows, cols, return_rows)
-
-                    if return_rows:
-                        sel_indices, contact_rates, succesful_rows = res
-                        contact_rates *= self._contact_rate_scaling
-                        return sel_indices, contact_rates, succesful_rows
-                    return (sel_indices,
-                            contact_rates*self._contact_rate_scaling)
-
-                self._sm._population.get_contacts = wrapped_get_contacts
-                """
-
-            if step == self._t_stop:
-                # self._sm._population.get_contacts = old_contact_func
-                self._sm._population.interaction_rate_scaling =\
-                    old_rate_scale
+            if step == next_change:
+                _log.debug("New social distancing step")
+                self._sm._population.interaction_rate_scaling = next_scaling
+                if self._t_steps:
+                    next_change = self._t_steps.pop()
+                    next_scaling = self._contact_rate_scalings.pop()
+                else:
+                    next_change = None
 
             self._sm.tick()
             if step % (self._sim_length / 10) == 0:

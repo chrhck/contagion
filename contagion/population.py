@@ -102,6 +102,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_strengths: np.ndarray
         """
 
+
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
         with np.errstate(all="ignore"):
             contact_rate = n_contacts / self._social_circles[rows]
@@ -127,19 +128,30 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         all_sel_indices = []
 
         succesful_rows = []
-        for i, row_index in enumerate(rows):
-            n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
-            if n_contact == 0:
-                continue
-            this_sel_indices = self._rstate.randint(
-                0, self._pop_size, size=n_contact, dtype=np.int)
 
-            all_sel_indices.append(this_sel_indices)
+        n_contacts_sym = np.asarray(
+            np.round(
+                np.min(
+                    np.vstack(
+                        [n_contacts+n_contacts_others,
+                         np.ones_like(n_contacts)*len(cols)]),
+                    axis=0)),
+            dtype=np.int)
+        all_sel_indices = np.split(
+            self._rstate.randint(
+                0, self._pop_size, size=np.sum(n_contacts_sym), dtype=np.int),
+            np.cumsum(n_contacts_sym))[:-1]
+
+        for i, (row_index, sel_indices) in enumerate(
+                zip(rows, all_sel_indices)):
+            if len(all_sel_indices[i]) == 0:
+                continue
+
             succesful_rows.append(np.ones(
-                    len(this_sel_indices), dtype=np.int)*row_index)
+                    len(all_sel_indices[i]), dtype=np.int)*row_index)
             contact_rates.append(
                 np.ones(
-                    len(this_sel_indices),
+                    len(all_sel_indices[i]),
                     dtype=np.float)
                 * contact_rate[i])
 
@@ -595,14 +607,14 @@ class NetworkXWrappers(object):
                 intra_rate_0 = intra_actions[edge[0]] / g.degree[edge[0]]
                 intra_rate_1 = intra_actions[edge[1]] / g.degree[edge[1]]
 
-                avg_int = np.average([intra_rate_0, intra_rate_1])
+                avg_int = 0.5 * (intra_rate_0 + intra_rate_1)
                 # mu is the fraction of inter-community interacions
                 edge_weights[edge] = avg_int
             else:
                 inter_rate_0 = inter_actions[edge[0]] / g.degree[edge[0]]
                 inter_rate_1 = inter_actions[edge[1]] / g.degree[edge[1]]
 
-                avg_int = np.average([inter_rate_0, inter_rate_1])
+                avg_int = 0.5 * (inter_rate_0 + inter_rate_1)
                 edge_weights[edge] = avg_int
 
         nx.set_edge_attributes(g, edge_weights, "weight")
@@ -723,7 +735,7 @@ class NetworkXWrappers(object):
 
             for u, n_inter_con, n_intra_con in zip(
                     g, num_inter_con, num_intra_con):
-                if g.degree(u) < 2:
+                if node_degrees[u] < 2:
                     continue
                 c = g.nodes[u]['community']
                 if (u not in all_sub_optimal_nodes
@@ -754,8 +766,7 @@ class NetworkXWrappers(object):
                         if kwargs["pref_attach"]:
                             v = random.choices(
                                 candidates,
-                                weights=[g.degree[node]
-                                         for node in candidates])[0]
+                                weights=node_degrees[list(candidates)])[0]
                         else:
                             v = random.choice(candidates)
                         attempted_vs.add(v)
@@ -878,8 +889,7 @@ class NetworkXWrappers(object):
                         if kwargs["pref_attach"]:
                             v = random.choices(
                                 candidates,
-                                weights=[g.degree[node]
-                                         for node in candidates])[0]
+                                weights=node_degrees[candidates])[0]
                         else:
                             v = random.choice(candidates)
                         attempted_vs.add(v)
@@ -1013,37 +1023,46 @@ class NetworkXPopulation(Population):
         contact_cols = []
         contact_rows = []
         contact_strengths = []
-        n_rnd_contacts = self._random_interact_pdf.rvs(rows.shape[0])
+        n_rnd_contacts = np.asarray(np.round(
+            self._random_interact_pdf.rvs(rows.shape[0])), dtype=np.int)
+        rnd_indices_all = np.split(
+            self._rstate.randint(
+                0, len(rows), size=np.sum(n_rnd_contacts), dtype=np.int),
+            np.cumsum(n_rnd_contacts))[:-1]
 
+        rnd_ctc_intens_all = np.split(
+            self._random_interact_intensity_pdf.rvs(
+                np.sum(n_rnd_contacts)),
+            np.cumsum(n_rnd_contacts))[:-1]
         col_set = set(cols)
-        for row, n_rnd_contact in zip(rows, n_rnd_contacts):
-            contacts = dict(self._graph[row])
-
-            rnd_indices = self._rstate.randint(
-                0, len(rows), size=int(np.round(n_rnd_contact)), dtype=np.int)
-
-            rnd_ctc_intens = self._random_interact_intensity_pdf.rvs(
-                len(rnd_indices))
-
-            for rnd_ind, intens in zip(rnd_indices, rnd_ctc_intens):
-                if rnd_ind not in contacts:
-                    contacts[rnd_ind] = {"weight": intens}
-
-            if not contacts:
-                continue
-
-            for ctc_ind, props in contacts.items():
-                #if ctc_ind not in self._graph.nodes[row]["community"]:
-                props["weight"] *= self.interaction_rate_scaling
+        for row, n_rnd_contact, rnd_indices, rnd_ctc_intens in zip(
+                rows, n_rnd_contacts, rnd_indices_all, rnd_ctc_intens_all):
+            node = self._graph.nodes[row]
             sel_cols = []
             strs = []
             sel_rows = []
-            for key, val in contacts.items():
-                if key not in col_set:
+
+            adj = self._graph[row]
+
+            for ctc_ind, node_attrs in adj.items():
+                if ctc_ind not in col_set:
                     continue
-                sel_cols.append(key)
-                strs.append(val["weight"])
+                sel_cols.append(ctc_ind)
+                rate = node_attrs["weight"]
+
+                #if ctc_ind in node["community"]:
+                rate *= self.interaction_rate_scaling
+
+                strs.append(rate)
                 sel_rows.append(row)
+
+            for rnd_ind, intens in zip(rnd_indices, rnd_ctc_intens):
+                if rnd_ind not in col_set:
+                    continue
+                if rnd_ind not in adj:
+                    sel_cols.append(rnd_ind)
+                    sel_rows.append(row)
+                    strs.append(intens)
 
             contact_cols.append(np.array(sel_cols, dtype=int))
             contact_strengths.append(np.array(strs, dtype=float))

@@ -9,6 +9,7 @@ Constructs the state machine
 from __future__ import annotations
 import abc
 from collections import defaultdict
+from copy import deepcopy
 import functools
 import logging
 from typing import Callable, Union, List, Tuple, Dict, Optional
@@ -759,6 +760,12 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         for field in self._data_fields:
             self._statistics[field].append(data[field].sum())
 
+    def __getitem__(self, key):
+        return self._statistics[key]
+
+    def __setitem__(self, key, value):
+        self._statistics[key] = value
+
     @property
     def statistics(self):
         return self._statistics
@@ -783,6 +790,7 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         self,
         data: Union[pd.DataFrame, DataDict],
         stat_collector: Optional[StatCollector],
+        trace_states: bool = False,
         *args,
         **kwargs,
     ):
@@ -799,6 +807,8 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             self._trace_infection = []
 
         self._cur_tick = 0
+        self._trace_states = trace_states
+        self._traced_states = []
 
     @property
     @abc.abstractmethod
@@ -820,6 +830,8 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             self._stat_collector(self._data)
         self._cur_tick += 1
 
+        if self._trace_states:
+            self._traced_states.append(deepcopy(self._data))
         return False
 
         """
@@ -887,6 +899,7 @@ class ContagionStateMachine(StateMachine):
             "will_have_symptoms",
             "will_have_symptoms_new",
             "is_symptomatic",
+            "is_symptomatic_new",
 
             "is_infectious",
             "is_new_infectious",
@@ -1033,7 +1046,9 @@ class ContagionStateMachine(StateMachine):
                 Condition.from_state(
                     ~timer_states["hospitalization_duration"]) &
                 Condition.from_state(
-                    ~boolean_states["is_new_hospitalized"])
+                    ~boolean_states["is_new_hospitalized"]) &
+                Condition.from_state(
+                    ~boolean_states["will_die"])
                 )
 
         # Quarantine condition
@@ -1050,7 +1065,8 @@ class ContagionStateMachine(StateMachine):
             "will_be_hospitalized_new",
             "is_new_hospitalized",
             "will_die_new",
-            "is_new_quarantined"
+            "is_new_quarantined",
+            "is_symptomatic_new"
 
         ]
 
@@ -1141,17 +1157,20 @@ class ContagionStateMachine(StateMachine):
             ChangeStatesConditionalTransition(
                 "will_have_symptoms",
                 [
-                    ~boolean_states["will_have_symptoms"],
-                    ~boolean_states["will_have_symptoms_new"],
+                    (~boolean_states["will_have_symptoms"], True),
+                    (~boolean_states["will_have_symptoms_new"], True)
                 ],
                 will_have_symptoms_cond,
             ),
 
             # No symptoms - symptomatic
-            ConditionalTransition(
+            MultiStateConditionalTransition(
                 "no_symptoms_symptomatic",
                 boolean_states["will_have_symptoms"],
-                boolean_states["is_symptomatic"],
+                [
+                    boolean_states["is_symptomatic"],
+                    boolean_states["is_symptomatic_new"],
+                ],
                 symptomatic_cond
             ),
 
@@ -1227,7 +1246,6 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_recovered"],
                     (~boolean_states["is_infected"], False),
                     (~boolean_states["is_symptomatic"], False),
-                    (~boolean_states["will_have_symptoms"], False),
                 ],
                 hospit_recovery_condition,
             ),
@@ -1367,23 +1385,38 @@ class ContagionStateMachine(StateMachine):
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
 
         infectious_mask = (
-            self.states["is_infectious"](data) 
+            self.states["is_infectious"](data)
             )
 
         if infectious_mask.sum() == 0:
+            self._stat_collector["contacts"].append(0)
+            if config["general"]["trace spread"]:
+                self._trace_contacts.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2)))
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
         removed_mask = self.states["is_removed"](data) 
         quarantined_mask = self.states["is_quarantined"](data)
-        infectious_mask = infectious_mask & (~removed_mask) & (~quarantined_mask)
+        hospitalized_mask = self.states["is_hospitalized"](data)
+        infectious_mask = (
+            infectious_mask & (~removed_mask) & (~quarantined_mask) 
+            & (~hospitalized_mask)
+            )
         infectious_indices = np.nonzero(infectious_mask)[0]
 
         healthy_mask = ~self.states["is_infected"](data)
-        is_infectable = healthy_mask & (~removed_mask) & (~quarantined_mask)
+        is_infectable = (
+            healthy_mask & (~removed_mask) & (~quarantined_mask)
+            & (~hospitalized_mask)
+            )
         is_infectable_indices = np.nonzero(is_infectable)[0]
 
         if len(is_infectable_indices) == 0:
+            self._stat_collector["contacts"].append(0)
+            if config["general"]["trace spread"]:
+                self._trace_contacts.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2)))
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # NOTE: This is ~2times slower
@@ -1444,7 +1477,7 @@ class ContagionStateMachine(StateMachine):
                 )
             )
         num_succesful_contacts = len(successful_contacts_indices)
-        self._statistics["contacts"].append(num_succesful_contacts)
+        self._stat_collector["contacts"].append(num_succesful_contacts)
         newly_infectee_indices = successful_contactee_indices[
                 newly_infected_mask
                 ]
@@ -1484,7 +1517,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
         new_indices = np.nonzero(
-            self.states["will_have_symptoms_new"](data))[0]
+            self.states["is_symptomatic_new"](data))[0]
         if len(new_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 
@@ -1509,18 +1542,19 @@ class ContagionStateMachine(StateMachine):
         return cond
 
     def __will_die(self, data: DataDict) -> np.ndarray:
-        new_hosp_indices = np.nonzero(
-            self.states["is_new_hospitalized"](data)
-        )[0]
+        new_symptomatic = self.states["is_symptomatic_new"](data)
+        new_hospitalized = self.states["will_be_hospitalized"](data)
+
+        new_hosp_indices = np.nonzero(new_symptomatic & new_hospitalized)[0]
         if len(new_hosp_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 
-        num_new_incub = len(new_hosp_indices)
-        will_die_prob = self._infection.death_prob.rvs(num_new_incub)
+        num_new_hosp = len(new_hosp_indices)
+        will_die_prob = self._infection.death_prob.rvs(num_new_hosp)
 
         # roll the dice
         will_die = (
-            self._rstate.binomial(1, will_die_prob, size=num_new_incub) == 1
+            self._rstate.binomial(1, will_die_prob, size=num_new_hosp) == 1
         )
 
         will_die_indices = new_hosp_indices[will_die]
