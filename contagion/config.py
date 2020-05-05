@@ -24,6 +24,7 @@ _baseconfig = {
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
+        "track graph history": True
     },
     "population": {
         "population size": 10000,
@@ -41,14 +42,85 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 6,
             "sd": 0.2},
+
+
+        "hierarchy": [{
+            # Close contacts (family)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 2,
+                "sd": 2},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 3,
+                "sd": 1},
+            # A person can only be in one of these circles
+            # -> Not interactions between circles of this type
+            "interconnectivity": 0,
+            "fully_connected": True,
+            },
+            {
+            # Friends
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 10,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 30 % of people in this group can be in other groups
+            "interconnectivity": 0.3,
+            "fully_connected": True,
+            },
+            {
+            # Loose contacts (work, ...)
+            "social circle pdf": {
+                "class": "Gamma",
+                "mean": 20,
+                "sd": 5},
+            "social circle interactions pdf": {
+                "class": "Gamma",
+                "mean": 5,
+                "sd": 2},
+            # 10 % of people in this group can be in other groups
+            "interconnectivity": 0.1,
+            "fully_connected": True,
+            }],
+
         "random interactions pdf": {
             "class": "Gamma",
             "mean": 0.0001,
             "sd": 0.001},
         "random interactions intensity pdf": {
             "class": "Gamma",
-            "mean": 0.0001,
-            "sd": 0.001},
+            "mean": 0.1,
+            "sd": 0.5},
+
+        "nx": {
+            "func": "lfr_benchmark",
+            "kwargs": {
+                "tau1": 3,
+                "tau2": 1.5,
+                "mu": 0.1,
+                "average_degree": 7,
+                "min_community": 8,
+                "max_iters": 200,
+            },
+            "inter freq pdf": {
+                "class": "Gamma",
+                "mean": 10,
+                "sd": 3
+            },
+            "intra freq pdf": {
+                "class": "Gamma",
+                "mean": 3,
+                "sd": 3
+            }
+
+        }
+
+
     },
     "infection": {
         # The number of starting infections
@@ -72,12 +144,12 @@ _baseconfig = {
         "latency duration pdf": {
             "class": "Gamma",
             "mean": 6,
-            "sd": 2.5,
+            "sd": 3,
             },
         "incubation duration pdf": {
             "class": "Gamma",
-            "mean": 3.,
-            "sd": 0.01},
+            "mean": 7.47522,
+            "sd": 4.27014},
         # Hospitalization
         "hospitalization probability pdf": {
             "class": "Beta",

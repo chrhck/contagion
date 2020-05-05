@@ -16,17 +16,17 @@ infection:
     sd: 1.0e-05
   incubation duration pdf:
     class: Gamma
-    mean: 7.47804179203349
-    sd: 2.7346008469305882
+    mean: 5.25
+    sd: 13.9
   infected: 1
   infection probability pdf:
     class: Gamma
     mean: 3.42
     sd: 2.38
-    max_val: 0.15
+    max_val: 0.28
   infectious duration pdf:
     class: Gamma
-    mean: 3.3708391476183848
+    mean: 8.57
     sd: 1.8359845172599862
   latency duration pdf:
     class: Gamma
