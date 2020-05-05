@@ -1450,7 +1450,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_have_symptoms(self, data: DataDict) -> np.ndarray:
 
-        new_infec = data["is_new_infectious"]
+        new_infec = data["is_new_latent"]
         num_new_infec = new_infec.sum()
         new_infec_indices = new_infec.nonzero()[0]
         symp_prob = self._infection.will_have_symptoms_prob.rvs(
