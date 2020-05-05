@@ -938,6 +938,10 @@ class ContagionStateMachine(StateMachine):
             ~timer_states["time_until_death"]
         ) & Condition.from_state(~boolean_states["will_die_new"])
 
+        free_condition = Condition.from_state(
+            ~timer_states["quarantine_duration"]
+        ) & Condition.from_state(~boolean_states["is_new_quarantined"])
+
         # Only people who are not hospitalized undergo normal recovery
 
         normal_recovery_condition = (
@@ -967,10 +971,6 @@ class ContagionStateMachine(StateMachine):
         tested_negative_cond = Condition.from_state(
             ~timer_states["time_until_test_result"]
         ) & Condition.from_state(~boolean_states["will_test_negative_new"])
-
-        quarantine_recovered_condition = Condition.from_state(
-            ~timer_states["quarantine_duration"]
-        ) & Condition.from_state(~boolean_states["is_new_quarantined"])
 
         temp_states = [
             "is_new_latent",
@@ -1237,7 +1237,6 @@ class ContagionStateMachine(StateMachine):
                 boolean_states["will_test_negative"],
                 [
                     (~boolean_states["is_tested"], False),
-                    (~boolean_states["is_removed"], False),
                     (~boolean_states["is_quarantined"], False),
                     (~counter_states["time_since_quarantine"], -np.inf),
                 ],
