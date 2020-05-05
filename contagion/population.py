@@ -889,7 +889,7 @@ class NetworkXWrappers(object):
                         if kwargs["pref_attach"]:
                             v = random.choices(
                                 candidates,
-                                weights=node_degrees[candidates])[0]
+                                weights=node_degrees[list(candidates)])[0]
                         else:
                             v = random.choice(candidates)
                         attempted_vs.add(v)
