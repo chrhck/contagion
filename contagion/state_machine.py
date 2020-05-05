@@ -903,7 +903,11 @@ class ContagionStateMachine(StateMachine):
         self._states.update(counter_states)
 
         # Condition that stores the new infections from this tick
-        infected_condition = Condition(self.__get_new_infections)
+        infected_condition = (
+            Condition(self.__get_new_infections)
+            & Condition.from_state(~boolean_states["is_removed"])
+            & Condition.from_state(~boolean_states["is_quarantined"])
+        )
 
         # Symptomatic
         will_have_symptoms_cond = Condition(self.__will_have_symptoms)
@@ -1199,7 +1203,6 @@ class ContagionStateMachine(StateMachine):
                 [
                     boolean_states["is_quarantined"],
                     boolean_states["is_new_quarantined"],
-                    boolean_states["is_removed"],
                 ],
                 quarantine_condition,
             ),
@@ -1242,19 +1245,10 @@ class ContagionStateMachine(StateMachine):
             ),
             # TODO: Does coming out of qurantine mean that you are healed?
             # Go out of quarantine
-            MultiStateConditionalTransition(
-                "quarantine_recovered",
-                boolean_states["is_quarantined"],
-                [
-                    (~boolean_states["is_infected"], False),
-                    boolean_states["is_recovered"],
-                    (~boolean_states["is_symptomatic"], False),
-                    (~boolean_states["is_infectious"], False),
-                    (~boolean_states["will_be_hospitalized"], False),
-                    (~boolean_states["will_have_symptoms"], False),
-                    (~counter_states["time_since_quarantine"], -np.inf),
-                ],
-                quarantine_recovered_condition,
+            ChangeStatesConditionalTransition(
+                "quarantined_free",
+                (boolean_states["is_quarantined"], False),
+                free_condition,
             ),
         ]
 
@@ -1320,20 +1314,21 @@ class ContagionStateMachine(StateMachine):
 
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
 
-        infectious_mask = self.states["is_infectious"](data) & ~self.states[
-            "is_new_infectious"
-        ](data)
+        infectious_mask = self.states["is_infectious"](data)
 
         if infectious_mask.sum() == 0:
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
-        # Only infectious non removed can infect others
+        # Only infectious non removed, non-quarantined can infect others
         removed_mask = self.states["is_removed"](data)
-        infectious_mask = infectious_mask & (~removed_mask)
+        quarantined_mask = self.states["is_quarantined"](data)
+        infectious_mask = (
+            infectious_mask & (~removed_mask) & (~quarantined_mask)
+        )
         infectious_indices = np.nonzero(infectious_mask)[0]
 
         healthy_mask = ~self.states["is_infected"](data)
-        is_infectable = healthy_mask & (~removed_mask)
+        is_infectable = healthy_mask & (~removed_mask) & (~quarantined_mask)
         is_infectable_indices = np.nonzero(is_infectable)[0]
 
         if len(is_infectable_indices) == 0:
@@ -1462,7 +1457,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_have_symptoms(self, data: DataDict) -> np.ndarray:
 
-        new_infec = data["is_new_infectious"]
+        new_infec = data["is_new_latent"]
         num_new_infec = new_infec.sum()
         new_infec_indices = new_infec.nonzero()[0]
         symp_prob = self._infection.will_have_symptoms_prob.rvs(num_new_infec)

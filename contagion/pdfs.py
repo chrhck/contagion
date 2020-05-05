@@ -276,39 +276,25 @@ class Gamma(ScipyPDF):
         # scipy parameters
         self._shape = self._alpha
         self._scale = 1. / self._beta
-        local_gamma = scipy.stats.gamma(
+        self._mode = (self._alpha-1) / self._beta
+        self._max_val = max_val
+
+        self._pdf = scipy.stats.gamma(
             self._shape,
             scale=self._scale
         )
 
-        if max_val is None:
-            self._pdf = local_gamma
-        else:
-            _log.debug('Using GammaMaxVal')
-            instance_ga = GammaMaxVal(name='GammaMaxVal')
-            # Lower and upper search bounds
-            lower_bound = (self._mean - self._sd)
-            # Trying to catch some possible errors here
-            if self._mean > 10 * self._sd:
-                _log.warning('Ratio between mean and sd too high!' +
-                             ' PDF will be incorrect!')
-            if lower_bound < 0.:
-                _log.error('Standard deviation'
-                           'for gamma distribution too large!')
-                raise ValueError('Please check the sd in the config file')
-            upper_bound = (self._mean + self._sd)
-            # TODO: Optimize this
-            maximum_loc = (
-                minimize_scalar(
-                    lambda x: -local_gamma.pdf(x),
-                    bounds=[lower_bound, upper_bound], method='bounded')
-            ).x
-            norm = local_gamma.pdf(maximum_loc) / max_val
-            self._pdf = instance_ga(
-                self._shape,
-                self._scale,
-                norm,
-            )
+        self._val_at_mode = self._pdf.pdf(self._mode)
+
+    def pdf(self, points: Union[float, np.ndarray],
+            dtype: Optional[type] = None) -> np.ndarray:
+
+        pdf_vals = super().pdf(points, dtype)
+
+        if self._max_val is not None:
+            pdf_vals = pdf_vals / self._val_at_mode * self._max_val
+
+        return pdf_vals
 
 
 class Gamma_Benchmark(ScipyPDF):

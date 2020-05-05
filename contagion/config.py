@@ -26,7 +26,7 @@ _baseconfig = {
         "trace spread": False,
     },
     "population": {
-        "population size": 1000,
+        "population size": 10000,
         "re-use population": False,
         # store population
         "store population": False,
@@ -39,56 +39,24 @@ _baseconfig = {
             "mean": 6,
             "sd": 0.2,
         },
-        "hierarchy": [
-            {
-                # Close contacts (family)
-                "social circle pdf": {"class": "Gamma", "mean": 2, "sd": 2},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 3,
-                    "sd": 1,
-                },
-                # A person can only be in one of these circles
-                # -> Not interactions between circles of this type
-                "interconnectivity": 0,
-            },
-            {
-                # Friends
-                "social circle pdf": {"class": "Gamma", "mean": 10, "sd": 5},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 5,
-                    "sd": 2,
-                },
-                # 30 % of people in this group can be in other groups
-                "interconnectivity": 0.3,
-            },
-            {
-                # Loose contacts (work, ...)
-                "social circle pdf": {"class": "Gamma", "mean": 20, "sd": 5},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 5,
-                    "sd": 2,
-                },
-                # 10 % of people in this group can be in other groups
-                "interconnectivity": 0.1,
-            },
-        ],
-        "random interactions pdf": {"class": "Gamma", "mean": 1, "sd": 1},
+        "random interactions pdf": {
+            "class": "Gamma",
+            "mean": 0.0001,
+            "sd": 0.001,
+        },
         "random interactions intensity pdf": {
             "class": "Gamma",
-            "mean": 0.1,
-            "sd": 0.5,
+            "mean": 0.0001,
+            "sd": 0.001,
         },
     },
     "infection": {
         # The number of starting infections
-        "infected": 10,
+        "infected": 1,
         # Symptom probability
         "will have symptoms prob pdf": {
             "class": "Beta",
-            "mean": 0.6,
+            "mean": 0.5,
             "sd": 0.1,
         },
         # Infection properties
@@ -96,15 +64,10 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 3.0,
             "sd": 2.42,
-            "max_val": 1.0,
+            "max_val": 0.15,
         },
         "infectious duration pdf": {"class": "Gamma", "mean": 8.0, "sd": 2.42},
-        "latency duration pdf": {
-            "class": "Gamma_Benchmark",
-            "shape": 3.93,
-            "loc": -4.0,
-            "scale": 2.154,
-        },
+        "latency duration pdf": {"class": "Gamma", "mean": 6, "sd": 2.5,},
         "incubation duration pdf": {"class": "Gamma", "mean": 3.0, "sd": 0.01},
         # Hospitalization
         "hospitalization probability pdf": {
@@ -138,7 +101,7 @@ _baseconfig = {
         # Second order Tracing (True, False)
         "second order": False,
         # fraction of population tracked
-        "tracked fraction": 0.2,
+        "tracked fraction": 1,
         # days of back tracking
         "backtrack length": 0.0,
         # duration of the quarantine
