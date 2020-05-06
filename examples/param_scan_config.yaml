@@ -18,7 +18,7 @@ infection:
     class: Gamma
     mean: 5.254683398832261
     sd: 13.905504177942786
-  infected: 10
+  infected: 1
   infection probability pdf:
     class: Gamma
     max_val: 0.2852105160647728
