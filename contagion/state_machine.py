@@ -888,7 +888,7 @@ class ContagionStateMachine(StateMachine):
             timer_state_names.append("quarantine_duration")
         if self._measures.testing:
             timer_state_names.append("time_until_test")
-            timer_state_names.append("time_until_test_restult")
+            timer_state_names.append("time_until_test_result")
 
         timer_states = {
             name: FloatState.from_timer(name) for name in timer_state_names
