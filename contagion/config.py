@@ -96,16 +96,22 @@ _baseconfig = {
         "recovery time pdf": {"class": "Gamma", "mean": 11.0, "sd": 5.0},
     },
     "measures": {
-        # Measures implemented (None, contact_tracing)
-        "type": None,
+        # Measures implemented (True, False)
+        "contact tracing": False,
+        # fraction of population tracked
+        "tracked fraction": 1.0,
         # Second order Tracing (True, False)
         "second order": False,
-        # fraction of population tracked
-        "tracked fraction": 1,
         # days of back tracking
         "backtrack length": 0.0,
+        # track uninfected (True, False)
+        "track uninfected": False,
+        # quarantine (True, False)
+        "quarantine": False,
         # duration of the quarantine
         "quarantine duration": 14.0,
+        # testing (True, False)
+        "testing": False,
         # Time until testing
         "time until test": 1.0,
         # Time until test results

@@ -42,19 +42,47 @@ class Measures(object):
         """
         self.__rstate = config["runtime"]["random state"]
 
-        if config["measures"]["type"] is None:
-            _log.info("No measure taken")
-            self.__tracked = None
-        elif config["measures"]["type"] == "contact_tracing":
+        self.__contact_tracing = config["measures"]["contact tracing"]
+        self.__quarantine = config["measures"]["quarantine"]
+        self.__testing = config["measures"]["testing"]
+
+        if self.__contact_tracing:
             _log.info("Using contact tracing")
-            self.__contact_tracing()
+            self.__def_contact_tracing()
         else:
-            _log.error("measure not implemented!")
-            exit("Please check the config file what measures are allowed")
+            _log.info("No contact tracing")
+            self.__tracked = None
+            # self.__backtrack_length = None
+            # self.__second_order_tracing = None
+            # self.__track_uninfected = None
 
-        self.__def_quarantine_pdf()
+        if self.__quarantine:
+            _log.info("Using quarantine")
+            self.__def_quarantine_pdf()
+        else:
+            _log.info("No quarantine")
+            # self.__quarantine_duration = None
 
-        self.__def_testing()
+        if self.__testing:
+            _log.info("Using testing")
+            self.__def_testing()
+        else:
+            _log.info("No testing")
+            # self.__time_until_test_pdf = None
+            # self.__time_until_test_result_pdf = None
+            # self.__test_efficiency_function = None
+
+    @property
+    def contact_tracing(self):
+        return self.__contact_tracing
+
+    @property
+    def quarantine(self):
+        return self.__quarantine
+
+    @property
+    def testing(self):
+        return self.__testing
 
     @property
     def tracked(self):
@@ -126,6 +154,18 @@ class Measures(object):
         return np.int(self.__backtrack_length)
 
     @property
+    def track_uninfected(self):
+        """
+        function: backtrack_length
+        Getter function for the length of the contact backtracing
+        Parameters:
+            -None
+        Returns:
+            -Int
+        """
+        return np.bool(self.__track_uninfected)
+
+    @property
     def is_SOT_active(self):
         """
         function: is_SOT_active
@@ -138,7 +178,7 @@ class Measures(object):
         return self.__second_order_tracing
 
     # TODO: Not 100% of participants will report correctly
-    def __contact_tracing(self):
+    def __def_contact_tracing(self):
         """
         function: __contact_tracing
         Implements the measure contact tracing
@@ -159,15 +199,17 @@ class Measures(object):
         ).flatten()
 
         self.__backtrack_length = config["measures"]["backtrack length"]
+        _log.debug(
+            "Length of backtracking: {0}".format(self.__backtrack_length)
+        )
 
-        if type(config["measures"]["second order"]) == np.bool:
-            self.__second_order_tracing = config["measures"]["second order"]
-            _log.debug(
-                "Second order tracing: {0}".format(self.__second_order_tracing)
-            )
-        else:
-            _log.error("Second order tracing must be True or False.")
-            exit("Please check the config file.")
+        self.__second_order_tracing = config["measures"]["second order"]
+        _log.debug(
+            "Second order tracing: {0}".format(self.__second_order_tracing)
+        )
+
+        self.__track_uninfected = config["measures"]["track uninfected"]
+        _log.debug("Track uninfected: {0}".format(self.__second_order_tracing))
 
     def __def_quarantine_pdf(self):
         """
