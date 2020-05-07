@@ -2,7 +2,7 @@ general:
   config location: ../run/config.txt
   debug level: 50
   log file handler: ../run/contagion.log
-  random state seed: 9
+  random state seed: 1
   trace spread: true
   track graph history: false
 infection:

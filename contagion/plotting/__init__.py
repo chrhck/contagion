@@ -1,0 +1,1 @@
+from .graph_visualization import plot_infection_history

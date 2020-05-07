@@ -77,6 +77,7 @@ class MC_Sim(object):
                 "will_have_symptoms": False,
                 "will_have_symptoms_new": False,
                 "is_symptomatic": False,
+                "is_symptomatic_new": False,
                 "is_removed": False,
                 "is_hospitalized": False,
                 "is_new_hospitalized": False,
@@ -118,6 +119,11 @@ class MC_Sim(object):
         infect_id = self.__rstate.choice(
             range(self.__pop_size), size=self.__infected, replace=False
         )
+
+        if hasattr(self.__pop, "_graph"):
+            g = self.__pop._graph
+            for inf_id in infect_id:
+                g.nodes[inf_id]["initial_infected"] = True
 
         # Their infection duration
         infec_dur = np.around(

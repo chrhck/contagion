@@ -9,23 +9,26 @@ Constructs the state machine
 from __future__ import annotations
 import abc
 from collections import defaultdict
+from copy import deepcopy
 import functools
 import logging
 from typing import Callable, Union, List, Tuple, Dict, Optional
 
 import numpy as np  # type: ignore
+import networkx as nx  # type: ignore
 import pandas as pd  # type: ignore
 
 from .config import config
 from .infection import Infection
 from .measures import Measures
 from .pdfs import PDF
-from .population import Population
+from .population import Population, NetworkXPopulation
 
 
 _log = logging.getLogger(__name__)
 
 DEBUG = False
+
 
 if DEBUG:
     _log.warn("DEBUG flag enabled. This will drastically slow down the code")
@@ -264,7 +267,9 @@ class BooleanState(_State):
     """
 
     @classmethod
-    def from_boolean(cls, name: str) -> BooleanState:
+    def from_boolean(
+        cls, name: str, graph: Optional[nx.Graph] = None
+    ) -> BooleanState:
         """
         Factory method for creating a state from a boolean field
         in a DataDict. The name of the state corresponds to the data field name
@@ -272,17 +277,34 @@ class BooleanState(_State):
 
         Parameters:
             name: str
+            graph: Optional[nx.Graph]
+                A graph object onto which the state change is recorded
         """
 
         def get_state(arr: np.ndarray):
             return arr
 
         def state_change(
-            data: DataDict, state: np.ndarray, condition: np.ndarray
+            data: DataDict, state: np.ndarray, condition: np.ndarray,
         ):
 
             # TODO: maybe offload application of condition to state here?
             data[name][condition] = state
+
+            if graph is not None:
+                sel_nodes = np.asarray(graph.nodes)[condition]
+
+                for i, node in enumerate(sel_nodes):
+                    if isinstance(state, np.ndarray):
+                        this_state = state[i]
+                    else:
+                        this_state = state
+                    if name not in graph.nodes[node]["history"]:
+                        graph.nodes[node]["history"][name] = []
+
+                    graph.nodes[node]["history"][name].append(
+                        (graph.graph["cur_tick"], this_state)
+                    )
 
         return cls(get_state, get_state, name, name, state_change)
 
@@ -736,6 +758,12 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         for field in self._data_fields:
             self._statistics[field].append(data[field].sum())
 
+    def __getitem__(self, key):
+        return self._statistics[key]
+
+    def __setitem__(self, key, value):
+        self._statistics[key] = value
+
     @property
     def statistics(self):
         return self._statistics
@@ -754,10 +782,13 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             Stat collector object
     """
 
+    # _graph_node_hist: Optional[List[Dict[int, Any]]]
+
     def __init__(
         self,
         data: Union[pd.DataFrame, DataDict],
         stat_collector: Optional[StatCollector],
+        trace_states: bool = False,
         *args,
         **kwargs,
     ):
@@ -773,6 +804,10 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             self._trace_contacts = []
             self._trace_infection = []
 
+        self._cur_tick = 0
+        self._trace_states = trace_states
+        self._traced_states = []
+
     @property
     @abc.abstractmethod
     def transitions(self) -> List[_Transition]:
@@ -783,7 +818,7 @@ class StateMachine(object, metaclass=abc.ABCMeta):
     def states(self) -> List[_State]:
         pass
 
-    def tick(self) -> None:
+    def tick(self) -> bool:
         """
         Perform all transitions
         """
@@ -791,6 +826,22 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             transition(self._data)
         if self._stat_collector is not None:
             self._stat_collector(self._data)
+        self._cur_tick += 1
+
+        if self._trace_states:
+            self._traced_states.append(deepcopy(self._data))
+        return False
+
+        """
+        if isinstance(self._population, NetworkXPopulation):
+            g = self._population._graph
+            if self._graph_node_hist is None:
+                self._graph_node_hist = []
+
+            self._graph_node_hist.append(
+                nx.get_node_attributes(g))
+            # track graph attribute changes
+        """
 
     @property
     def statistics(self):
@@ -831,15 +882,20 @@ class ContagionStateMachine(StateMachine):
         self._statistics = defaultdict(list)
         self._measures = measures
 
+        graph = None
+        if isinstance(self._population, NetworkXPopulation):
+            graph = self._population._graph
+            graph.graph["cur_tick"] = 0
+
         # Boolean states
         boolean_state_names = [
-            "is_infected",
             "is_new_infected",
             "is_latent",
             "is_new_latent",
             "will_have_symptoms",
             "will_have_symptoms_new",
             "is_symptomatic",
+            "is_symptomatic_new",
             "is_infectious",
             "is_new_infectious",
             "is_hospitalized",
@@ -868,10 +924,20 @@ class ContagionStateMachine(StateMachine):
             boolean_state_names.append("will_test_negative")
             boolean_state_names.append("will_test_negative_new")
 
+        tracked_boolean_state_names = [
+            "is_infected",
+        ]
+
         boolean_states = {
-            name: BooleanState.from_boolean(name)
+            name: BooleanState.from_boolean(name, None)
             for name in boolean_state_names
         }
+
+        for name in tracked_boolean_state_names:
+            boolean_states[name] = BooleanState.from_boolean(
+                name,
+                graph if config["general"]["track graph history"] else None,
+            )
 
         # Timer states
         timer_state_names = [
@@ -965,9 +1031,11 @@ class ContagionStateMachine(StateMachine):
             & Condition.from_state(~boolean_states["is_new_infectious"])
         )
 
-        hospit_recovery_condition = Condition.from_state(
-            ~timer_states["hospitalization_duration"]
-        ) & Condition.from_state(~boolean_states["is_new_hospitalized"])
+        hospit_recovery_condition = (
+            Condition.from_state(~timer_states["hospitalization_duration"])
+            & Condition.from_state(~boolean_states["is_new_hospitalized"])
+            & Condition.from_state(~boolean_states["will_die"])
+        )
 
         # Quarantine condition
         if self._measures.quarantine:
@@ -997,6 +1065,7 @@ class ContagionStateMachine(StateMachine):
             "will_be_hospitalized_new",
             "is_new_hospitalized",
             "will_die_new",
+            "is_symptomatic_new",
         ]
 
         if self._measures.quarantine:
@@ -1114,16 +1183,19 @@ class ContagionStateMachine(StateMachine):
             ChangeStatesConditionalTransition(
                 "will_have_symptoms",
                 [
-                    ~boolean_states["will_have_symptoms"],
-                    ~boolean_states["will_have_symptoms_new"],
+                    (~boolean_states["will_have_symptoms"], True),
+                    (~boolean_states["will_have_symptoms_new"], True),
                 ],
                 will_have_symptoms_cond,
             ),
             # No symptoms - symptomatic
-            ConditionalTransition(
+            MultiStateConditionalTransition(
                 "no_symptoms_symptomatic",
                 boolean_states["will_have_symptoms"],
-                boolean_states["is_symptomatic"],
+                [
+                    boolean_states["is_symptomatic"],
+                    boolean_states["is_symptomatic_new"],
+                ],
                 symptomatic_cond,
             ),
             # infectious - recovering
@@ -1194,7 +1266,6 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_recovered"],
                     (~boolean_states["is_infected"], False),
                     (~boolean_states["is_symptomatic"], False),
-                    (~boolean_states["will_have_symptoms"], False),
                 ],
                 hospit_recovery_condition,
             ),
@@ -1348,6 +1419,21 @@ class ContagionStateMachine(StateMachine):
                 )
             )
 
+    def tick(self) -> bool:
+        """
+        Perform all transitions
+        """
+
+        super().tick()
+
+        if isinstance(self._population, NetworkXPopulation):
+            self._population._graph.graph["cur_tick"] += 1
+
+        if np.sum(self._data["is_infected"]) == 0:
+            # Early stopping
+            return True
+        return False
+
     @property
     def trace_contacts(self):
         return self._trace_contacts
@@ -1369,6 +1455,10 @@ class ContagionStateMachine(StateMachine):
         infectious_mask = self.states["is_infectious"](data)
 
         if infectious_mask.sum() == 0:
+            self._stat_collector["contacts"].append(0)
+            if config["general"]["trace spread"]:
+                self._trace_contacts.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2)))
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
@@ -1387,6 +1477,10 @@ class ContagionStateMachine(StateMachine):
         is_infectable_indices = np.nonzero(is_infectable)[0]
 
         if len(is_infectable_indices) == 0:
+            self._stat_collector["contacts"].append(0)
+            if config["general"]["trace spread"]:
+                self._trace_contacts.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2)))
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # NOTE: This is ~2times slower
@@ -1444,13 +1538,12 @@ class ContagionStateMachine(StateMachine):
                 )
             )
         num_succesful_contacts = len(successful_contacts_indices)
-        self._statistics["contacts"].append(num_succesful_contacts)
+        self._stat_collector["contacts"].append(num_succesful_contacts)
+        newly_infectee_indices = successful_contactee_indices[
+            newly_infected_mask
+        ]
 
         if config["general"]["trace spread"]:
-
-            newly_infectee_indices = successful_contactee_indices[
-                newly_infected_mask
-            ]
 
             self._trace_infection.append(
                 np.dstack((newly_infectee_indices, newly_infected_indices))
@@ -1458,16 +1551,28 @@ class ContagionStateMachine(StateMachine):
 
         # There might be multiple successfull infections per person
         # from different infected people
-        newly_infected_indices = np.unique(newly_infected_indices)
+        newly_infected_indices, uq_ind = np.unique(
+            newly_infected_indices, return_index=True
+        )
+        # If multiple sucessful interacions pick the first
+        newly_infectee_indices = newly_infectee_indices[uq_ind]
+
+        if isinstance(self._population, NetworkXPopulation):
+            # update graph history
+            g = self._population._graph
+            for ni, ni_by in zip(
+                newly_infected_indices, newly_infectee_indices
+            ):
+                g.nodes[ni]["history"]["infected_at"] = self._cur_tick
+                g.nodes[ni]["history"]["infected_by"] = ni_by
+
         cond = np.zeros_like(infectious_mask, dtype=np.bool)
         cond[newly_infected_indices] = True
 
         return cond
 
     def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
-        new_indices = np.nonzero(self.states["will_have_symptoms_new"](data))[
-            0
-        ]
+        new_indices = np.nonzero(self.states["is_symptomatic_new"](data))[0]
         if len(new_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 
@@ -1490,18 +1595,19 @@ class ContagionStateMachine(StateMachine):
         return cond
 
     def __will_die(self, data: DataDict) -> np.ndarray:
-        new_hosp_indices = np.nonzero(
-            self.states["is_new_hospitalized"](data)
-        )[0]
+        new_symptomatic = self.states["is_symptomatic_new"](data)
+        new_hospitalized = self.states["will_be_hospitalized"](data)
+
+        new_hosp_indices = np.nonzero(new_symptomatic & new_hospitalized)[0]
         if len(new_hosp_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 
-        num_new_incub = len(new_hosp_indices)
-        will_die_prob = self._infection.death_prob.rvs(num_new_incub)
+        num_new_hosp = len(new_hosp_indices)
+        will_die_prob = self._infection.death_prob.rvs(num_new_hosp)
 
         # roll the dice
         will_die = (
-            self._rstate.binomial(1, will_die_prob, size=num_new_incub) == 1
+            self._rstate.binomial(1, will_die_prob, size=num_new_hosp) == 1
         )
 
         will_die_indices = new_hosp_indices[will_die]
