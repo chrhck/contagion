@@ -2,7 +2,7 @@
 
 """
 Name: config.py
-Authors: Christian Haack, Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger, Andrea Turcati
 Config file for the contagion package.
 It is recommended, that only advanced users change
 the settings here.
@@ -165,6 +165,8 @@ _baseconfig = {
         "track uninfected": False,
         # quarantine (True, False)
         "quarantine": False,
+        # report symptomatic (True, False)
+        "report symptomatic": True,
         # duration of the quarantine
         "quarantine duration": 14.0,
         # testing (True, False)

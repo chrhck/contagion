@@ -52,25 +52,18 @@ class Measures(object):
         else:
             _log.info("No contact tracing")
             self.__tracked = None
-            # self.__backtrack_length = None
-            # self.__second_order_tracing = None
-            # self.__track_uninfected = None
 
         if self.__quarantine:
             _log.info("Using quarantine")
-            self.__def_quarantine_pdf()
+            self.__def_quarantine()
         else:
             _log.info("No quarantine")
-            # self.__quarantine_duration = None
 
         if self.__testing:
             _log.info("Using testing")
             self.__def_testing()
         else:
             _log.info("No testing")
-            # self.__time_until_test_pdf = None
-            # self.__time_until_test_result_pdf = None
-            # self.__test_efficiency_function = None
 
     @property
     def contact_tracing(self):
@@ -109,6 +102,10 @@ class Measures(object):
                 The pdf of the quarantine duration
         """
         return self.__quarantine_duration
+
+    @property
+    def report_symptomatic(self):
+        return self.__report_symptomatic
 
     @property
     def time_until_test(self):
@@ -211,7 +208,7 @@ class Measures(object):
         self.__track_uninfected = config["measures"]["track uninfected"]
         _log.debug("Track uninfected: {0}".format(self.__second_order_tracing))
 
-    def __def_quarantine_pdf(self):
+    def __def_quarantine(self):
         """
         function: __def_quarantine_pdf
         Defines the pdf for the duration of the quarantine
@@ -224,6 +221,7 @@ class Measures(object):
             config["measures"]["quarantine duration"], 0.0
         )
         self.__quarantine_duration = quarantine_duration_pdf
+        self.__report_symptomatic = config["measures"]["report symptomatic"]
 
     def __def_testing(self):
         """

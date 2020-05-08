@@ -1635,14 +1635,25 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
-        infected_mask = self.states["is_symptomatic"](data)
-
         if self._measures.contact_tracing:
             tracked_mask = self.states["is_tracked"](data)
         else:
             tracked_mask = np.zeros_like(infected_mask, dtype=np.bool)
 
-        tracked_infected_mask = infected_mask & tracked_mask
+        if self._measures.report_symptomatic:
+            reported_mask = self.states["is_symptomatic"](data)
+            infected_mask = self.states["is_infected"](data)
+            unreported_tracked_mask = (
+                infected_mask & ~reported_mask & tracked_mask
+            )
+
+            tracked_infected_mask = np.logical_or(
+                unreported_tracked_mask, reported_mask
+            )
+        else:
+            infected_mask = self.states["is_symptomatic"](data)
+            tracked_infected_mask = infected_mask & tracked_mask
+
         if not np.any(tracked_infected_mask):
             return tracked_infected_mask
 
@@ -1683,6 +1694,7 @@ class ContagionStateMachine(StateMachine):
             return tracked_infected_mask
 
         contacted_mask = np.zeros_like(infected_mask, dtype=np.bool)
+        contacted_indices = np.asarray(contacted_indices, dtype=np.int)
         contacted_mask[contacted_indices] = True
         contacted_mask[~tracked_mask] = False
         if self._measures.track_uninfected == False:

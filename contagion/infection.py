@@ -2,7 +2,7 @@
 
 """
 Name: infection.py
-Authors: Christian Haack, Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger, Andrea Turcati
 Constructs the infection.
 """
 
@@ -24,6 +24,7 @@ class Infection(object):
     Returns:
         -None
     """
+
     def __init__(self):
         """
         function: __init__
@@ -42,7 +43,8 @@ class Infection(object):
         _log.debug("The infection probability pdf")
 
         infection_prob_pdf = construct_pdf(
-            config["infection"]["infection probability pdf"])
+            config["infection"]["infection probability pdf"]
+        )
 
         self.__pdf_infection_prob = infection_prob_pdf
 
@@ -50,33 +52,38 @@ class Infection(object):
 
         # Infectious duration
         dur_infectious_pdf = construct_pdf(
-            config["infection"]["infectious duration pdf"])
+            config["infection"]["infectious duration pdf"]
+        )
         self.__infectious_duration = dur_infectious_pdf
 
         # Incubation duration
         _log.debug("The incubation duration pdf")
         dur_incubation_pdf = construct_pdf(
-            config["infection"]["incubation duration pdf"])
+            config["infection"]["incubation duration pdf"]
+        )
         self.__incubation_duration = dur_incubation_pdf
 
         # Latency
         _log.debug("The latency duration pdf")
         dur_latent_pdf = construct_pdf(
-            config["infection"]["latency duration pdf"])
+            config["infection"]["latency duration pdf"]
+        )
         self.__latent_duration = dur_latent_pdf
 
         # Recovery
         _log.debug("The recovery time pdf")
 
         recovery_time_pdf = construct_pdf(
-            config["infection"]["recovery time pdf"])
+            config["infection"]["recovery time pdf"]
+        )
         self.__recovery_time = recovery_time_pdf
 
         # Symptoms
         _log.debug("Symptoms pdf")
 
         will_have_symptoms_pdf = construct_pdf(
-            config["infection"]["will have symptoms prob pdf"])
+            config["infection"]["will have symptoms prob pdf"]
+        )
 
         self.__will_have_symptoms_prob = will_have_symptoms_pdf
 
@@ -84,26 +91,31 @@ class Infection(object):
         _log.debug("The hospitalization pdfs")
 
         hospit_prob_pdf = construct_pdf(
-            config["infection"]["hospitalization probability pdf"])
+            config["infection"]["hospitalization probability pdf"]
+        )
         self._hospitalization_prob = hospit_prob_pdf
 
         hospit_dur_pdf = construct_pdf(
-            config["infection"]["hospitalization duration pdf"])
+            config["infection"]["hospitalization duration pdf"]
+        )
         self.__hospitalization_duration = hospit_dur_pdf
 
         hospit_dur_until_pdf = construct_pdf(
-            config["infection"]["time until hospitalization pdf"])
+            config["infection"]["time until hospitalization pdf"]
+        )
         self.__time_until_hospitalization = hospit_dur_until_pdf
 
         # Mortality
         _log.debug("The mortality pdfs")
 
         time_till_death_pdf = construct_pdf(
-            config["infection"]["time incubation death pdf"])
+            config["infection"]["time incubation death pdf"]
+        )
         self.__time_incubation_death = time_till_death_pdf
 
         death_prob_pdf = construct_pdf(
-            config["infection"]["mortality prob pdf"])
+            config["infection"]["mortality prob pdf"]
+        )
         self.__death_prob = death_prob_pdf
 
     @property
