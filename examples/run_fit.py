@@ -71,6 +71,7 @@ if __name__ == "__main__":
         contagion.sim()
 
         stats = pd.DataFrame(contagion.statistics)
+        stats["is_recovered"] = stats["is_recovered"] + stats["is_recovering"]
         return stats
 
     def make_chi2_distance(fields):
@@ -136,7 +137,7 @@ if __name__ == "__main__":
         n_bootstrap=10,
         client=client)
     #population = 300
-    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.5)
+    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.4)
     abc = pyabc.ABCSMC(model, prior, distance,
                        population_size=population, sampler=sampler,
                        acceptor=pyabc.UniformAcceptor(
