@@ -66,13 +66,13 @@ if __name__ == "__main__":
         contagion.sim()
 
         stats = pd.DataFrame(contagion.statistics)
-        stats["is_infected_total"] = this_config["is_recovered"] + ["is_recovering"] + ["is_infected"]
+        stats["is_infected_total"] = stats["is_recovered"] + stats["is_recovering"] + stats["is_infected"]
         
         stats = stats / this_config['population']['population size'] * 80E6
         stats["is_infected_total"] *= parameters["id_fraction"]
         stats["is_recovered"] *= parameters["id_fraction"]
 
-        zero_rows = pd.DataFrame({col: np.zeros(parameters["timeshift"]) for col in stats.columns})
+        zero_rows = pd.DataFrame({col: np.zeros(int(parameters["timeshift"])) for col in stats.columns})
         stats = pd.concat([zero_rows, stats]).reset_index()
         return stats.iloc[:len(data["is_recovered"])]
 
