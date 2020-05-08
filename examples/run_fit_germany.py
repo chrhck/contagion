@@ -28,7 +28,9 @@ if __name__ == "__main__":
 
     #contagion = Contagion(userconfig=my_config)
     #contagion.sim()
-    data = pd.from_csv("data_germany.csv").loc[:pd.to_datetime('2020-03-20')]
+    data = pd.read_csv("data_germany.csv")
+    data["Date"] = pd.to_datetime(data['Date'])
+    data = data.set_index("Date").loc[:pd.to_datetime('2020-03-20')]
     
     fields = ["is_recovered", "is_infected_total", "is_dead"]
     #data = {field: np.asarray(contagion.statistics[field]) for field in fields}
@@ -38,7 +40,8 @@ if __name__ == "__main__":
     def model(parameters):
         this_config = dict(_baseconfig)
         this_config.update(my_config)
-        this_config['population']['social circle pdf']["mean"] = parameters["soc circ mean"]        
+        this_config['population']['social circle pdf']["mean"] = parameters["soc circ mean"]
+          
         this_config['population']['social circle interactions pdf']["mean"] = parameters["soc circ mean"]        
         this_config['infection']["latency duration pdf"]['mean'] =  parameters["latency mean"]        
         this_config['infection']["infectious duration pdf"]['mean'] =  parameters["infectious dur mean"]        
@@ -65,10 +68,13 @@ if __name__ == "__main__":
         stats = pd.DataFrame(contagion.statistics)
         stats["is_infected_total"] = this_config["is_recovered"] + ["is_recovering"] + ["is_infected"]
         
+        stats = stats / this_config['population']['population size'] * 80E6
+        stats["is_infected_total"] *= parameters["id_fraction"]
+        stats["is_recovered"] *= parameters["id_fraction"]
 
         zero_rows = pd.DataFrame({col: np.zeros(parameters["timeshift"]) for col in stats.columns})
         stats = pd.concat([zero_rows, stats]).reset_index()
-        return stats
+        return stats.iloc[:len(data["is_recovered"])]
 
     def make_chi2_distance(fields):
         distances = []
@@ -118,9 +124,11 @@ if __name__ == "__main__":
          "recovery dur mean": pyabc.RV("uniform", 0.1, 10),
          "inf prob max": pyabc.RV("uniform", 0.1, 0.3),
          "mort mean": pyabc.RV("uniform", 0.01, 0.3),
-         "mort sd": pyabc.RV("uniform", 0.01, 0.1)
+         "mort sd": pyabc.RV("uniform", 0.01, 0.1),
          "symp prob mean": pyabc.RV("uniform", 0.1, 0.7),
-         "symp prob sd": pyabc.RV("uniform", 0.01, 0.1)
+         "symp prob sd": pyabc.RV("uniform", 0.01, 0.1),
+         "timeshift": pyabc.RV("uniform", 20, 60),
+         "id_fraction": pyabc.RV("uniform", 0.01, 0.2)
         })
 
     client = Client(scheduler_file="scheduler.json")
@@ -146,7 +154,7 @@ if __name__ == "__main__":
                        summary_statistics=summary_statistics,
                        eps=epsilon
                        )
-    db_path = "sqlite:///" + os.path.join(os.environ["HOME"], "abc.db")
+    db_path = "sqlite:///" + os.path.join(os.environ["HOME"], "abc_ger.db")
 
     logging.getLogger().setLevel("DEBUG")
 
