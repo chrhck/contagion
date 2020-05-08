@@ -1,0 +1,121 @@
+general:
+  config location: ../run/config.txt
+  debug level: 50
+  log file handler: ../run/contagion.log
+  random state seed: 3
+  trace spread: true
+  track graph history: false
+infection:
+  hospitalization duration pdf:
+    class: Gamma
+    mean: 12.0
+    sd: 3
+  hospitalization probability pdf:
+    class: Beta
+    mean: 0.26
+    sd: 0.01
+  incubation duration pdf:
+    class: Gamma
+    mean: 6
+    sd: 12
+  infected: 5
+  infection probability pdf:
+    class: Gamma
+    max_val: 0.2852105160647728
+    mean: 3.42
+    sd: 2.38
+  infectious duration pdf:
+    class: Gamma
+    mean: 8.569207570576166
+    sd: 0.1
+  latency duration pdf:
+    class: Gamma
+    mean: 4.0735490022379315
+    sd: 0.1
+  mortality prob pdf:
+    class: Beta
+    mean: 0.155
+    sd: 0.01
+  recovery time pdf:
+    class: Gamma
+    mean: 0.15866543305799297
+    sd: 0.1
+  time incubation death pdf:
+    class: Gamma
+    mean: 9
+    sd: 2.0
+  time until hospitalization pdf:
+    class: Gamma
+    mean: 7
+    sd: 2.0
+  will have symptoms prob pdf:
+    class: Beta
+    mean: 0.3
+    sd: 0.01
+measures:
+  backtrack length: 0.0
+  distanced fraction: 0.0
+  quarantine duration: 14.0
+  tracked fraction: 1.0
+  type: contact_tracing
+population:
+  nx:
+    func: lfr_ba
+    inter freq pdf:
+      class: Gamma
+      mean: 8
+      sd: 3
+    intra freq pdf:
+      class: Gamma
+      mean: 8
+      sd: 3
+    kwargs:
+      m: 4
+      max_community: 500
+      max_iters: 2000
+      min_community: 10
+      mu: 0.1
+      pref_attach: true
+      tau: 1.2
+      tolerance: 0.1
+  population class: HomogeneousPopulation
+  population size: 1000000
+  population storage: 1E6_homogeneous.pickle
+  random interactions intensity pdf:
+    class: Gamma
+    mean: 0.01
+    sd: 0.001
+  random interactions pdf:
+    class: Gamma
+    mean: 0.01
+    sd: 0.01
+  re-use population: false
+  social circle interactions pdf:
+    class: Gamma
+    mean: 8
+    sd: 0.1
+  social circle pdf:
+    class: Gamma
+    mean: 8
+    sd: 0.1
+  store population: true
+  store_population: true
+scenario:
+  class: SocialDistancing
+  contact_rate_scalings:
+  - 0.75
+  - 0.625
+  - 0.3125
+  - 0.125
+  - 0.075
+  - 0.75
+  - 1
+  sim_length: 720
+  t_steps:
+  - 0
+  - 19
+  - 23
+  - 29
+  - 39
+  - 65
+  - 93
