@@ -38,7 +38,8 @@ if __name__ == "__main__":
     
     fields = ["is_recovered", "is_infected_total", "is_dead"]
     #data = {field: np.asarray(contagion.statistics[field]) for field in fields}
-    data = {"is_recovered": data["recovered"], "is_infected_total": data["tot. infected"], "is_dead": data["deaths"]}
+    data = {"is_recovered": np.round(data["recovered"]), "is_infected_total": np.round(data["tot. infected"]),
+            "is_dead": data["deaths"]}
     
     
     def model(parameters):
@@ -60,6 +61,7 @@ if __name__ == "__main__":
         
         this_config["infection"]["will have symptoms prob pdf"]["mean"] = parameters["symp prob mean"]
         this_config["infection"]["will have symptoms prob pdf"]["sd"] = parameters["symp prob sd"]
+        this_config["measures"]["tracked fraction"] = parameters["tracked frac"]
         
         if args.full:
             this_config["scenario"]["class"] = "SocialDistancing"
@@ -150,7 +152,8 @@ if __name__ == "__main__":
          "id_fraction": pyabc.RV("uniform", 0.01, 0.2),
          "t_start_dist": pyabc.RV("uniform", 20, 9),
          "scaling_dur": pyabc.RV("uniform", 1, 14),
-         "int_per_day_dist": pyabc.RV("uniform", 0.5, 1.5)
+         "int_per_day_dist": pyabc.RV("uniform", 0.5, 1.5),
+         "tracked frac": pyabc.RV("uniform", 0, 1)
         })
 
     client = Client(scheduler_file="scheduler.json")
@@ -162,7 +165,7 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=800)
     population = pyabc.populationstrategy.AdaptivePopulationSize(
         150,
-        max_population_size=300,
+        max_population_size=1000,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
