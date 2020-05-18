@@ -1635,6 +1635,8 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
+        infected_mask = self.states["is_infected"](data)
+
         if self._measures.contact_tracing:
             tracked_mask = self.states["is_tracked"](data)
         else:
@@ -1642,7 +1644,7 @@ class ContagionStateMachine(StateMachine):
 
         if self._measures.report_symptomatic:
             reported_mask = self.states["is_symptomatic"](data)
-            infected_mask = self.states["is_infected"](data)
+
             unreported_tracked_mask = (
                 infected_mask & ~reported_mask & tracked_mask
             )
@@ -1697,7 +1699,7 @@ class ContagionStateMachine(StateMachine):
         contacted_indices = np.asarray(contacted_indices, dtype=np.int)
         contacted_mask[contacted_indices] = True
         contacted_mask[~tracked_mask] = False
-        if self._measures.track_uninfected == False:
+        if not self._measures.track_uninfected:
             contacted_mask[~infected_mask] = False
 
         if self._measures.is_SOT_active:
@@ -1728,7 +1730,7 @@ class ContagionStateMachine(StateMachine):
 
                     if len(successful_contacts_indices) > 0:
                         SOT_contacts_mask[successful_contacts_indices] = True
-                        if self._measures.track_uninfected == False:
+                        if not self._measures.track_uninfected False:
                             SOT_contacts_mask[~infected_mask] = False
 
             contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
@@ -1739,7 +1741,7 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_tested(self, data: DataDict) -> np.ndarray:
 
-        if self._measures.testing == False:
+        if not self._measures.testing:
             return np.zeros(data.field_len, dtype=np.bool)
 
         new_quarantined = data["is_new_quarantined"]
