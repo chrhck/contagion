@@ -1,0 +1,85 @@
+general:
+  config location: ../run/config.txt
+  debug level: 50
+  log file handler: ../run/contagion.log
+  random state seed: 3
+  trace spread: true
+  track graph history: false
+infection:
+  hospitalization duration pdf:
+    class: Gamma
+    mean: 14.0
+    sd: 0.01
+  hospitalization probability pdf:
+    class: Beta
+    mean: 0.0001
+    sd: 1.0e-05
+  incubation duration pdf:
+    class: Gamma
+    mean: 2.814151198599678
+    sd: 12.124388809473224
+  infected: 1
+  infection probability pdf:
+    class: Gamma
+    max_val: 0.29504467830800235
+    mean: 3.42
+    sd: 2.38
+  infectious duration pdf:
+    class: Gamma
+    mean: 8.857457471617819
+    sd: 0.1
+  latency duration pdf:
+    class: Gamma
+    mean: 4.453585491036238
+    sd: 0.1
+  mortality prob pdf:
+    class: Beta
+    mean: 0.01
+    sd: 0.01
+  recovery time pdf:
+    class: Gamma
+    mean: 9.083431617277599
+    sd: 0.1
+  time incubation death pdf:
+    class: Gamma
+    mean: 32.0
+    sd: 5.0
+  time until hospitalization pdf:
+    class: Gamma
+    mean: 2.52
+    sd: 1.0
+  will have symptoms prob pdf:
+    class: Beta
+    mean: 0.5
+    sd: 0.1
+measures:
+  backtrack length: 0.0
+  distanced fraction: 0.0
+  quarantine duration: 14.0
+  tracked fraction: 1.0
+  type: contact_tracing
+population:
+  population class: HomogeneousPopulation
+  population size: 10000
+  population storage: ../populations/generic.pkl
+  random interactions intensity pdf:
+    class: Gamma
+    mean: 0.0001
+    sd: 0.0001
+  random interactions pdf:
+    class: Gamma
+    mean: 0.001
+    sd: 0.001
+  re-use population: false
+  social circle interactions pdf:
+    class: Gamma
+    mean: 6.473041708427619
+    sd: 0.1
+  social circle pdf:
+    class: Gamma
+    mean: 6.473041708427619
+    sd: 0.1
+  store population: true
+scenario:
+  class: StandardScenario
+  sim_length: 150
