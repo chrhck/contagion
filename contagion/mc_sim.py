@@ -106,9 +106,9 @@ class MC_Sim(object):
                 "will_be_tested": False,
                 "will_be_tested_new": False,
                 "is_tested": False,
+                "is_tested_positive": False,
                 "is_new_tested": False,
                 "will_test_negative": False,
-                "will_test_negative_new": False,
                 "time_until_test": 0,
                 "time_until_test_result": 0,
             },
@@ -163,6 +163,8 @@ class MC_Sim(object):
                 "is_symptomatic",
                 "will_be_tested",
                 "is_tested",
+                "is_tested_positive",
+                "will_test_negative"
             ]
         )
         # The state machine

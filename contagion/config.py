@@ -120,7 +120,7 @@ _baseconfig = {
             "max_val": 0.15,
         },
         "infectious duration pdf": {"class": "Gamma", "mean": 8.0, "sd": 2.42},
-        "latency duration pdf": {"class": "Gamma", "mean": 6, "sd": 3,},
+        "latency duration pdf": {"class": "Gamma", "mean": 6, "sd": 3},
         "incubation duration pdf": {
             "class": "Gamma",
             "mean": 7.47522,

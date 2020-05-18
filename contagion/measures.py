@@ -8,10 +8,8 @@ to suppress the spread.
 """
 
 # imports
-from sys import exit
 from typing import Union, Optional
 import numpy as np
-from scipy.interpolate import interp1d
 import logging
 
 from .pdfs import Uniform

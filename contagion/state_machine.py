@@ -1671,7 +1671,8 @@ class ContagionStateMachine(StateMachine):
             infected_mask = self.states["is_symptomatic"](data)
             tracked_infected_mask = infected_mask & tracked_mask
 
-        if not np.any(tracked_infected_mask):
+        if (not np.any(tracked_infected_mask) or
+                not self._measures.contact_tracing):
             return tracked_infected_mask
 
         tracked_infected_indices = np.nonzero(tracked_infected_mask)[0]
