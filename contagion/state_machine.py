@@ -920,9 +920,9 @@ class ContagionStateMachine(StateMachine):
             boolean_state_names.append("will_be_tested")
             boolean_state_names.append("will_be_tested_new")
             boolean_state_names.append("is_tested")
+            boolean_state_names.append("is_tested_positive")
             boolean_state_names.append("is_new_tested")
             boolean_state_names.append("will_test_negative")
-            boolean_state_names.append("will_test_negative_new")
 
         tracked_boolean_state_names = [
             "is_infected",
@@ -1053,9 +1053,10 @@ class ContagionStateMachine(StateMachine):
             # Test negative conditions
             will_test_negative_cond = Condition(self.__will_test_negative)
 
-            tested_negative_cond = Condition.from_state(
-                ~timer_states["time_until_test_result"]
-            ) & Condition.from_state(~boolean_states["will_test_negative_new"])
+            test_result_cond = (
+                Condition.from_state(~timer_states["time_until_test_result"])
+                & Condition.from_state(~boolean_states["is_new_tested"])
+            )
 
         temp_states = [
             "is_new_latent",
@@ -1074,7 +1075,6 @@ class ContagionStateMachine(StateMachine):
         if self._measures.testing:
             temp_states.append("will_be_tested_new")
             temp_states.append("is_new_tested")
-            temp_states.append("will_test_negative_new")
 
         # Timer name, tick when not in this state
         # state will be inverted
@@ -1136,7 +1136,7 @@ class ContagionStateMachine(StateMachine):
             timer_ticks.append(
                 (
                     "time_until_test_result",
-                    "will_test_negative_new",
+                    "is_new_tested",
                     self._measures.time_until_test_result,
                 )
             )
@@ -1346,7 +1346,6 @@ class ContagionStateMachine(StateMachine):
                     "will_test_negative",
                     [
                         ~boolean_states["will_test_negative"],
-                        ~boolean_states["will_test_negative_new"],
                     ],
                     will_test_negative_cond,
                 )
@@ -1360,7 +1359,18 @@ class ContagionStateMachine(StateMachine):
                         (~boolean_states["is_quarantined"], False),
                         (~counter_states["time_since_quarantine"], -np.inf),
                     ],
-                    tested_negative_cond,
+                    test_result_cond,
+                )
+            )
+
+            self._transitions.append(
+                MultiStateConditionalTransition(
+                    "tested_positive",
+                    boolean_states["is_tested"],
+                    [
+                        boolean_states["is_tested_positive"]
+                    ],
+                    test_result_cond,
                 )
             )
 
@@ -1735,7 +1745,7 @@ class ContagionStateMachine(StateMachine):
 
                     if len(successful_contacts_indices) > 0:
                         SOT_contacts_mask[successful_contacts_indices] = True
-                        if not self._measures.track_uninfected False:
+                        if not self._measures.track_uninfected:
                             SOT_contacts_mask[~infected_mask] = False
 
             contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
