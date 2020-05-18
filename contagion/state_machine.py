@@ -1396,11 +1396,11 @@ class ContagionStateMachine(StateMachine):
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
-        removed_mask = self.states["is_removed"](data) 
+        removed_mask = self.states["is_removed"](data)
         quarantined_mask = self.states["is_quarantined"](data)
         hospitalized_mask = self.states["is_hospitalized"](data)
         infectious_mask = (
-            infectious_mask & (~removed_mask) & (~quarantined_mask) 
+            infectious_mask & (~removed_mask) & (~quarantined_mask)
             & (~hospitalized_mask)
             )
         infectious_indices = np.nonzero(infectious_mask)[0]

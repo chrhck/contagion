@@ -77,8 +77,6 @@ class PopulationWithSocialCircles(Population):
     def social_circles(self):
         return self._social_circles
 
-  
-
 
 class HomogeneousPopulation(PopulationWithSocialCircles):
 
@@ -101,7 +99,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_indices: np.ndarray
             contact_strengths: np.ndarray
         """
-
 
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
         with np.errstate(all="ignore"):
@@ -1037,7 +1034,7 @@ class NetworkXPopulation(Population):
         col_set = set(cols)
         for row, n_rnd_contact, rnd_indices, rnd_ctc_intens in zip(
                 rows, n_rnd_contacts, rnd_indices_all, rnd_ctc_intens_all):
-            node = self._graph.nodes[row]
+
             sel_cols = []
             strs = []
             sel_rows = []
@@ -1050,7 +1047,7 @@ class NetworkXPopulation(Population):
                 sel_cols.append(ctc_ind)
                 rate = node_attrs["weight"]
 
-                #if ctc_ind in node["community"]:
+                # if ctc_ind in node["community"]:
                 rate *= self.interaction_rate_scaling
 
                 strs.append(rate)

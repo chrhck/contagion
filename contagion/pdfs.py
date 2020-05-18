@@ -4,12 +4,10 @@ This module provided interfaces to PDFs and RNG
 import abc
 import logging
 from typing import Optional, Union, Dict, Any
-from scipy.optimize import minimize_scalar
 import scipy.stats  # type: ignore
 import numpy as np  # type: ignore
 
 from .config import config
-from .functions import GammaMaxVal
 
 _log = logging.getLogger(__name__)
 
