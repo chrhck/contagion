@@ -2,7 +2,7 @@ general:
   config location: ../run/config.txt
   debug level: 50
   log file handler: ../run/contagion.log
-  random state seed: 1
+  random state seed: 3
   trace spread: true
   track graph history: false
 infection:
@@ -16,21 +16,21 @@ infection:
     sd: 1.0e-05
   incubation duration pdf:
     class: Gamma
-    mean: 5.254683398832261
-    sd: 13.905504177942786
-  infected: 10
+    mean: 6.831703615810074
+    sd: 6.470971687213531
+  infected: 1
   infection probability pdf:
     class: Gamma
-    max_val: 0.2852105160647728
+    max_val: 0.21226105734132317
     mean: 3.42
     sd: 2.38
   infectious duration pdf:
     class: Gamma
-    mean: 8.569207570576166
+    mean: 8.205180029252979
     sd: 0.1
   latency duration pdf:
     class: Gamma
-    mean: 4.0735490022379315
+    mean: 4.629519138580446
     sd: 0.1
   mortality prob pdf:
     class: Beta
@@ -38,7 +38,7 @@ infection:
     sd: 0.01
   recovery time pdf:
     class: Gamma
-    mean: 0.15866543305799297
+    mean: 9.701434516496493
     sd: 0.1
   time incubation death pdf:
     class: Gamma
@@ -59,47 +59,27 @@ measures:
   tracked fraction: 1.0
   type: contact_tracing
 population:
-  nx:
-    func: lfr_ba
-    inter freq pdf:
-      class: Gamma
-      mean: 7.8
-      sd: 3
-    intra freq pdf:
-      class: Gamma
-      mean: 7.8
-      sd: 3
-    kwargs:
-      m: 4
-      max_community: 500
-      max_iters: 2000
-      min_community: 10
-      mu: 0.1
-      pref_attach: true
-      tau: 1.2
-      tolerance: 0.1
   population class: HomogeneousPopulation
-  population size: 100000
-  population storage: scenarios_graph.pickle
+  population size: 10000
+  population storage: ../populations/generic.pkl
   random interactions intensity pdf:
     class: Gamma
-    mean: 0.01
-    sd: 0.001
+    mean: 0.0001
+    sd: 0.0001
   random interactions pdf:
     class: Gamma
-    mean: 0.01
-    sd: 0.01
+    mean: 0.001
+    sd: 0.001
   re-use population: false
   social circle interactions pdf:
     class: Gamma
-    mean: 7.8
+    mean: 8.223254708080832
     sd: 0.1
   social circle pdf:
     class: Gamma
-    mean: 7.8
+    mean: 8.223254708080832
     sd: 0.1
   store population: true
-  store_population: true
 scenario:
   class: StandardScenario
-  sim_length: 720
+  sim_length: 150

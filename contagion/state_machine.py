@@ -268,9 +268,8 @@ class BooleanState(_State):
 
     @classmethod
     def from_boolean(
-            cls,
-            name: str,
-            graph: Optional[nx.Graph] = None) -> BooleanState:
+        cls, name: str, graph: Optional[nx.Graph] = None
+    ) -> BooleanState:
         """
         Factory method for creating a state from a boolean field
         in a DataDict. The name of the state corresponds to the data field name
@@ -286,9 +285,7 @@ class BooleanState(_State):
             return arr
 
         def state_change(
-            data: DataDict,
-            state: np.ndarray,
-            condition: np.ndarray,
+            data: DataDict, state: np.ndarray, condition: np.ndarray,
         ):
 
             # TODO: maybe offload application of condition to state here?
@@ -306,7 +303,8 @@ class BooleanState(_State):
                         graph.nodes[node]["history"][name] = []
 
                     graph.nodes[node]["history"][name].append(
-                        (graph.graph["cur_tick"], this_state))
+                        (graph.graph["cur_tick"], this_state)
+                    )
 
         return cls(get_state, get_state, name, name, state_change)
 
@@ -892,56 +890,54 @@ class ContagionStateMachine(StateMachine):
         # Boolean states
         boolean_state_names = [
             "is_new_infected",
-
             "is_latent",
             "is_new_latent",
-
             "will_have_symptoms",
             "will_have_symptoms_new",
             "is_symptomatic",
             "is_symptomatic_new",
-
             "is_infectious",
             "is_new_infectious",
-
             "is_hospitalized",
             "is_new_hospitalized",
-
             "will_be_hospitalized",
             "will_be_hospitalized_new",
-
             "is_dead",
             "is_removed",
-
-            "is_quarantined",
-            "is_new_quarantined",
-            "is_tracked",
-
             "is_recovering",
             "is_new_recovering",
-
             "is_recovered",
-
             "will_die",
             "will_die_new",
-
         ]
+
+        if self._measures.contact_tracing:
+            boolean_state_names.append("is_tracked")
+        if self._measures.quarantine:
+            boolean_state_names.append("is_quarantined")
+            boolean_state_names.append("is_new_quarantined")
+        if self._measures.testing:
+            boolean_state_names.append("will_be_tested")
+            boolean_state_names.append("will_be_tested_new")
+            boolean_state_names.append("is_tested")
+            boolean_state_names.append("is_tested_positive")
+            boolean_state_names.append("is_new_tested")
+            boolean_state_names.append("will_test_negative")
 
         tracked_boolean_state_names = [
             "is_infected",
         ]
 
         boolean_states = {
-            name: BooleanState.from_boolean(
-                name,
-                None)
+            name: BooleanState.from_boolean(name, None)
             for name in boolean_state_names
         }
 
         for name in tracked_boolean_state_names:
             boolean_states[name] = BooleanState.from_boolean(
                 name,
-                graph if config["general"]["track graph history"] else None)
+                graph if config["general"]["track graph history"] else None,
+            )
 
         # Timer states
         timer_state_names = [
@@ -952,8 +948,13 @@ class ContagionStateMachine(StateMachine):
             "recovery_time",
             "time_until_hospitalization",
             "time_until_death",
-            "quarantine_duration",
         ]
+
+        if self._measures.quarantine:
+            timer_state_names.append("quarantine_duration")
+        if self._measures.testing:
+            timer_state_names.append("time_until_test")
+            timer_state_names.append("time_until_test_result")
 
         timer_states = {
             name: FloatState.from_timer(name) for name in timer_state_names
@@ -963,6 +964,9 @@ class ContagionStateMachine(StateMachine):
         counter_state_names = [
             "time_since_infectious",
         ]
+
+        if self._measures.quarantine:
+            counter_state_names.append("time_since_quarantine",)
 
         counter_states = {
             name: FloatState.from_counter(name) for name in counter_state_names
@@ -974,13 +978,16 @@ class ContagionStateMachine(StateMachine):
         self._states.update(counter_states)
 
         # Condition that stores the new infections from this tick
-        infected_condition = (
-                Condition(self.__get_new_infections) &
-                Condition.from_state(
-                    ~boolean_states["is_removed"]) &
-                Condition.from_state(
-                    ~boolean_states["is_quarantined"])
-                )
+        if self._measures.quarantine:
+            infected_condition = (
+                Condition(self.__get_new_infections)
+                & Condition.from_state(~boolean_states["is_removed"])
+                & Condition.from_state(~boolean_states["is_quarantined"])
+            )
+        else:
+            infected_condition = Condition(
+                self.__get_new_infections
+            ) & Condition.from_state(~boolean_states["is_removed"])
 
         # Symptomatic
         will_have_symptoms_cond = Condition(self.__will_have_symptoms)
@@ -991,70 +998,64 @@ class ContagionStateMachine(StateMachine):
         # Condition that stores people who will die
         will_die_cond = Condition(self.__will_die)
 
-        hospit_cond = (
-            Condition.from_state(
-                ~timer_states["time_until_hospitalization"]) &
-            Condition.from_state(
-                ~boolean_states["will_be_hospitalized_new"])
-        )
+        hospit_cond = Condition.from_state(
+            ~timer_states["time_until_hospitalization"]
+        ) & Condition.from_state(~boolean_states["will_be_hospitalized_new"])
 
-        infectious_cond = (
-            Condition.from_state(
-                ~timer_states["latent_duration"]) &
-            Condition.from_state(
-                ~boolean_states["is_new_latent"])
-        )
+        infectious_cond = Condition.from_state(
+            ~timer_states["latent_duration"]
+        ) & Condition.from_state(~boolean_states["is_new_latent"])
 
-        symptomatic_cond = (
-            Condition.from_state(
-                ~timer_states["time_until_symptoms"]) &
-            Condition.from_state(
-                ~boolean_states["will_have_symptoms_new"])
-        )
+        symptomatic_cond = Condition.from_state(
+            ~timer_states["time_until_symptoms"]
+        ) & Condition.from_state(~boolean_states["will_have_symptoms_new"])
 
-        recovery_cond = (
-            Condition.from_state(
-                ~timer_states["recovery_time"]) &
-            Condition.from_state(
-                ~boolean_states["is_new_recovering"])
-        )
+        recovery_cond = Condition.from_state(
+            ~timer_states["recovery_time"]
+        ) & Condition.from_state(~boolean_states["is_new_recovering"])
 
-        is_dead_cond = (
-            Condition.from_state(
-                ~timer_states["time_until_death"]) &
-            Condition.from_state(
-                ~boolean_states["will_die_new"])
-        )
+        is_dead_cond = Condition.from_state(
+            ~timer_states["time_until_death"]
+        ) & Condition.from_state(~boolean_states["will_die_new"])
 
-        free_condition = (
-            Condition.from_state(
-                ~timer_states["quarantine_duration"]) &
-            Condition.from_state(
-                ~boolean_states["is_new_quarantined"])
-        )
+        if self._measures.quarantine:
+            free_condition = Condition.from_state(
+                ~timer_states["quarantine_duration"]
+            ) & Condition.from_state(~boolean_states["is_new_quarantined"])
 
         # Only people who are not hospitalized undergo normal recovery
 
         normal_recovery_condition = (
-                Condition.from_state(
-                    ~(boolean_states["is_hospitalized"])) &
-                Condition.from_state(~timer_states["infectious_duration"]) &
-                Condition.from_state(~boolean_states["is_new_infectious"])
-                )
+            Condition.from_state(~(boolean_states["is_hospitalized"]))
+            & Condition.from_state(~timer_states["infectious_duration"])
+            & Condition.from_state(~boolean_states["is_new_infectious"])
+        )
 
         hospit_recovery_condition = (
-                Condition.from_state(
-                    ~timer_states["hospitalization_duration"]) &
-                Condition.from_state(
-                    ~boolean_states["is_new_hospitalized"]) &
-                Condition.from_state(
-                    ~boolean_states["will_die"])
-                )
+            Condition.from_state(~timer_states["hospitalization_duration"])
+            & Condition.from_state(~boolean_states["is_new_hospitalized"])
+            & Condition.from_state(~boolean_states["will_die"])
+        )
 
         # Quarantine condition
-        quarantine_condition = (
-            Condition(self.__will_be_quarantined) &
-            Condition.from_state(~(boolean_states["is_removed"]))
+        if self._measures.quarantine:
+            quarantine_condition = Condition(
+                self.__will_be_quarantined
+            ) & Condition.from_state(~(boolean_states["is_removed"]))
+
+        if self._measures.testing:
+            will_be_tested_cond = Condition(self.__will_be_tested)
+
+            is_tested_cond = Condition.from_state(
+                ~timer_states["time_until_test"]
+            ) & Condition.from_state(~boolean_states["will_be_tested_new"])
+
+            # Test negative conditions
+            will_test_negative_cond = Condition(self.__will_test_negative)
+
+            test_result_cond = (
+                Condition.from_state(~timer_states["time_until_test_result"])
+                & Condition.from_state(~boolean_states["is_new_tested"])
             )
 
         temp_states = [
@@ -1065,10 +1066,15 @@ class ContagionStateMachine(StateMachine):
             "will_be_hospitalized_new",
             "is_new_hospitalized",
             "will_die_new",
-            "is_new_quarantined",
-            "is_symptomatic_new"
-
+            "is_symptomatic_new",
         ]
+
+        if self._measures.quarantine:
+            temp_states.append("is_new_quarantined")
+
+        if self._measures.testing:
+            temp_states.append("will_be_tested_new")
+            temp_states.append("is_new_tested")
 
         # Timer name, tick when not in this state
         # state will be inverted
@@ -1076,52 +1082,74 @@ class ContagionStateMachine(StateMachine):
             (
                 "latent_duration",
                 "is_new_latent",
-                self._infection.latent_duration
+                self._infection.latent_duration,
             ),
             (
                 "infectious_duration",
                 "is_new_infectious",
-                self._infection.infectious_duration
+                self._infection.infectious_duration,
             ),
             (
                 "time_until_symptoms",
                 "will_have_symptoms_new",
-                self._infection.incubation_duration
+                self._infection.incubation_duration,
             ),
             (
                 "recovery_time",
                 "is_new_recovering",
-                self._infection.recovery_time
+                self._infection.recovery_time,
             ),
             (
                 "time_until_hospitalization",
                 "will_be_hospitalized_new",
-                self._infection.time_until_hospitalization
+                self._infection.time_until_hospitalization,
             ),
             (
                 "hospitalization_duration",
                 "is_new_hospitalized",
-                self._infection.hospitalization_duration
+                self._infection.hospitalization_duration,
             ),
             (
                 "time_until_death",
                 "will_die_new",
-                self._infection.time_incubation_death
+                self._infection.time_incubation_death,
             ),
-            (
-                "quarantine_duration",
-                "is_new_quarantined",
-                self._measures.quarantine_duration
-            ),
-
         ]
+
+        if self._measures.quarantine:
+            timer_ticks.append(
+                (
+                    "quarantine_duration",
+                    "is_new_quarantined",
+                    self._measures.quarantine_duration,
+                )
+            )
+
+        if self._measures.testing:
+            timer_ticks.append(
+                (
+                    "time_until_test",
+                    "will_be_tested_new",
+                    self._measures.time_until_test,
+                )
+            )
+            timer_ticks.append(
+                (
+                    "time_until_test_result",
+                    "is_new_tested",
+                    self._measures.time_until_test_result,
+                )
+            )
 
         # Counter name, tick when not in this state
         counter_ticks = [
-            (
-                "time_since_infectious",
-                "is_new_infectious"
-               )]
+            ("time_since_infectious", "is_new_infectious"),
+        ]
+
+        if self._measures.quarantine:
+            counter_ticks.append(
+                ("time_since_quarantine", "is_new_quarantined")
+            )
 
         # Transitions
         self._transitions = [
@@ -1141,7 +1169,6 @@ class ContagionStateMachine(StateMachine):
                 ],
                 infected_condition,
             ),
-
             # When latent time is over, people become infectious
             MultiStateConditionalTransition(
                 "latent_infectious",
@@ -1152,17 +1179,15 @@ class ContagionStateMachine(StateMachine):
                 ],
                 infectious_cond,
             ),
-
             # Determine if ppl will develop symptoms
             ChangeStatesConditionalTransition(
                 "will_have_symptoms",
                 [
                     (~boolean_states["will_have_symptoms"], True),
-                    (~boolean_states["will_have_symptoms_new"], True)
+                    (~boolean_states["will_have_symptoms_new"], True),
                 ],
                 will_have_symptoms_cond,
             ),
-
             # No symptoms - symptomatic
             MultiStateConditionalTransition(
                 "no_symptoms_symptomatic",
@@ -1171,9 +1196,8 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_symptomatic"],
                     boolean_states["is_symptomatic_new"],
                 ],
-                symptomatic_cond
+                symptomatic_cond,
             ),
-
             # infectious - recovering
             # Transition from is_infectious to:
             #   -is_recovering
@@ -1193,7 +1217,6 @@ class ContagionStateMachine(StateMachine):
                 ],
                 normal_recovery_condition,
             ),
-
             # recovering - recovered
             # Transition from is_recovering to:
             #   -is_recovered
@@ -1208,7 +1231,6 @@ class ContagionStateMachine(StateMachine):
                 ],
                 recovery_cond,
             ),
-
             # Activate will_be_hospitalized and will_be_hospitalized_new if the
             # will_be_hospitalized_cond condition is true.
             ChangeStatesConditionalTransition(
@@ -1219,7 +1241,6 @@ class ContagionStateMachine(StateMachine):
                 ],
                 will_be_hospitalized_cond,
             ),
-
             # will_be_hospitalized - hospitalized
             # Transition from will_be_hospitalized to:
             #   -is_hospitalized
@@ -1234,11 +1255,10 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_hospitalized"],
                     boolean_states["is_new_hospitalized"],
                     boolean_states["is_removed"],
-                    (~boolean_states["is_quarantined"], False),
+                    # (~boolean_states["is_quarantined"], False),
                 ],
                 hospit_cond,
             ),
-
             MultiStateConditionalTransition(
                 "hospitalized_recovered",
                 boolean_states["is_hospitalized"],
@@ -1249,17 +1269,13 @@ class ContagionStateMachine(StateMachine):
                 ],
                 hospit_recovery_condition,
             ),
-
-
             # Activate will_die and will_die_new if the
             # will_die_cond condition is true.
             ChangeStatesConditionalTransition(
                 "will_die",
-                [~boolean_states["will_die"],
-                 ~boolean_states["will_die_new"]],
+                [~boolean_states["will_die"], ~boolean_states["will_die_new"]],
                 will_die_cond,
             ),
-
             # will_die - is_dead
             # Transition from will_die to:
             #   -is_dead
@@ -1283,29 +1299,91 @@ class ContagionStateMachine(StateMachine):
                 ],
                 is_dead_cond,
             ),
-
-            # Susceptible - Quarantine
-            # transition if:
-            #  - is_infected
-            #  - is_tracked
-            MultiStateConditionalTransition(
-                "is_quarantined",
-                ~boolean_states["is_quarantined"],
-                [
-                    boolean_states["is_quarantined"],
-                    boolean_states["is_new_quarantined"],
-                ],
-                quarantine_condition,
-            ),
-
-            # TODO: Does coming out of qurantine mean that you are healed?
-            # Go out of quarantine
-            ChangeStatesConditionalTransition(
-                "quarantined_free",
-                (boolean_states["is_quarantined"], False),
-                free_condition,
-            ),
         ]
+
+        if self._measures.quarantine:
+            self._transitions.append(
+                # Susceptible - Quarantine
+                # transition if:
+                #  - is_infected
+                #  - is_tracked
+                MultiStateConditionalTransition(
+                    "is_quarantined",
+                    ~boolean_states["is_quarantined"],
+                    [
+                        boolean_states["is_quarantined"],
+                        boolean_states["is_new_quarantined"],
+                    ],
+                    quarantine_condition,
+                )
+            )
+
+        if self._measures.testing:
+            self._transitions.append(
+                ChangeStatesConditionalTransition(
+                    "will_be_tested",
+                    [
+                        ~boolean_states["will_be_tested"],
+                        ~boolean_states["will_be_tested_new"],
+                    ],
+                    will_be_tested_cond,
+                )
+            )
+            self._transitions.append(
+                # will_be_tested -> tested
+                MultiStateConditionalTransition(
+                    "will_be_tested_tested",
+                    boolean_states["will_be_tested"],
+                    [
+                        boolean_states["is_tested"],
+                        boolean_states["is_new_tested"],
+                    ],
+                    is_tested_cond,
+                )
+            )
+            self._transitions.append(
+                ChangeStatesConditionalTransition(
+                    "will_test_negative",
+                    [
+                        ~boolean_states["will_test_negative"],
+                    ],
+                    will_test_negative_cond,
+                )
+            )
+            self._transitions.append(
+                MultiStateConditionalTransition(
+                    "tested_negative",
+                    boolean_states["will_test_negative"],
+                    [
+                        (~boolean_states["is_tested"], False),
+                        (~boolean_states["is_quarantined"], False),
+                        (~counter_states["time_since_quarantine"], -np.inf),
+                    ],
+                    test_result_cond,
+                )
+            )
+
+            self._transitions.append(
+                MultiStateConditionalTransition(
+                    "tested_positive",
+                    boolean_states["is_tested"],
+                    [
+                        boolean_states["is_tested_positive"]
+                    ],
+                    test_result_cond,
+                )
+            )
+
+        if self._measures.quarantine:
+            self._transitions.append(
+                # TODO: Does coming out of qurantine mean that you are healed?
+                # Go out of quarantine
+                ChangeStatesConditionalTransition(
+                    "quarantined_free",
+                    (boolean_states["is_quarantined"], False),
+                    free_condition,
+                ),
+            )
 
         for (state, dont_tick_when, init_func) in timer_ticks:
             self._transitions.append(
@@ -1384,9 +1462,7 @@ class ContagionStateMachine(StateMachine):
 
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
 
-        infectious_mask = (
-            self.states["is_infectious"](data)
-            )
+        infectious_mask = self.states["is_infectious"](data)
 
         if infectious_mask.sum() == 0:
             self._stat_collector["contacts"].append(0)
@@ -1396,20 +1472,23 @@ class ContagionStateMachine(StateMachine):
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
-        removed_mask = self.states["is_removed"](data) 
-        quarantined_mask = self.states["is_quarantined"](data)
+        removed_mask = self.states["is_removed"](data)
         hospitalized_mask = self.states["is_hospitalized"](data)
         infectious_mask = (
-            infectious_mask & (~removed_mask) & (~quarantined_mask) 
+            infectious_mask & (~removed_mask)
             & (~hospitalized_mask)
-            )
+        )
+
+        if self._measures.quarantine:
+            quarantined_mask = self.states["is_quarantined"](data)
+            infectious_mask = infectious_mask & (~quarantined_mask)
+
         infectious_indices = np.nonzero(infectious_mask)[0]
 
         healthy_mask = ~self.states["is_infected"](data)
-        is_infectable = (
-            healthy_mask & (~removed_mask) & (~quarantined_mask)
-            & (~hospitalized_mask)
-            )
+        is_infectable = healthy_mask & (~removed_mask)
+        if self._measures.quarantine:
+            is_infectable = is_infectable & (~quarantined_mask)
         is_infectable_indices = np.nonzero(is_infectable)[0]
 
         if len(is_infectable_indices) == 0:
@@ -1420,14 +1499,13 @@ class ContagionStateMachine(StateMachine):
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # NOTE: This is ~2times slower
-        (contact_cols,
-         contact_strengths,
-         contact_rows,
-         ) = self._population.get_contacts(
-                infectious_indices,
-                is_infectable_indices,
-                return_rows=True
-                )
+        (
+            contact_cols,
+            contact_strengths,
+            contact_rows,
+        ) = self._population.get_contacts(
+            infectious_indices, is_infectable_indices, return_rows=True
+        )
         # contacted_mask = np.zeros_like(infectious_mask)
         # contacted_mask[contact_cols] = True
 
@@ -1450,11 +1528,9 @@ class ContagionStateMachine(StateMachine):
         # The duration of each infection
         infectious_dur = data["time_since_infectious"][
             successful_contactee_indices
-            ]
+        ]
 
-        infection_prob = self._infection.pdf_infection_prob.pdf(
-            infectious_dur
-        )
+        infection_prob = self._infection.pdf_infection_prob.pdf(infectious_dur)
 
         # An infection is successful if the bernoulli outcome
         # based on the infection probability is 1
@@ -1479,25 +1555,20 @@ class ContagionStateMachine(StateMachine):
         num_succesful_contacts = len(successful_contacts_indices)
         self._stat_collector["contacts"].append(num_succesful_contacts)
         newly_infectee_indices = successful_contactee_indices[
-                newly_infected_mask
-                ]
+            newly_infected_mask
+        ]
 
         if config["general"]["trace spread"]:
 
             self._trace_infection.append(
-                np.dstack(
-                    (
-                        newly_infectee_indices,
-                        newly_infected_indices
-                    )
-                )
+                np.dstack((newly_infectee_indices, newly_infected_indices))
             )
 
         # There might be multiple successfull infections per person
         # from different infected people
         newly_infected_indices, uq_ind = np.unique(
-            newly_infected_indices,
-            return_index=True)
+            newly_infected_indices, return_index=True
+        )
         # If multiple sucessful interacions pick the first
         newly_infectee_indices = newly_infectee_indices[uq_ind]
 
@@ -1505,8 +1576,8 @@ class ContagionStateMachine(StateMachine):
             # update graph history
             g = self._population._graph
             for ni, ni_by in zip(
-                    newly_infected_indices,
-                    newly_infectee_indices):
+                newly_infected_indices, newly_infectee_indices
+            ):
                 g.nodes[ni]["history"]["infected_at"] = self._cur_tick
                 g.nodes[ni]["history"]["infected_by"] = ni_by
 
@@ -1516,8 +1587,7 @@ class ContagionStateMachine(StateMachine):
         return cond
 
     def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
-        new_indices = np.nonzero(
-            self.states["is_symptomatic_new"](data))[0]
+        new_indices = np.nonzero(self.states["is_symptomatic_new"](data))[0]
         if len(new_indices) == 0:
             return np.zeros(data.field_len, dtype=np.bool)
 
@@ -1528,9 +1598,7 @@ class ContagionStateMachine(StateMachine):
 
         # roll the dice
         will_be_hospitalized = (
-            self._rstate.binomial(
-                1, will_be_hospitalized_prob, size=num_new
-            )
+            self._rstate.binomial(1, will_be_hospitalized_prob, size=num_new)
             == 1
         )
 
@@ -1568,12 +1636,11 @@ class ContagionStateMachine(StateMachine):
         new_infec = data["is_new_latent"]
         num_new_infec = new_infec.sum()
         new_infec_indices = new_infec.nonzero()[0]
-        symp_prob = self._infection.will_have_symptoms_prob.rvs(
-            num_new_infec)
+        symp_prob = self._infection.will_have_symptoms_prob.rvs(num_new_infec)
 
         will_have_symp = (
             self._rstate.binomial(1, symp_prob, size=num_new_infec) == 1
-            )
+        )
 
         will_have_symp_indices = new_infec_indices[will_have_symp]
         cond = np.zeros(data.field_len, dtype=np.bool)
@@ -1583,22 +1650,36 @@ class ContagionStateMachine(StateMachine):
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
-        infected_mask = self.states["is_symptomatic"](data)
+        infected_mask = self.states["is_infected"](data)
 
-        if self._measures.tracked is not None:
+        if self._measures.contact_tracing:
             tracked_mask = self.states["is_tracked"](data)
         else:
             tracked_mask = np.zeros_like(infected_mask, dtype=np.bool)
 
-        cond = infected_mask & tracked_mask
-        if not np.any(cond):
-            return cond
+        if self._measures.report_symptomatic:
+            reported_mask = self.states["is_symptomatic"](data)
 
-        tracked_infected_indices = np.nonzero(cond)[0]
+            unreported_tracked_mask = (
+                infected_mask & ~reported_mask & tracked_mask
+            )
+
+            tracked_infected_mask = np.logical_or(
+                unreported_tracked_mask, reported_mask
+            )
+        else:
+            infected_mask = self.states["is_symptomatic"](data)
+            tracked_infected_mask = infected_mask & tracked_mask
+
+        if (not np.any(tracked_infected_mask) or
+                not self._measures.contact_tracing):
+            return tracked_infected_mask
+
+        tracked_infected_indices = np.nonzero(tracked_infected_mask)[0]
 
         backtrack_length = self._measures.backtrack_length
         if backtrack_length == 0:
-            return cond
+            return tracked_infected_mask
 
         # Get contact history
         con_history = self.trace_contacts
@@ -1608,14 +1689,12 @@ class ContagionStateMachine(StateMachine):
             backtrack_length = len_history
 
         if backtrack_length == 0:
-            return cond
+            return tracked_infected_mask
 
-        con_history = np.squeeze(
-            np.hstack(con_history[-backtrack_length:])
-        )
+        con_history = np.squeeze(np.hstack(con_history[-backtrack_length:]))
 
         if con_history.size == 0:
-            return cond
+            return tracked_infected_mask
 
         # Only check contacts of tracked infected people
         if len(con_history) > 2:
@@ -1630,14 +1709,98 @@ class ContagionStateMachine(StateMachine):
             contacted_indices = np.unique(con_history)
 
         if contacted_indices.size == 0:
-            return cond
+            return tracked_infected_mask
 
-        contacted_mask = np.zeros_like(
-            infected_mask, dtype=np.bool
-        )
+        contacted_mask = np.zeros_like(infected_mask, dtype=np.bool)
+        contacted_indices = np.asarray(contacted_indices, dtype=np.int)
         contacted_mask[contacted_indices] = True
         contacted_mask[~tracked_mask] = False
+        if not self._measures.track_uninfected:
+            contacted_mask[~infected_mask] = False
 
-        cond = np.logical_or(cond, contacted_mask)
+        if self._measures.is_SOT_active:
 
-        return contacted_mask
+            is_contactable = tracked_mask
+            is_contactable_indices = np.nonzero(is_contactable)[0]
+
+            SOT_contacts_mask = np.zeros_like(infected_mask, dtype=np.bool)
+            if len(is_contactable_indices) > 0:
+                for i in range(backtrack_length):
+
+                    (
+                        contact_cols,
+                        contact_strengths,
+                    ) = self._population.get_contacts(
+                        contacted_indices,
+                        is_contactable_indices,
+                        return_rows=False,
+                    )
+
+                    successful_contacts_mask = (
+                        self._rstate.poisson(contact_strengths) >= 1
+                    )
+
+                    successful_contacts_indices = contact_cols[
+                        successful_contacts_mask
+                    ]
+
+                    if len(successful_contacts_indices) > 0:
+                        SOT_contacts_mask[successful_contacts_indices] = True
+                        if not self._measures.track_uninfected:
+                            SOT_contacts_mask[~infected_mask] = False
+
+            contacted_mask = np.logical_or(contacted_mask, SOT_contacts_mask)
+
+        cond = np.logical_or(tracked_infected_mask, contacted_mask)
+
+        return cond
+
+    def __will_be_tested(self, data: DataDict) -> np.ndarray:
+
+        if not self._measures.testing:
+            return np.zeros(data.field_len, dtype=np.bool)
+
+        new_quarantined = data["is_new_quarantined"]
+        num_new_quarantined = new_quarantined.sum()
+        new_quarantined_indices = new_quarantined.nonzero()[0]
+
+        will_be_tested = np.ones(num_new_quarantined, dtype=np.bool)
+
+        will_be_tested_indices = new_quarantined_indices[will_be_tested]
+        cond = np.zeros(data.field_len, dtype=np.bool)
+        cond[will_be_tested_indices] = True
+
+        return cond
+
+    def __will_test_negative(self, data: DataDict) -> np.ndarray:
+
+        new_test_mask = self.states["is_new_tested"](data)
+
+        infectious_mask = self.states["is_infectious"](data) & ~self.states[
+            "is_new_infectious"
+        ](data)
+
+        non_testable_mask = ~self.states["is_infectious"](data)
+        always_negative_mask = new_test_mask & non_testable_mask
+        always_negative_indices = np.nonzero(always_negative_mask)[0]
+
+        cond = np.zeros(data.field_len, dtype=np.bool)
+        cond[always_negative_indices] = True
+
+        infectious_to_test_mask = new_test_mask & infectious_mask
+        if not np.any(infectious_to_test_mask):
+            return cond
+
+        infectious_to_test_indices = np.nonzero(infectious_to_test_mask)[0]
+        infectious_dur = data["time_since_infectious"][
+            infectious_to_test_indices
+        ]
+        correct_test_prob = self._measures.test_efficiency(infectious_dur)
+        positive_test_mask = self._rstate.binomial(1, correct_test_prob)
+        positive_test_mask = np.asarray(positive_test_mask, np.bool)
+        false_negative_indices = infectious_to_test_indices[
+            ~positive_test_mask
+        ]
+        cond[false_negative_indices] = True
+
+        return cond

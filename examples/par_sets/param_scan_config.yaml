@@ -8,17 +8,17 @@ general:
 infection:
   hospitalization duration pdf:
     class: Gamma
-    mean: 14.0
-    sd: 0.01
+    mean: 12.0
+    sd: 3
   hospitalization probability pdf:
     class: Beta
-    mean: 0.0001
-    sd: 1.0e-05
+    mean: 0.2
+    sd: 0.01
   incubation duration pdf:
     class: Gamma
     mean: 5.254683398832261
     sd: 13.905504177942786
-  infected: 10
+  infected: 1
   infection probability pdf:
     class: Gamma
     max_val: 0.2852105160647728
@@ -34,7 +34,7 @@ infection:
     sd: 0.1
   mortality prob pdf:
     class: Beta
-    mean: 0.01
+    mean: 0.15
     sd: 0.01
   recovery time pdf:
     class: Gamma
@@ -42,12 +42,12 @@ infection:
     sd: 0.1
   time incubation death pdf:
     class: Gamma
-    mean: 32.0
-    sd: 5.0
+    mean: 20
+    sd: 10.0
   time until hospitalization pdf:
     class: Gamma
-    mean: 2.52
-    sd: 1.0
+    mean: 7
+    sd: 2.0
   will have symptoms prob pdf:
     class: Beta
     mean: 0.5
@@ -78,7 +78,7 @@ population:
       pref_attach: true
       tau: 1.2
       tolerance: 0.1
-  population class: HomogeneousPopulation
+  population class: NetworkXPopulation
   population size: 100000
   population storage: scenarios_graph.pickle
   random interactions intensity pdf:

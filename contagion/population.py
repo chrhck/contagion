@@ -2,7 +2,7 @@
 
 """
 Name: population.py
-Authors: Christian Haack, Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger, Andrea Turcati
 Constructs the population.
 """
 import abc
@@ -36,12 +36,11 @@ class Population(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_contacts(
-            self,
-            rows: np.ndarray,
-            cols: np.ndarray,
-            return_rows=False)\
-            -> Union[Tuple[np.ndarray, np.ndarray],
-                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        self, rows: np.ndarray, cols: np.ndarray, return_rows=False
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+    ]:
         pass
 
     @property
@@ -54,22 +53,20 @@ class Population(object, metaclass=abc.ABCMeta):
 
 
 class PopulationWithSocialCircles(Population):
-
     def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
         super().__init__(
-            interaction_rate_scaling=interaction_rate_scaling,
-            *args, **kwargs)
+            interaction_rate_scaling=interaction_rate_scaling, *args, **kwargs
+        )
 
         _log.info("Constructing social circles for the population")
 
-        soc_circ_pdf = construct_pdf(
-            config["population"]["social circle pdf"])
+        soc_circ_pdf = construct_pdf(config["population"]["social circle pdf"])
 
-        self._social_circles = soc_circ_pdf.rvs(
-            self._pop_size, dtype=np.int)
+        self._social_circles = soc_circ_pdf.rvs(self._pop_size, dtype=np.int)
 
         soc_circ_interact_pdf = construct_pdf(
-                config["population"]["social circle interactions pdf"])
+            config["population"]["social circle interactions pdf"]
+        )
 
         self._soc_circ_interact_pdf = soc_circ_interact_pdf
 
@@ -77,18 +74,14 @@ class PopulationWithSocialCircles(Population):
     def social_circles(self):
         return self._social_circles
 
-  
-
 
 class HomogeneousPopulation(PopulationWithSocialCircles):
-
     def get_contacts(
-            self,
-            rows: np.ndarray,
-            cols: np.ndarray,
-            return_rows=False)\
-            -> Union[Tuple[np.ndarray, np.ndarray],
-                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        self, rows: np.ndarray, cols: np.ndarray, return_rows=False
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """
         Get the contacts for indices in `rows`
 
@@ -101,7 +94,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_indices: np.ndarray
             contact_strengths: np.ndarray
         """
-
 
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
         with np.errstate(all="ignore"):
@@ -119,7 +111,8 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         n_candidates = self._pop_size - len(rows)
         contact_rate_others = 1 / self._pop_size * n_candidates * contact_rate
         n_contacts_others = self._rstate.poisson(
-            contact_rate_others, size=len(rows))
+            contact_rate_others, size=len(rows)
+        )
 
         sel_indices = []
         contact_rates = []
@@ -133,27 +126,36 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             np.round(
                 np.min(
                     np.vstack(
-                        [n_contacts+n_contacts_others,
-                         np.ones_like(n_contacts)*len(cols)]),
-                    axis=0)),
-            dtype=np.int)
+                        [
+                            n_contacts + n_contacts_others,
+                            np.ones_like(n_contacts) * len(cols),
+                        ]
+                    ),
+                    axis=0,
+                )
+            ),
+            dtype=np.int,
+        )
         all_sel_indices = np.split(
             self._rstate.randint(
-                0, self._pop_size, size=np.sum(n_contacts_sym), dtype=np.int),
-            np.cumsum(n_contacts_sym))[:-1]
+                0, self._pop_size, size=np.sum(n_contacts_sym), dtype=np.int
+            ),
+            np.cumsum(n_contacts_sym),
+        )[:-1]
 
         for i, (row_index, sel_indices) in enumerate(
-                zip(rows, all_sel_indices)):
+            zip(rows, all_sel_indices)
+        ):
             if len(all_sel_indices[i]) == 0:
                 continue
 
-            succesful_rows.append(np.ones(
-                    len(all_sel_indices[i]), dtype=np.int)*row_index)
+            succesful_rows.append(
+                np.ones(len(all_sel_indices[i]), dtype=np.int) * row_index
+            )
             contact_rates.append(
-                np.ones(
-                    len(all_sel_indices[i]),
-                    dtype=np.float)
-                * contact_rate[i])
+                np.ones(len(all_sel_indices[i]), dtype=np.float)
+                * contact_rate[i]
+            )
 
         if all_sel_indices:
             all_sel_indices = np.concatenate(all_sel_indices)
@@ -161,11 +163,12 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             succesful_rows = np.concatenate(succesful_rows)
 
             unique_indices, ind, counts = np.unique(
-                all_sel_indices, return_index=True,
-                return_counts=True)
+                all_sel_indices, return_index=True, return_counts=True
+            )
 
             sel_indices, pos, _ = np.intersect1d(
-                unique_indices, cols, assume_unique=True, return_indices=True)
+                unique_indices, cols, assume_unique=True, return_indices=True
+            )
 
             counts = counts[pos]
             contact_rates = contact_rates[ind][pos] * counts
@@ -251,11 +254,12 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         # Inputs
 
         super().__init__(
-            interaction_rate_scaling=interaction_rate_scaling,
-            *args, **kwargs)
+            interaction_rate_scaling=interaction_rate_scaling, *args, **kwargs
+        )
 
         self.__sc_interactions = self._soc_circ_interact_pdf.rvs(
-            self._pop_size)
+            self._pop_size
+        )
 
         self.construct_population()
 
@@ -263,8 +267,8 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         _log.debug("Constructing population")
         start = time()
         # LIL sparse matrices are efficient for row-wise construction
-        interaction_matrix = (
-            sparse.lil_matrix((self._pop_size, self._pop_size), dtype=np.bool)
+        interaction_matrix = sparse.lil_matrix(
+            (self._pop_size, self._pop_size), dtype=np.bool
         )
 
         # Here, the interaction matrix stores the connections of every
@@ -289,12 +293,14 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
 
         # Logical or for the upper triangle
         # interaction_matrix = interaction_matrix.tocsr()
-        interaction_matrix = sparse.triu(interaction_matrix, 1) +\
-            sparse.triu(interaction_matrix.transpose(), 1)
+        interaction_matrix = sparse.triu(interaction_matrix, 1) + sparse.triu(
+            interaction_matrix.transpose(), 1
+        )
 
         # Mirror the upper triangle to the lower triangle
-        interaction_matrix = interaction_matrix +\
-            interaction_matrix.transpose()
+        interaction_matrix = (
+            interaction_matrix + interaction_matrix.transpose()
+        )
 
         interaction_matrix = interaction_matrix.tolil()
         # No self-interaction
@@ -307,7 +313,7 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         interaction_matrix = interaction_matrix.asfptype()
 
         num_contacts = self.__sc_interactions
-        num_connections = (interaction_matrix.sum(axis=1)-1)
+        num_connections = interaction_matrix.sum(axis=1) - 1
         num_connections = np.asarray(num_connections).squeeze()
 
         # Context manager
@@ -317,8 +323,9 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
 
         # Set the contact rate for each connection by scaling the matrix
         # with each persons contact rate
-        d = sparse.spdiags(contact_rate, 0,
-                           self._pop_size, self._pop_size, format="csr")
+        d = sparse.spdiags(
+            contact_rate, 0, self._pop_size, self._pop_size, format="csr"
+        )
 
         interaction_matrix = interaction_matrix.tocsr()
         interaction_matrix = d * interaction_matrix
@@ -328,8 +335,7 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         # This re-symmetrizes the matrix
 
         upper_triu = sparse.triu(interaction_matrix, 1)
-        upper_triu_transp = sparse.triu(
-            interaction_matrix.transpose(), 1)
+        upper_triu_transp = sparse.triu(interaction_matrix.transpose(), 1)
 
         max_inter = upper_triu.maximum(upper_triu_transp)
 
@@ -354,12 +360,11 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
         return self._interaction_matrix
 
     def get_contacts(
-            self,
-            rows: np.ndarray,
-            cols: np.ndarray,
-            return_rows=False)\
-            -> Union[Tuple[np.ndarray, np.ndarray],
-                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        self, rows: np.ndarray, cols: np.ndarray, return_rows=False
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """
         Get the contacts for indices in `rows`
 
@@ -379,8 +384,9 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
             # here we need the rows
             # NOTE: This is ~2times slower
 
-            contact_rows, contact_cols, contact_strengths =\
-                sparse.find(infected_sub_mtx)
+            contact_rows, contact_cols, contact_strengths = sparse.find(
+                infected_sub_mtx
+            )
         else:
             contact_cols = infected_sub_mtx.indices  # nonzero column indices
             contact_strengths = infected_sub_mtx.data  # nonzero data
@@ -396,28 +402,27 @@ class PureSocialCirclePopulation(PopulationWithSocialCircles):
 
 
 class AccuratePopulation(PureSocialCirclePopulation):
-
     def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
         super().__init__(
-            interaction_rate_scaling=interaction_rate_scaling,
-            *args, **kwargs)
+            interaction_rate_scaling=interaction_rate_scaling, *args, **kwargs
+        )
 
         self._random_interact_pdf = construct_pdf(
-                config["population"]["random interactions pdf"])
+            config["population"]["random interactions pdf"]
+        )
 
         self._random_interact_intensity_pdf = construct_pdf(
-                config["population"]["random interactions intensity pdf"])
+            config["population"]["random interactions intensity pdf"]
+        )
 
     def get_contacts(
-            self,
-            rows: np.ndarray,
-            cols: np.ndarray,
-            return_rows=False)\
-            -> Union[Tuple[np.ndarray, np.ndarray],
-                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        self, rows: np.ndarray, cols: np.ndarray, return_rows=False
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+    ]:
 
-        res_soc_cir = super().get_contacts(
-            rows, cols, return_rows)
+        res_soc_cir = super().get_contacts(rows, cols, return_rows)
 
         n_rnd_contacts = self._random_interact_pdf.rvs(rows.shape[0])
         # TODO: Random contacts are not yet symmetric
@@ -432,22 +437,25 @@ class AccuratePopulation(PureSocialCirclePopulation):
             if n_contact == 0:
                 continue
             this_sel_indices = self._rstate.randint(
-                0, self._pop_size, size=n_contact, dtype=np.int)
+                0, self._pop_size, size=n_contact, dtype=np.int
+            )
 
             all_sel_indices.append(this_sel_indices)
-            succesful_rows.append(np.ones(
-                    len(this_sel_indices), dtype=np.int)*row_index)
+            succesful_rows.append(
+                np.ones(len(this_sel_indices), dtype=np.int) * row_index
+            )
 
         if all_sel_indices:
             all_sel_indices = np.concatenate(all_sel_indices)
             succesful_rows = np.concatenate(succesful_rows)
 
             unique_indices, ind, counts = np.unique(
-                all_sel_indices, return_index=True,
-                return_counts=True)
+                all_sel_indices, return_index=True, return_counts=True
+            )
 
             sel_indices, pos, _ = np.intersect1d(
-                unique_indices, cols, assume_unique=True, return_indices=True)
+                unique_indices, cols, assume_unique=True, return_indices=True
+            )
 
             counts = counts[pos]
             succesful_rows = succesful_rows[ind][pos]
@@ -457,7 +465,8 @@ class AccuratePopulation(PureSocialCirclePopulation):
             succesful_rows = np.empty(0, dtype=int)
 
         contact_rates = self._random_interact_intensity_pdf.rvs(
-            len(sel_indices))
+            len(sel_indices)
+        )
         sel_indices = np.concatenate([sel_indices, res_soc_cir[0]])
 
         # Only the social circle rates have been scaled!
@@ -486,7 +495,7 @@ class SocialCircle(object):
 
 
 def intra_com_cons(g, u):
-    c = g.nodes[u]['community']
+    c = g.nodes[u]["community"]
 
     adj_in_com = 0
     for adj in g[u]:
@@ -502,7 +511,7 @@ def suboptimal(g, u, target_intra):
 
 def supoptimal(g, u, target_intra):
     adj_in_com = intra_com_cons(g, u)
-    return (adj_in_com > target_intra)
+    return adj_in_com > target_intra
 
 
 @py_random_state(6)
@@ -583,21 +592,22 @@ def _generate_communities(degree_seq, community_sizes, mu, max_iters, seed):
             result[c].remove(rnd_node)
         if not free:
             return result
-    msg = 'Could not assign communities; try increasing min_community'
+    msg = "Could not assign communities; try increasing min_community"
     raise nx.ExceededMaxIterations(msg)
 
 
 class NetworkXWrappers(object):
-
     @staticmethod
     def add_lfr_weights(g):
         g.remove_edges_from(nx.selfloop_edges(g))
         edge_weights = {}
 
         inter_actions_rvs = construct_pdf(
-                config["population"]["nx"]["inter freq pdf"]).rvs
+            config["population"]["nx"]["inter freq pdf"]
+        ).rvs
         intra_actions_rvs = construct_pdf(
-                config["population"]["nx"]["intra freq pdf"]).rvs
+            config["population"]["nx"]["intra freq pdf"]
+        ).rvs
 
         inter_actions = inter_actions_rvs(len(g))
         intra_actions = intra_actions_rvs(len(g))
@@ -645,34 +655,42 @@ class NetworkXWrappers(object):
 
         # Validate parameters for generating the community size sequence.
         if min_community is None:
-            min_community = min(deg_seq)+1
+            min_community = min(deg_seq) + 1
         else:
-            if min_community < min(deg_seq)+1:
+            if min_community < min(deg_seq) + 1:
                 print("Min community is smaller than min(k)+1. Adjusting")
-                min_community = min(deg_seq)+1
+                min_community = min(deg_seq) + 1
         if max_community is None:
-            max_community = max(deg_seq)+1
+            max_community = max(deg_seq) + 1
         else:
-            if max_community < max(deg_seq)+1:
+            if max_community < max(deg_seq) + 1:
                 print("Max community is smaller than max(k)+1. Adjusting")
-                max_community = int(1.5*(max(deg_seq)))
+                max_community = int(1.5 * (max(deg_seq)))
 
         low, high = min_community, max_community
 
-        def condition(seq): return sum(seq) == n
+        def condition(seq):
+            return sum(seq) == n
 
-        def length(seq): return sum(seq) >= n
+        def length(seq):
+            return sum(seq) >= n
+
         comms = _powerlaw_sequence(
-            kwargs["tau"], low, high, condition,
-            length, kwargs["max_iters"], seed)
+            kwargs["tau"],
+            low,
+            high,
+            condition,
+            length,
+            kwargs["max_iters"],
+            seed,
+        )
 
-        communities = _generate_communities(
-            deg_seq, comms, mu, 50*n, seed)
+        communities = _generate_communities(deg_seq, comms, mu, 50 * n, seed)
 
         g.remove_edges_from(nx.selfloop_edges(g))
         for c in communities:
             for u in c:
-                g.nodes[u]['community'] = c
+                g.nodes[u]["community"] = c
 
         node_degrees = np.asarray(list(dict(g.degree).values()))
 
@@ -694,19 +712,24 @@ class NetworkXWrappers(object):
             """
 
             intra_cnt = np.sum(
-                [v in g.nodes[u]["community"] for u, v in g.edges])
+                [v in g.nodes[u]["community"] for u, v in g.edges]
+            )
             cur_mu = 1 - intra_cnt / g.number_of_edges()
             if (
-                    np.abs(cur_mu/mu - 1) < kwargs["tolerance"] * mu or
-                    cur_mu < mu
-               ):
+                np.abs(cur_mu / mu - 1) < kwargs["tolerance"] * mu
+                or cur_mu < mu
+            ):
                 break
 
             if cur_mu == last_mu:
                 no_change_for += 1
                 if no_change_for == 5:
-                    print("No change for five steps. Current mu: ", cur_mu,
-                          " Target: ", mu)
+                    print(
+                        "No change for five steps. Current mu: ",
+                        cur_mu,
+                        " Target: ",
+                        mu,
+                    )
                     break
 
             else:
@@ -714,8 +737,12 @@ class NetworkXWrappers(object):
                 last_mu = cur_mu
 
             if it > max_it:
-                print("Max iterations reached. Current mu: ", cur_mu,
-                      " Target: ", mu)
+                print(
+                    "Max iterations reached. Current mu: ",
+                    cur_mu,
+                    " Target: ",
+                    mu,
+                )
                 break
 
             # First find all sub- and sup-optimal nodes
@@ -724,22 +751,26 @@ class NetworkXWrappers(object):
             all_sup_optimal_nodes = set()
 
             for u, n_inter_con, n_intra_con in zip(
-                    g, num_inter_con, num_intra_con):
-                c = g.nodes[u]['community']
+                g, num_inter_con, num_intra_con
+            ):
+                c = g.nodes[u]["community"]
 
                 if supoptimal(g, u, n_intra_con):
                     all_sup_optimal_nodes.add(u)
                 elif suboptimal(g, u, n_intra_con):
                     all_sub_optimal_nodes.add(u)
-                assert(len(all_sup_optimal_nodes & all_sub_optimal_nodes) == 0)
+                assert len(all_sup_optimal_nodes & all_sub_optimal_nodes) == 0
 
             for u, n_inter_con, n_intra_con in zip(
-                    g, num_inter_con, num_intra_con):
+                g, num_inter_con, num_intra_con
+            ):
                 if node_degrees[u] < 2:
                     continue
-                c = g.nodes[u]['community']
-                if (u not in all_sub_optimal_nodes
-                        and u not in all_sup_optimal_nodes):
+                c = g.nodes[u]["community"]
+                if (
+                    u not in all_sub_optimal_nodes
+                    and u not in all_sup_optimal_nodes
+                ):
                     continue
 
                 sub_optimal_nodes = all_sub_optimal_nodes & c
@@ -766,7 +797,8 @@ class NetworkXWrappers(object):
                         if kwargs["pref_attach"]:
                             v = random.choices(
                                 candidates,
-                                weights=node_degrees[list(candidates)])[0]
+                                weights=node_degrees[list(candidates)],
+                            )[0]
                         else:
                             v = random.choice(candidates)
                         attempted_vs.add(v)
@@ -784,10 +816,10 @@ class NetworkXWrappers(object):
 
                             for adj in shuffled_adj:
                                 if (
-                                        adj not in c and
-                                        adj not in g[v] and
-                                        adj != v
-                                   ):
+                                    adj not in c
+                                    and adj not in g[v]
+                                    and adj != v
+                                ):
                                     target_1 = adj
                                     break
 
@@ -796,11 +828,7 @@ class NetworkXWrappers(object):
                             # Get internal adjacent node of v
                             target_2 = None
                             for adj in g[v]:
-                                if (
-                                        adj in c and
-                                        adj not in g[u] and
-                                        adj != u
-                                   ):
+                                if adj in c and adj not in g[u] and adj != u:
                                     target_2 = adj
                                     break
                             if target_2 is None:
@@ -843,12 +871,14 @@ class NetworkXWrappers(object):
 
                             target_2 = None
                             for adj in g[v]:
-                                if (adj not in c
-                                        # and adj in all_sup_optimal_nodes
-                                        and adj != target_1
-                                        and target_2 not in
-                                        g.nodes[target_1]["community"]
-                                        and target_2 not in g[target_1]):
+                                if (
+                                    adj not in c
+                                    # and adj in all_sup_optimal_nodes
+                                    and adj != target_1
+                                    and target_2
+                                    not in g.nodes[target_1]["community"]
+                                    and target_2 not in g[target_1]
+                                ):
                                     target_2 = adj
                                     break
                             if target_2 is None:
@@ -889,7 +919,8 @@ class NetworkXWrappers(object):
                         if kwargs["pref_attach"]:
                             v = random.choices(
                                 candidates,
-                                weights=node_degrees[list(candidates)])[0]
+                                weights=node_degrees[list(candidates)],
+                            )[0]
                         else:
                             v = random.choice(candidates)
                         attempted_vs.add(v)
@@ -905,11 +936,7 @@ class NetworkXWrappers(object):
                         shuffled_adj = list(g[u])
                         random.shuffle(shuffled_adj)
                         for adj in shuffled_adj:
-                            if (
-                                    adj in c
-                                    and adj not in g[v]
-                                    and adj != v
-                               ):
+                            if adj in c and adj not in g[v] and adj != v:
                                 target_1 = adj
                                 break
 
@@ -921,10 +948,7 @@ class NetworkXWrappers(object):
                         # Choose an inter-community edge from v
                         # v - target_2
                         for adj in g[v]:
-                            if (
-                                    adj not in c and
-                                    adj not in g[u]
-                               ):
+                            if adj not in c and adj not in g[u]:
                                 target_2 = adj
                                 break
                         if target_2 is None:
@@ -955,9 +979,11 @@ class NetworkXWrappers(object):
         p = kwargs["p"]
 
         inter_actions_rvs = construct_pdf(
-                config["population"]["nx"]["inter freq pdf"]).rvs
+            config["population"]["nx"]["inter freq pdf"]
+        ).rvs
         intra_actions_rvs = construct_pdf(
-                config["population"]["nx"]["intra freq pdf"]).rvs
+            config["population"]["nx"]["intra freq pdf"]
+        ).rvs
 
         g = nx.caveman_graph(n_cliques, clique_size)
 
@@ -995,49 +1021,56 @@ class NetworkXWrappers(object):
 class NetworkXPopulation(Population):
     def __init__(self, interaction_rate_scaling=1, *args, **kwargs):
         super().__init__(
-            interaction_rate_scaling=interaction_rate_scaling,
-            *args, **kwargs)
+            interaction_rate_scaling=interaction_rate_scaling, *args, **kwargs
+        )
 
         self._random_interact_pdf = construct_pdf(
-                config["population"]["random interactions pdf"])
+            config["population"]["random interactions pdf"]
+        )
 
         self._random_interact_intensity_pdf = construct_pdf(
-                config["population"]["random interactions intensity pdf"])
+            config["population"]["random interactions intensity pdf"]
+        )
 
         gen_func = getattr(
-            NetworkXWrappers, config["population"]["nx"]["func"])
+            NetworkXWrappers, config["population"]["nx"]["func"]
+        )
         self._graph = gen_func(
-            self._pop_size, **(config["population"]["nx"]["kwargs"]))
+            self._pop_size, **(config["population"]["nx"]["kwargs"])
+        )
 
         for node in self._graph:
             self._graph.nodes[node]["history"] = {}
 
     def get_contacts(
-            self,
-            rows: np.ndarray,
-            cols: np.ndarray,
-            return_rows=False)\
-            -> Union[Tuple[np.ndarray, np.ndarray],
-                     Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        self, rows: np.ndarray, cols: np.ndarray, return_rows=False
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+    ]:
 
         contact_cols = []
         contact_rows = []
         contact_strengths = []
-        n_rnd_contacts = np.asarray(np.round(
-            self._random_interact_pdf.rvs(rows.shape[0])), dtype=np.int)
+        n_rnd_contacts = np.asarray(
+            np.round(self._random_interact_pdf.rvs(rows.shape[0])),
+            dtype=np.int,
+        )
         rnd_indices_all = np.split(
             self._rstate.randint(
-                0, len(rows), size=np.sum(n_rnd_contacts), dtype=np.int),
-            np.cumsum(n_rnd_contacts))[:-1]
+                0, len(rows), size=np.sum(n_rnd_contacts), dtype=np.int
+            ),
+            np.cumsum(n_rnd_contacts),
+        )[:-1]
 
         rnd_ctc_intens_all = np.split(
-            self._random_interact_intensity_pdf.rvs(
-                np.sum(n_rnd_contacts)),
-            np.cumsum(n_rnd_contacts))[:-1]
+            self._random_interact_intensity_pdf.rvs(np.sum(n_rnd_contacts)),
+            np.cumsum(n_rnd_contacts),
+        )[:-1]
         col_set = set(cols)
         for row, n_rnd_contact, rnd_indices, rnd_ctc_intens in zip(
                 rows, n_rnd_contacts, rnd_indices_all, rnd_ctc_intens_all):
-            node = self._graph.nodes[row]
+
             sel_cols = []
             strs = []
             sel_rows = []
@@ -1050,7 +1083,7 @@ class NetworkXPopulation(Population):
                 sel_cols.append(ctc_ind)
                 rate = node_attrs["weight"]
 
-                #if ctc_ind in node["community"]:
+                # if ctc_ind in node["community"]:
                 rate *= self.interaction_rate_scaling
 
                 strs.append(rate)

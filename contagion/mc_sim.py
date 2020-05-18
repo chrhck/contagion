@@ -70,19 +70,15 @@ class MC_Sim(object):
             {
                 "is_infected": False,
                 "is_new_infected": False,
-
                 "is_latent": False,
                 "is_new_latent": False,
                 "is_infectious": False,
                 "is_new_infectious": False,
-
                 "will_have_symptoms": False,
                 "will_have_symptoms_new": False,
                 "is_symptomatic": False,
                 "is_symptomatic_new": False,
-
                 "is_removed": False,
-
                 "is_hospitalized": False,
                 "is_new_hospitalized": False,
                 "is_recovering": False,
@@ -96,9 +92,7 @@ class MC_Sim(object):
                 "is_new_dead": False,
                 "is_quarantined": False,
                 "is_new_quarantined": False,
-
                 "is_tracked": False,
-
                 "infectious_duration": 0,
                 "latent_duration": 0,
                 "time_until_hospitalization": 0,
@@ -108,7 +102,15 @@ class MC_Sim(object):
                 "time_until_death": 0,
                 "time_until_symptoms": 0,
                 "quarantine_duration": 0,
-
+                "time_since_quarantine": -np.inf,
+                "will_be_tested": False,
+                "will_be_tested_new": False,
+                "is_tested": False,
+                "is_tested_positive": False,
+                "is_new_tested": False,
+                "will_test_negative": False,
+                "time_until_test": 0,
+                "time_until_test_result": 0,
             },
             index=np.arange(self.__pop_size),
         )
@@ -159,6 +161,10 @@ class MC_Sim(object):
                 "is_dead",
                 "is_quarantined",
                 "is_symptomatic",
+                "will_be_tested",
+                "is_tested",
+                "is_tested_positive",
+                "will_test_negative"
             ]
         )
         # The state machine
@@ -177,7 +183,8 @@ class MC_Sim(object):
         scenario_class = scenario_conf.pop("class")
 
         self._scenario = getattr(scenario, scenario_class)(
-            state_machine=self._sm, **scenario_conf)
+            state_machine=self._sm, **scenario_conf
+        )
 
         _log.debug("Finished the state machine")
         # Running the simulation

@@ -2,7 +2,7 @@
 
 """
 Name: config.py
-Authors: Christian Haack, Stephan Meighen-Berger
+Authors: Christian Haack, Stephan Meighen-Berger, Andrea Turcati
 Config file for the contagion package.
 It is recommended, that only advanced users change
 the settings here.
@@ -24,7 +24,7 @@ _baseconfig = {
         "random state seed": 1337,
         # Trace the infection spread
         "trace spread": False,
-        "track graph history": True
+        "track graph history": True,
     },
     "population": {
         "population size": 10000,
@@ -34,69 +34,61 @@ _baseconfig = {
         "population storage": "../populations/generic.pkl",
         "population class": "HomogeneousPopulation",
         # Social circle pdf:
-        "social circle pdf": {
-            "class": "Gamma",
-            "mean": 40,
-            "sd": 5},
+        "social circle pdf": {"class": "Gamma", "mean": 40, "sd": 5},
         "social circle interactions pdf": {
             "class": "Gamma",
             "mean": 6,
-            "sd": 0.2},
-
-
-        "hierarchy": [{
-            # Close contacts (family)
-            "social circle pdf": {
-                "class": "Gamma",
-                "mean": 2,
-                "sd": 2},
-            "social circle interactions pdf": {
-                "class": "Gamma",
-                "mean": 3,
-                "sd": 1},
-            # A person can only be in one of these circles
-            # -> Not interactions between circles of this type
-            "interconnectivity": 0,
-            "fully_connected": True,
+            "sd": 0.2,
+        },
+        "hierarchy": [
+            {
+                # Close contacts (family)
+                "social circle pdf": {"class": "Gamma", "mean": 2, "sd": 2},
+                "social circle interactions pdf": {
+                    "class": "Gamma",
+                    "mean": 3,
+                    "sd": 1,
+                },
+                # A person can only be in one of these circles
+                # -> Not interactions between circles of this type
+                "interconnectivity": 0,
+                "fully_connected": True,
             },
             {
-            # Friends
-            "social circle pdf": {
-                "class": "Gamma",
-                "mean": 10,
-                "sd": 5},
-            "social circle interactions pdf": {
-                "class": "Gamma",
-                "mean": 5,
-                "sd": 2},
-            # 30 % of people in this group can be in other groups
-            "interconnectivity": 0.3,
-            "fully_connected": True,
+                # Friends
+                "social circle pdf": {"class": "Gamma", "mean": 10, "sd": 5},
+                "social circle interactions pdf": {
+                    "class": "Gamma",
+                    "mean": 5,
+                    "sd": 2,
+                },
+                # 30 % of people in this group can be in other groups
+                "interconnectivity": 0.3,
+                "fully_connected": True,
             },
             {
-            # Loose contacts (work, ...)
-            "social circle pdf": {
-                "class": "Gamma",
-                "mean": 20,
-                "sd": 5},
-            "social circle interactions pdf": {
-                "class": "Gamma",
-                "mean": 5,
-                "sd": 2},
-            # 10 % of people in this group can be in other groups
-            "interconnectivity": 0.1,
-            "fully_connected": True,
-            }],
-
+                # Loose contacts (work, ...)
+                "social circle pdf": {"class": "Gamma", "mean": 20, "sd": 5},
+                "social circle interactions pdf": {
+                    "class": "Gamma",
+                    "mean": 5,
+                    "sd": 2,
+                },
+                # 10 % of people in this group can be in other groups
+                "interconnectivity": 0.1,
+                "fully_connected": True,
+            },
+        ],
         "random interactions pdf": {
             "class": "Gamma",
             "mean": 0.0001,
-            "sd": 0.001},
+            "sd": 0.001,
+        },
         "random interactions intensity pdf": {
             "class": "Gamma",
             "mean": 0.1,
-            "sd": 0.5},
-
+            "sd": 0.5,
+        },
         "nx": {
             "func": "lfr_benchmark",
             "kwargs": {
@@ -107,20 +99,9 @@ _baseconfig = {
                 "min_community": 8,
                 "max_iters": 200,
             },
-            "inter freq pdf": {
-                "class": "Gamma",
-                "mean": 10,
-                "sd": 3
-            },
-            "intra freq pdf": {
-                "class": "Gamma",
-                "mean": 3,
-                "sd": 3
-            }
-
-        }
-
-
+            "inter freq pdf": {"class": "Gamma", "mean": 10, "sd": 3},
+            "intra freq pdf": {"class": "Gamma", "mean": 3, "sd": 3},
+        },
     },
     "infection": {
         # The number of starting infections
@@ -129,71 +110,73 @@ _baseconfig = {
         "will have symptoms prob pdf": {
             "class": "Beta",
             "mean": 0.5,
-            "sd": 0.1
+            "sd": 0.1,
         },
         # Infection properties
         "infection probability pdf": {
             "class": "Gamma",
-            "mean": 3.,
+            "mean": 3.0,
             "sd": 2.42,
-            "max_val": 0.15},
-        "infectious duration pdf": {
-            "class": "Gamma",
-            "mean": 8.,
-            "sd": 2.42},
-        "latency duration pdf": {
-            "class": "Gamma",
-            "mean": 6,
-            "sd": 3,
-            },
+            "max_val": 0.15,
+        },
+        "infectious duration pdf": {"class": "Gamma", "mean": 8.0, "sd": 2.42},
+        "latency duration pdf": {"class": "Gamma", "mean": 6, "sd": 3},
         "incubation duration pdf": {
             "class": "Gamma",
             "mean": 7.47522,
-            "sd": 4.27014},
+            "sd": 4.27014,
+        },
         # Hospitalization
         "hospitalization probability pdf": {
             "class": "Beta",
             "mean": 0.1,
-            "sd": 0.01},
+            "sd": 0.01,
+        },
         "hospitalization duration pdf": {
             "class": "Gamma",
-            "mean": 14.,
-            "sd": 0.01},
+            "mean": 14.0,
+            "sd": 0.01,
+        },
         "time until hospitalization pdf": {
             "class": "Gamma",
             "mean": 2.52,
-            "sd": 1.},
+            "sd": 1.0,
+        },
         # Mortality
         "time incubation death pdf": {
             "class": "Gamma",
-            "mean": 32.,
-            "sd": 5.},
-        "mortality prob pdf": {
-            "class": "Beta",
-            "mean": 0.01,
-            "sd": 0.01},
+            "mean": 32.0,
+            "sd": 5.0,
+        },
+        "mortality prob pdf": {"class": "Beta", "mean": 0.01, "sd": 0.01},
         # Recovery
-        "recovery time pdf": {
-            "class": "Gamma",
-            "mean": 11.,
-            "sd": 5.},
+        "recovery time pdf": {"class": "Gamma", "mean": 11.0, "sd": 5.0},
     },
     "measures": {
-        # Measures implemented (None, contact_tracing, social_distancing, all)
-        "type": "contact_tracing",
+        # Measures implemented (True, False)
+        "contact tracing": False,
         # fraction of population tracked
-        "tracked fraction": 1,
+        "tracked fraction": 1.0,
+        # Second order Tracing (True, False)
+        "second order": False,
         # days of back tracking
-        "backtrack length": 0.,
+        "backtrack length": 0.0,
+        # track uninfected (True, False)
+        "track uninfected": False,
+        # quarantine (True, False)
+        "quarantine": False,
+        # report symptomatic (True, False)
+        "report symptomatic": True,
         # duration of the quarantine
         "quarantine duration": 14.0,
-        # social distancing
-        "distanced fraction": 0.0,
+        # testing (True, False)
+        "testing": False,
+        # Time until testing
+        "time until test": 1.0,
+        # Time until test results
+        "time until result": 1.0,
     },
-    "scenario": {
-        "class": "StandardScenario",
-        "sim_length": 200,
-    }
+    "scenario": {"class": "StandardScenario", "sim_length": 200},
 }
 
 
