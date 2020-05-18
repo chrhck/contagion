@@ -19,9 +19,9 @@ if __name__ == "__main__":
                         default=argparse.SUPPRESS,
                         const=None, nargs="?", dest="cont", type=int)
     parser.add_argument("-d", choices=["summary", "chi2", "ad"], dest="distance", default="summary")
-    parser.add_argument("-v", choices=["mean", "minimal"], dest="variance_mode", default="mean")
+    parser.add_argument("--full", help="Use full dataset", action="store_true", dest="full")
     args = parser.parse_args()
-    my_config = yaml.safe_load(open("benchmark_config.yaml"))
+    my_config = yaml.safe_load(open("fit_germany_conf.yaml"))
    
 
     if "cont" in args:
@@ -29,17 +29,25 @@ if __name__ == "__main__":
 
     #contagion = Contagion(userconfig=my_config)
     #contagion.sim()
-    data = np.loadtxt("cpp_model.csv", delimiter=",")
+    data = pd.read_csv("data_germany.csv")
+    data["Date"] = pd.to_datetime(data['Date'])
+    if args.full:
+        data = data.set_index("Date").loc[pd.to_datetime('2020-02-24'):]
+    else:
+        data = data.set_index("Date").loc[pd.to_datetime('2020-02-24'):pd.to_datetime('2020-03-20')]
     
-    fields = ["is_recovered", "is_infectious", "is_latent"]
+    fields = ["is_recovered", "is_infected_total", "is_dead"]
     #data = {field: np.asarray(contagion.statistics[field]) for field in fields}
-    data = {"is_recovered": data[:, 1], "is_infectious": data[:, 0], "is_latent": data[:, 2]}
+    data = {"is_recovered": np.round(data["recovered"]), "is_infected_total": np.round(data["tot. infected"]),
+            "is_dead": data["deaths"]}
     
     
     def model(parameters):
         this_config = dict(_baseconfig)
         this_config.update(my_config)
-        this_config['population']['social circle pdf']["mean"] = parameters["soc circ mean"]        
+        this_config['population']['population size'] = 100000
+        this_config['population']['social circle pdf']["mean"] = parameters["soc circ mean"]
+          
         this_config['population']['social circle interactions pdf']["mean"] = parameters["soc circ mean"]        
         this_config['infection']["latency duration pdf"]['mean'] =  parameters["latency mean"]        
         this_config['infection']["infectious duration pdf"]['mean'] =  parameters["infectious dur mean"]        
@@ -48,31 +56,46 @@ if __name__ == "__main__":
         this_config['infection']["infection probability pdf"]['max_val'] =  parameters["inf prob max"]
         this_config['infection']["incubation duration pdf"]['sd'] =  parameters["incub dur sd"] 
         
+        this_config["infection"]["mortality prob pdf"]["mean"] = parameters["mort mean"]
+        this_config["infection"]["mortality prob pdf"]["sd"] = parameters["mort sd"]
         
-        if args.variance_mode == "mean":
-            this_config['infection']["recovery time pdf"]['sd'] =  np.sqrt(parameters["recovery dur mean"])
-            this_config['infection']["infectious duration pdf"]['sd'] =  np.sqrt(parameters["infectious dur mean"])
-            this_config['infection']["latency duration pdf"]['sd'] =  np.sqrt(parameters["latency mean"])
-            this_config['population']['social circle interactions pdf']["sd"] = np.sqrt(parameters["soc circ mean"])
-            this_config['population']['social circle pdf']["sd"] = np.sqrt(parameters["soc circ mean"])
-        elif args.variance_mode == "minimal":
-            this_config['infection']["recovery time pdf"]['sd'] =  0.1
-            this_config['infection']["infectious duration pdf"]['sd'] =  0.1
-            this_config['infection']["latency duration pdf"]['sd'] =  0.1
-            this_config['population']['social circle interactions pdf']["sd"] = 0.1
-            this_config['population']['social circle pdf']["sd"] = 0.1
+        this_config["infection"]["will have symptoms prob pdf"]["mean"] = parameters["symp prob mean"]
+        this_config["infection"]["will have symptoms prob pdf"]["sd"] = parameters["symp prob sd"]
+        this_config["measures"]["tracked fraction"] = parameters["tracked frac"]
+        
+        if args.full:
+            this_config["scenario"]["class"] = "SocialDistancing"
+            
+            start_scaling = int(parameters["t_start_dist"])
+            end_scaling = start_scaling + int(parameters["scaling_dur"])
+            final_inf_per_day = parameters["int_per_day_dist"]
+            
+            slope = (parameters["soc circ mean"] - final_inf_per_day) / (start_scaling-end_scaling)
+            offset =  parameters["soc circ mean"] - slope * start_scaling
+            t_steps = np.arange(start_scaling)
+            if len(t_steps)==0:
+                raise RuntimeError("Help ",start_scaling, end_scaling)
+            this_config["scenario"]["t_steps"] = list(t_steps)
+            this_config["scenario"]["contact_rate_scalings"] = list(slope*t_steps + offset)
+            
         else:
-            raise RuntimeError("Unknown variance mode: {}".format(args.variance_mode))
-        
-        #this_config['infection']["incubation duration pdf"]['mean'] =  parameters["incubation mean"]
-        
+            this_config["scenario"]["class"] = "StandardScenario"
+        this_config["measures"]["tracked fraction"] = 1.0
+              
         this_config["population"]["re-use population"] = False
         contagion = Contagion(userconfig=this_config)
         contagion.sim()
 
         stats = pd.DataFrame(contagion.statistics)
-        stats["is_recovered"] = stats["is_recovered"] + stats["is_recovering"]
-        return stats
+        stats["is_infected_total"] = stats["is_recovered"] + stats["is_recovering"] + stats["is_infected"]
+        
+        #stats = stats / this_config['population']['population size'] * 80E6
+        stats["is_infected_total"] *= parameters["id_fraction"]
+        stats["is_recovered"] *= parameters["id_fraction"]
+
+        zero_rows = pd.DataFrame({col: np.zeros(int(parameters["timeshift"])) for col in stats.columns})
+        stats = pd.concat([zero_rows, stats]).reset_index()
+        return stats.iloc[:len(data["is_recovered"])]
 
     def make_chi2_distance(fields):
         distances = []
@@ -114,13 +137,23 @@ if __name__ == "__main__":
         raise RuntimeError("Unknown distance type: {}".format(args.distance))
 
     prior = pyabc.Distribution(
-        {"soc circ mean": pyabc.RV("uniform", 5, 15),
-         "latency mean": pyabc.RV("uniform", 1, 10) ,
-         "infectious dur mean": pyabc.RV("uniform", 1, 15),
-         "incub dur mean": pyabc.RV("uniform", 1, 15),
-         "incub dur sd": pyabc.RV("uniform", 1, 15),
+        {"soc circ mean": pyabc.RV("uniform", 5, 10),
+         "latency mean": pyabc.RV("uniform", 1, 9) ,
+         "infectious dur mean": pyabc.RV("uniform", 1, 14),
+         "incub dur mean": pyabc.RV("uniform", 1, 14),
+         "incub dur sd": pyabc.RV("uniform", 1, 14),
          "recovery dur mean": pyabc.RV("uniform", 0.1, 10),
-         "inf prob max": pyabc.RV("uniform", 0.1, 0.3)
+         "inf prob max": pyabc.RV("uniform", 0.1, 0.2),
+         "mort mean": pyabc.RV("uniform", 0.01, 0.1),
+         "mort sd": pyabc.RV("uniform", 0.001, 0.01),
+         "symp prob mean": pyabc.RV("uniform", 0.1, 0.6),
+         "symp prob sd": pyabc.RV("uniform", 0.01, 0.1),
+         "timeshift": pyabc.RV("uniform", 0, 10),
+         "id_fraction": pyabc.RV("uniform", 0.01, 0.2),
+         "t_start_dist": pyabc.RV("uniform", 20, 9),
+         "scaling_dur": pyabc.RV("uniform", 1, 14),
+         "int_per_day_dist": pyabc.RV("uniform", 0.5, 1.5),
+         "tracked frac": pyabc.RV("uniform", 0, 1)
         })
 
     client = Client(scheduler_file="scheduler.json")
@@ -132,12 +165,12 @@ if __name__ == "__main__":
     sampler = DaskDistributedSampler(client, batch_size=1, client_max_jobs=800)
     population = pyabc.populationstrategy.AdaptivePopulationSize(
         150,
-        max_population_size=300,
+        max_population_size=1000,
         mean_cv=0.1,
         n_bootstrap=10,
         client=client)
     #population = 300
-    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.4)
+    epsilon = pyabc.epsilon.QuantileEpsilon(alpha=0.5)
     abc = pyabc.ABCSMC(model, prior, distance,
                        population_size=population, sampler=sampler,
                        acceptor=pyabc.UniformAcceptor(
@@ -146,7 +179,7 @@ if __name__ == "__main__":
                        summary_statistics=summary_statistics,
                        eps=epsilon
                        )
-    db_path = "sqlite:///" + os.path.join(os.environ["HOME"], "abc.db")
+    db_path = "sqlite:///" + os.path.join(os.environ["HOME"], "abc_ger.db")
 
     logging.getLogger().setLevel("DEBUG")
 

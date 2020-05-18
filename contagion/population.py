@@ -1069,9 +1069,8 @@ class NetworkXPopulation(Population):
         )[:-1]
         col_set = set(cols)
         for row, n_rnd_contact, rnd_indices, rnd_ctc_intens in zip(
-            rows, n_rnd_contacts, rnd_indices_all, rnd_ctc_intens_all
-        ):
-            node = self._graph.nodes[row]
+                rows, n_rnd_contacts, rnd_indices_all, rnd_ctc_intens_all):
+
             sel_cols = []
             strs = []
             sel_rows = []

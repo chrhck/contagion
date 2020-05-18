@@ -45,6 +45,8 @@ def make_sum_stats(fields):
         for key, val in sum_stats.items():
             if np.any(~np.isfinite(val)):
                 raise RuntimeError("NaN detected in sumamry stats.\n Stats: {}. \n Simulation was: {}".format(sum_stats, simulation))
+        if np.all(np.asarray(sum_stats.values()) == 0):
+            raise RuntimeError("All values 0 in sumamry stats.\n Stats: {}. \n Simulation was: {}".format(sum_stats, simulation))
         
         return sum_stats
     return gen_summary_stats

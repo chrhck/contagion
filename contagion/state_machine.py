@@ -1463,7 +1463,12 @@ class ContagionStateMachine(StateMachine):
 
         # Only infectious non removed, non-quarantined can infect others
         removed_mask = self.states["is_removed"](data)
-        infectious_mask = infectious_mask & (~removed_mask)
+        hospitalized_mask = self.states["is_hospitalized"](data)
+        infectious_mask = (
+            infectious_mask & (~removed_mask)
+            & (~hospitalized_mask)
+        )
+
         if self._measures.quarantine:
             quarantined_mask = self.states["is_quarantined"](data)
             infectious_mask = infectious_mask & (~quarantined_mask)
