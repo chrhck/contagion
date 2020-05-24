@@ -649,6 +649,7 @@ class NetworkXWrappers(object):
         g = nx.barabasi_albert_graph(pop_size, kwargs["m"], seed=seed)
 
         deg_seq = list(dict(nx.degree(g)).values())
+
         min_community = kwargs.get("min_community", None)
         max_community = kwargs.get("max_community", None)
         n = pop_size
@@ -661,11 +662,11 @@ class NetworkXWrappers(object):
                 print("Min community is smaller than min(k)+1. Adjusting")
                 min_community = min(deg_seq) + 1
         if max_community is None:
-            max_community = max(deg_seq) + 1
+            max_community = 3*max(deg_seq) 
         else:
             if max_community < max(deg_seq) + 1:
                 print("Max community is smaller than max(k)+1. Adjusting")
-                max_community = int(1.5 * (max(deg_seq)))
+                max_community = int(2 * (max(deg_seq)))
 
         low, high = min_community, max_community
 
@@ -970,6 +971,81 @@ class NetworkXWrappers(object):
 
         g = NetworkXWrappers.add_lfr_weights(g)
         return g
+
+    @staticmethod
+    def hierarchical_lfr_ba(pop_size, **kwargs):
+        seed = config["general"]["random state seed"]
+        n = pop_size
+        random.seed(seed)
+
+        def condition(seq):
+            return sum(seq) == n
+
+        def length(seq):
+            return sum(seq) >= n
+
+        graph_sizes = _powerlaw_sequence(
+            kwargs["tau_graphs"],
+            kwargs["min_graph"],
+            kwargs["max_graph"],
+            condition,
+            length,
+            kwargs["max_iters"],
+            seed,
+        )
+
+        cur_size = 0
+
+        combined = nx.Graph()
+        for hier_com, gs in enumerate(graph_sizes):
+            g = NetworkXWrappers.lfr_ba(gs, **kwargs)
+
+            mapping = {i: i+cur_size for i in range(gs)}
+            nx.relabel_nodes(g, mapping, copy=False)
+
+            for node in g:
+                g.nodes[node]["hier_comm"] = hier_com
+                comm = g.nodes[node]["community"]
+
+                relabeled_comm = set()
+                for val in list(comm):
+                    relabeled_comm.add(val+cur_size)
+
+            combined.add_nodes_from(g.nodes(data=True))
+            combined.add_edges_from(g.edges)
+            cur_size += gs
+
+        for u in combined:
+            this_hcomm = combined.nodes[u]["hier_comm"]
+            adjs = combined[u]
+            for adj in list(adjs):
+                if (adj not in combined.nodes[u]["community"]
+                        and random.uniform(0, 1) < kwargs["mu_hier"]/2):
+
+                    while True:
+                        randint = random.randint(0, pop_size-1)
+                        v = combined.nodes[randint]
+                        if randint == u:
+                            continue
+                        if randint in combined.nodes[u]["community"]:
+                            continue
+                        if v["hier_comm"] == this_hcomm:
+                            continue
+                        partner = None
+                        for adj2 in list(combined[randint]):
+                            if (adj2 not in v["community"] and
+                                 adj2 not in combined.nodes[u]["community"]):
+                                partner = adj2
+                                break
+                        if partner is not None:
+                            break
+
+                    combined.remove_edge(u, adj)
+                    combined.remove_edge(randint, partner)
+                    combined.add_edge(u, randint)
+                    combined.add_edge(adj, partner)
+        combined = NetworkXWrappers.add_lfr_weights(combined)
+        return combined
 
     @staticmethod
     def relaxed_caveman_graph(pop_size, **kwargs):

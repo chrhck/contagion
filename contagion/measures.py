@@ -230,6 +230,21 @@ class Measures(object):
         Returns:
             -None
         """
+
+        # Function fitted for the test efficiency:
+        # x : days after infectious
+        # a = 8.5
+        # b = 0.74408163
+        # c = 8.48725228
+        def test_efficiency_function(x, a=8.5, b=0.74408163, c=8.48725228):
+            if x < a:
+                return config["measures"]["test true positive rate"]
+            else:
+                return (
+                    config["measures"]["test true positive rate"] *
+                    np.exp(-b * (x - c)))
+
+
         time_until_test_pdf = Uniform(
             config["measures"]["time until test"], 0.0
         )
@@ -245,13 +260,4 @@ class Measures(object):
         )
 
 
-# Function fitted for the test efficiency:
-# x : days after infectious
-# a = 8.5
-# b = 0.74408163
-# c = 8.48725228
-def test_efficiency_function(x, a=8.5, b=0.74408163, c=8.48725228):
-    if x < a:
-        return 0.95
-    else:
-        return np.exp(-b * (x - c))
+
