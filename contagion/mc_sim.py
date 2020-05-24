@@ -165,7 +165,8 @@ class MC_Sim(object):
                 "is_tested",
                 "is_tested_positive",
                 "will_test_negative"
-            ]
+            ],
+            [("is_recovered", "is_tested_positive", True)]
         )
         # The state machine
         _log.debug("Setting up the state machine")

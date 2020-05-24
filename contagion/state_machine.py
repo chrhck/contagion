@@ -750,13 +750,22 @@ class StatCollector(object, metaclass=abc.ABCMeta):
 
     _statistics: Dict[str, List[float]]
 
-    def __init__(self, data_fields: List[str]):
+    def __init__(
+            self,
+            data_fields: List[str],
+            cond_fields: Optional[List[Tuple[str, str, bool]]]):
         self._data_fields = data_fields
+        self._cond_fields = cond_fields
         self._statistics = defaultdict(list)
 
     def __call__(self, data: DataDict):
         for field in self._data_fields:
             self._statistics[field].append(data[field].sum())
+        if self._cond_fields is not None:
+            for (field, field2, state) in self._cond_fields:
+                cond = data[field] & (data[field2] == state)
+                self._statistics[field + "_" + field2].append(
+                    cond.sum())
 
     def __getitem__(self, key):
         return self._statistics[key]
@@ -1255,7 +1264,13 @@ class ContagionStateMachine(StateMachine):
                     boolean_states["is_hospitalized"],
                     boolean_states["is_new_hospitalized"],
                     boolean_states["is_removed"],
-                    # (~boolean_states["is_quarantined"], False),
+                    (~boolean_states["will_be_tested"], False),
+                    (~boolean_states["will_be_tested_new"], False),
+                    (~boolean_states["will_test_negative"], False),
+                    (~boolean_states["is_tested"], False),
+                    (~boolean_states["is_new_tested"], False),
+                    boolean_states["is_tested_positive"],
+                    (~boolean_states["is_quarantined"], False),
                 ],
                 hospit_cond,
             ),
