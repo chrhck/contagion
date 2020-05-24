@@ -141,4 +141,4 @@ population:
   store population: true
 scenario:
   class: StandardScenario
-  sim_length: 50
+  sim_length: 500
