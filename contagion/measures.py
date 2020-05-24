@@ -244,7 +244,6 @@ class Measures(object):
                     config["measures"]["test true positive rate"] *
                     np.exp(-b * (x - c)))
 
-
         time_until_test_pdf = Uniform(
             config["measures"]["time until test"], 0.0
         )

@@ -1,0 +1,144 @@
+general:
+  config location: ../run/config.txt
+  debug level: 50
+  log file handler: ../run/contagion.log
+  random state seed: 6
+  trace spread: true
+  track graph history: true
+infection:
+  hospitalization duration pdf:
+    class: Gamma
+    mean: 14.0
+    sd: 0.01
+  hospitalization probability pdf:
+    class: Beta
+    mean: 0.0001
+    sd: 1.0e-05
+  incubation duration pdf:
+    class: Gamma
+    mean: 7.47522
+    sd: 4.27014
+  infected: 400
+  infection probability pdf:
+    class: Gamma
+    max_val: 0.069
+    mean: 3.0
+    sd: 2.42
+  infectious duration pdf:
+    class: Gamma
+    mean: 8.0
+    sd: 2.42
+  latency duration pdf:
+    class: Gamma
+    mean: 6
+    sd: 3
+  mortality prob pdf:
+    class: Beta
+    mean: 0.01
+    sd: 0.01
+  recovery time pdf:
+    class: Gamma
+    mean: 11.0
+    sd: 5.0
+  time incubation death pdf:
+    class: Gamma
+    mean: 32.0
+    sd: 5.0
+  time until hospitalization pdf:
+    class: Gamma
+    mean: 2.52
+    sd: 1.0
+  will have symptoms prob pdf:
+    class: Beta
+    mean: 0.6
+    sd: 0.01
+measures:
+  backtrack length: 14
+  contact tracing: true
+  quarantine: true
+  quarantine duration: 14
+  report symptomatic: true
+  second order: false
+  test true positive rate: 0.9
+  testing: true
+  time until result: 1
+  time until test: 1
+  track uninfected: true
+  tracked fraction: 0
+population:
+  hierarchy:
+  - fully_connected: true
+    interconnectivity: 0
+    social circle interactions pdf:
+      class: Gamma
+      mean: 3
+      sd: 1
+    social circle pdf:
+      class: Gamma
+      mean: 2
+      sd: 2
+  - fully_connected: true
+    interconnectivity: 0.3
+    social circle interactions pdf:
+      class: Gamma
+      mean: 5
+      sd: 2
+    social circle pdf:
+      class: Gamma
+      mean: 10
+      sd: 5
+  - fully_connected: true
+    interconnectivity: 0.1
+    social circle interactions pdf:
+      class: Gamma
+      mean: 5
+      sd: 2
+    social circle pdf:
+      class: Gamma
+      mean: 20
+      sd: 5
+  nx:
+    func: hierarchical_lfr_ba
+    inter freq pdf:
+      class: Gamma
+      mean: 10.0
+      sd: 1
+    intra freq pdf:
+      class: Gamma
+      mean: 10.0
+      sd: 1
+    kwargs:
+      m: 3
+      max_graph: 5000
+      max_iters: 4000
+      min_community: 13
+      min_graph: 200
+      mu: 0.1
+      mu_hier: 0.1
+      pref_attach: true
+      tau: 1.2
+      tau_graphs: 3
+      tolerance: 0.1
+  population class: HomogeneousPopulation
+  population size: 1000000
+  population storage: ../populations/generic.pkl
+  random interactions intensity pdf:
+    class: Gamma
+    mean: 0.0001
+    sd: 0.0001
+  random interactions pdf:
+    class: Delta
+    mean: 0.001
+  re-use population: false
+  social circle interactions pdf:
+    class: Gamma
+    mean: 10.0
+    sd: 1
+  social circle pdf:
+    class: Gamma
+    mean: 10.0
+    sd: 1
+  store population: true
+scenario:
+  class: StandardScenario
+  sim_length: 50

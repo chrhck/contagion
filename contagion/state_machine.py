@@ -24,6 +24,7 @@ from .measures import Measures
 from .pdfs import PDF
 from .population import Population, NetworkXPopulation
 
+from memory_profiler import profile
 
 _log = logging.getLogger(__name__)
 
@@ -1475,6 +1476,7 @@ class ContagionStateMachine(StateMachine):
     def states(self):
         return self._states
 
+    @profile
     def __get_new_infections(self, data: DataDict) -> np.ndarray:
 
         infectious_mask = self.states["is_infectious"](data)
@@ -1598,7 +1600,6 @@ class ContagionStateMachine(StateMachine):
 
         cond = np.zeros_like(infectious_mask, dtype=np.bool)
         cond[newly_infected_indices] = True
-
         return cond
 
     def __will_be_hospitalized(self, data: DataDict) -> np.ndarray:
@@ -1663,6 +1664,7 @@ class ContagionStateMachine(StateMachine):
 
         return cond
 
+    @profile
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
         # If you are tracked and infected you will be quarantined
         infected_mask = self.states["is_infected"](data)
