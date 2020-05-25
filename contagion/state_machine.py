@@ -756,8 +756,9 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         self._data_fields = data_fields
         self._cond_fields = cond_fields
         self._statistics = defaultdict(list)
+        self._recovered_old = None
 
-    def __call__(self, data: DataDict):
+    def __call__(self, data: DataDict, inf_trace=None):
         for field in self._data_fields:
             self._statistics[field].append(data[field].sum())
         if self._cond_fields is not None:
@@ -765,6 +766,30 @@ class StatCollector(object, metaclass=abc.ABCMeta):
                 cond = data[field] & (data[field2] == state)
                 self._statistics[field + "_" + field2].append(
                     cond.sum())
+
+        # Re
+        if inf_trace is not None:
+            if self._recovered_old is None:
+                self._statistics["Re"].append(0)
+            else:
+                new_recoveries = (
+                    (~self._recovered_old) & data["is_recovered"]
+                )
+                num_new_rec = new_recoveries.sum()
+                if num_new_rec == 0:
+                    re = 0
+                else:
+                    new_rec_ids = np.nonzero(new_recoveries)[0]
+                    inf_hist = np.squeeze(np.hstack(inf_trace))
+
+                    num_infected = 0
+                    for new_rec_id in new_rec_ids:
+                        mask = inf_hist[:, 0] == new_rec_id
+                        num_infected += mask.sum()
+                    re = num_infected/num_new_rec
+
+                self._statistics["Re"].append(re)
+            self._recovered_old = np.array(data["is_recovered"], copy=True)
 
     def __getitem__(self, key):
         return self._statistics[key]
@@ -811,6 +836,10 @@ class StateMachine(object, metaclass=abc.ABCMeta):
             _log.debug("Tracing the population")
             self._trace_contacts = []
             self._trace_infection = []
+        else:
+            if config["general"]["trace spread"]:
+                self._trace_contacts = None
+                self._trace_infection = None
 
         self._cur_tick = 0
         self._trace_states = trace_states
@@ -833,7 +862,7 @@ class StateMachine(object, metaclass=abc.ABCMeta):
         for transition in self.transitions:
             transition(self._data)
         if self._stat_collector is not None:
-            self._stat_collector(self._data)
+            self._stat_collector(self._data, self._trace_infection)
         self._cur_tick += 1
 
         if self._trace_states:
