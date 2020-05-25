@@ -778,13 +778,16 @@ class StatCollector(object, metaclass=abc.ABCMeta):
                     re = 0
                 else:
                     new_rec_ids = np.nonzero(new_recoveries)[0]
-                    inf_hist = np.squeeze(np.hstack(inf_trace))
+                    inf_hist = np.atleast_2d(np.squeeze(np.hstack(inf_trace)))
 
-                    num_infected = 0
-                    for new_rec_id in new_rec_ids:
-                        mask = inf_hist[:, 0] == new_rec_id
-                        num_infected += mask.sum()
-                    re = num_infected / num_new_rec
+                    if len(inf_hist) == 0:
+                        re = 0
+                    else:
+                        num_infected = 0
+                        for new_rec_id in new_rec_ids:
+                            mask = inf_hist[:, 0] == new_rec_id
+                            num_infected += mask.sum()
+                        re = num_infected / num_new_rec
 
                 self._statistics["Re"].append(re)
             self._recovered_old = np.array(data["is_recovered"], copy=True)
@@ -1612,14 +1615,17 @@ class ContagionStateMachine(StateMachine):
 
         # TODO: Add this as a state not seperate list
         if config["general"]["trace spread"]:
-            self._trace_contacts.append(
-                np.dstack(
-                    (
-                        successful_contactee_indices,
-                        successful_contacts_indices,
+            if not self._measures.measures_active:
+                self._trace_contacts.append(np.empty((1, 0, 2)))
+            else:
+                self._trace_contacts.append(
+                    np.dstack(
+                        (
+                            successful_contactee_indices,
+                            successful_contacts_indices,
+                        )
                     )
                 )
-            )
         num_succesful_contacts = len(successful_contacts_indices)
         self._stat_collector["contacts"].append(num_succesful_contacts)
         newly_infectee_indices = successful_contactee_indices[
@@ -1716,8 +1722,8 @@ class ContagionStateMachine(StateMachine):
         return cond
 
     def __will_be_quarantined(self, data: DataDict) -> np.ndarray:
-        if not self._measures.quarantine_active:
-            return 
+        if not self._measures.measures_active:
+            return np.zeros(data.field_len, dtype=np.bool)
         # If you are tracked and infected you will be quarantined
         infected_mask = self.states["is_infected"](data)
 
@@ -1827,6 +1833,8 @@ class ContagionStateMachine(StateMachine):
         return cond
 
     def __will_be_tested(self, data: DataDict) -> np.ndarray:
+        if not self._measures.measures_active:
+            return np.zeros(data.field_len, dtype=np.bool)
 
         if not self._measures.testing:
             return np.zeros(data.field_len, dtype=np.bool)
