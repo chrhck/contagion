@@ -750,9 +750,10 @@ class StatCollector(object, metaclass=abc.ABCMeta):
     _statistics: Dict[str, List[float]]
 
     def __init__(
-            self,
-            data_fields: List[str],
-            cond_fields: Optional[List[Tuple[str, str, bool]]]):
+        self,
+        data_fields: List[str],
+        cond_fields: Optional[List[Tuple[str, str, bool]]],
+    ):
         self._data_fields = data_fields
         self._cond_fields = cond_fields
         self._statistics = defaultdict(list)
@@ -764,17 +765,14 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         if self._cond_fields is not None:
             for (field, field2, state) in self._cond_fields:
                 cond = data[field] & (data[field2] == state)
-                self._statistics[field + "_" + field2].append(
-                    cond.sum())
+                self._statistics[field + "_" + field2].append(cond.sum())
 
         # Re
         if inf_trace is not None:
             if self._recovered_old is None:
                 self._statistics["Re"].append(0)
             else:
-                new_recoveries = (
-                    (~self._recovered_old) & data["is_recovered"]
-                )
+                new_recoveries = (~self._recovered_old) & data["is_recovered"]
                 num_new_rec = new_recoveries.sum()
                 if num_new_rec == 0:
                     re = 0
@@ -786,7 +784,7 @@ class StatCollector(object, metaclass=abc.ABCMeta):
                     for new_rec_id in new_rec_ids:
                         mask = inf_hist[:, 0] == new_rec_id
                         num_infected += mask.sum()
-                    re = num_infected/num_new_rec
+                    re = num_infected / num_new_rec
 
                 self._statistics["Re"].append(re)
             self._recovered_old = np.array(data["is_recovered"], copy=True)
@@ -1090,10 +1088,9 @@ class ContagionStateMachine(StateMachine):
             # Test negative conditions
             will_test_negative_cond = Condition(self.__will_test_negative)
 
-            test_result_cond = (
-                Condition.from_state(~timer_states["time_until_test_result"])
-                & Condition.from_state(~boolean_states["is_new_tested"])
-            )
+            test_result_cond = Condition.from_state(
+                ~timer_states["time_until_test_result"]
+            ) & Condition.from_state(~boolean_states["is_new_tested"])
 
         temp_states = [
             "is_new_latent",
@@ -1278,71 +1275,104 @@ class ContagionStateMachine(StateMachine):
                 ],
                 will_be_hospitalized_cond,
             ),
-            # will_be_hospitalized - hospitalized
-            # Transition from will_be_hospitalized to:
-            #   -is_hospitalized
-            #   -is_new_hospitalized
-            #   -is_removed
-            #   -not is_recovering
-            # where the time_until_hospitalization timer is <= 0
-            MultiStateConditionalTransition(
-                "will_be_hospitalized_hospitalized",
-                boolean_states["will_be_hospitalized"],
-                [
-                    boolean_states["is_hospitalized"],
-                    boolean_states["is_new_hospitalized"],
-                    boolean_states["is_removed"],
-                    (~boolean_states["will_be_tested"], False),
-                    (~boolean_states["will_be_tested_new"], False),
-                    (~boolean_states["will_test_negative"], False),
-                    (~boolean_states["is_tested"], False),
-                    (~boolean_states["is_new_tested"], False),
-                    boolean_states["is_tested_positive"],
-                    (~boolean_states["is_quarantined"], False),
-                ],
-                hospit_cond,
-            ),
-            MultiStateConditionalTransition(
-                "hospitalized_recovered",
-                boolean_states["is_hospitalized"],
-                [
-                    boolean_states["is_recovered"],
-                    (~boolean_states["is_infected"], False),
-                    (~boolean_states["is_symptomatic"], False),
-                ],
-                hospit_recovery_condition,
-            ),
-            # Activate will_die and will_die_new if the
-            # will_die_cond condition is true.
-            ChangeStatesConditionalTransition(
-                "will_die",
-                [~boolean_states["will_die"], ~boolean_states["will_die_new"]],
-                will_die_cond,
-            ),
-            # will_die - is_dead
-            # Transition from will_die to:
-            #   -is_dead
-            #   -is_removed
-            #   -not is_infected
-            #   -not is_hospitalized
-            #   -not is_new_hospitalized
-            # where the time_until_death timer is <= 0
-            MultiStateConditionalTransition(
-                "will_die_is_dead",
-                boolean_states["will_die"],
-                [
-                    boolean_states["is_dead"],
-                    boolean_states["is_removed"],
-                    (~boolean_states["is_infectious"], False),
-                    (~boolean_states["is_infected"], False),
-                    (~boolean_states["is_hospitalized"], False),
-                    (~boolean_states["is_new_hospitalized"], False),
-                    (~boolean_states["is_symptomatic"], False),
-                    (~boolean_states["will_have_symptoms"], False),
-                ],
-                is_dead_cond,
-            ),
         ]
+
+        if self._measures.testing:
+            self._transitions.append(
+                # will_be_hospitalized - hospitalized
+                # Transition from will_be_hospitalized to:
+                #   -is_hospitalized
+                #   -is_new_hospitalized
+                #   -is_removed
+                #   -not is_recovering
+                # where the time_until_hospitalization timer is <= 0
+                MultiStateConditionalTransition(
+                    "will_be_hospitalized_hospitalized",
+                    boolean_states["will_be_hospitalized"],
+                    [
+                        boolean_states["is_hospitalized"],
+                        boolean_states["is_new_hospitalized"],
+                        boolean_states["is_removed"],
+                        (~boolean_states["will_be_tested"], False),
+                        (~boolean_states["will_be_tested_new"], False),
+                        (~boolean_states["will_test_negative"], False),
+                        (~boolean_states["is_tested"], False),
+                        (~boolean_states["is_new_tested"], False),
+                        boolean_states["is_tested_positive"],
+                        (~boolean_states["is_quarantined"], False),
+                    ],
+                    hospit_cond,
+                ),
+            )
+        else:
+            self._transitions.append(
+                # will_be_hospitalized - hospitalized
+                # Transition from will_be_hospitalized to:
+                #   -is_hospitalized
+                #   -is_new_hospitalized
+                #   -is_removed
+                #   -not is_recovering
+                # where the time_until_hospitalization timer is <= 0
+                MultiStateConditionalTransition(
+                    "will_be_hospitalized_hospitalized",
+                    boolean_states["will_be_hospitalized"],
+                    [
+                        boolean_states["is_hospitalized"],
+                        boolean_states["is_new_hospitalized"],
+                        boolean_states["is_removed"],
+                        (~boolean_states["is_quarantined"], False),
+                    ],
+                    hospit_cond,
+                ),
+            )
+
+        self._transitions.extend(
+            [
+                MultiStateConditionalTransition(
+                    "hospitalized_recovered",
+                    boolean_states["is_hospitalized"],
+                    [
+                        boolean_states["is_recovered"],
+                        (~boolean_states["is_infected"], False),
+                        (~boolean_states["is_symptomatic"], False),
+                    ],
+                    hospit_recovery_condition,
+                ),
+                # Activate will_die and will_die_new if the
+                # will_die_cond condition is true.
+                ChangeStatesConditionalTransition(
+                    "will_die",
+                    [
+                        ~boolean_states["will_die"],
+                        ~boolean_states["will_die_new"],
+                    ],
+                    will_die_cond,
+                ),
+                # will_die - is_dead
+                # Transition from will_die to:
+                #   -is_dead
+                #   -is_removed
+                #   -not is_infected
+                #   -not is_hospitalized
+                #   -not is_new_hospitalized
+                # where the time_until_death timer is <= 0
+                MultiStateConditionalTransition(
+                    "will_die_is_dead",
+                    boolean_states["will_die"],
+                    [
+                        boolean_states["is_dead"],
+                        boolean_states["is_removed"],
+                        (~boolean_states["is_infectious"], False),
+                        (~boolean_states["is_infected"], False),
+                        (~boolean_states["is_hospitalized"], False),
+                        (~boolean_states["is_new_hospitalized"], False),
+                        (~boolean_states["is_symptomatic"], False),
+                        (~boolean_states["will_have_symptoms"], False),
+                    ],
+                    is_dead_cond,
+                ),
+            ]
+        )
 
         if self._measures.quarantine:
             self._transitions.append(
@@ -1387,9 +1417,7 @@ class ContagionStateMachine(StateMachine):
             self._transitions.append(
                 ChangeStatesConditionalTransition(
                     "will_test_negative",
-                    [
-                        ~boolean_states["will_test_negative"],
-                    ],
+                    [~boolean_states["will_test_negative"],],
                     will_test_negative_cond,
                 )
             )
@@ -1410,9 +1438,7 @@ class ContagionStateMachine(StateMachine):
                 MultiStateConditionalTransition(
                     "tested_positive",
                     boolean_states["is_tested"],
-                    [
-                        boolean_states["is_tested_positive"]
-                    ],
+                    [boolean_states["is_tested_positive"]],
                     test_result_cond,
                 )
             )
@@ -1518,8 +1544,7 @@ class ContagionStateMachine(StateMachine):
         removed_mask = self.states["is_removed"](data)
         hospitalized_mask = self.states["is_hospitalized"](data)
         infectious_mask = (
-            infectious_mask & (~removed_mask)
-            & (~hospitalized_mask)
+            infectious_mask & (~removed_mask) & (~hospitalized_mask)
         )
 
         if self._measures.quarantine:
@@ -1715,8 +1740,10 @@ class ContagionStateMachine(StateMachine):
             infected_mask = self.states["is_symptomatic"](data)
             tracked_infected_mask = infected_mask & tracked_mask
 
-        if (not np.any(tracked_infected_mask) or
-                not self._measures.contact_tracing):
+        if (
+            not np.any(tracked_infected_mask)
+            or not self._measures.contact_tracing
+        ):
             return tracked_infected_mask
 
         tracked_infected_indices = np.nonzero(tracked_infected_mask)[0]
