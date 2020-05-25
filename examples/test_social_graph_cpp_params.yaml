@@ -18,7 +18,7 @@ infection:
     class: Gamma
     mean: 7.47522
     sd: 4.27014
-  infected: 400
+  infected: 1
   infection probability pdf:
     class: Gamma
     max_val: 0.069
@@ -98,7 +98,7 @@ population:
       mean: 20
       sd: 5
   nx:
-    func: hierarchical_lfr_ba
+    func: lfr_ba
     inter freq pdf:
       class: Gamma
       mean: 10.0
@@ -109,19 +109,15 @@ population:
       sd: 1
     kwargs:
       m: 3
-      max_graph: 5000
       max_iters: 4000
       min_community: 13
-      min_graph: 200
       mu: 0.1
-      mu_hier: 0.1
       pref_attach: true
       tau: 1.2
-      tau_graphs: 3
       tolerance: 0.1
-  population class: HomogeneousPopulation
-  population size: 1000000
-  population storage: ../populations/generic.pkl
+  population class: NetworkXPopulation
+  population size: 100000
+  population storage: 1E6_lfr_ba.pickle
   random interactions intensity pdf:
     class: Gamma
     mean: 0.0001
@@ -129,7 +125,7 @@ population:
   random interactions pdf:
     class: Delta
     mean: 0.001
-  re-use population: false
+  re-use population: true
   social circle interactions pdf:
     class: Gamma
     mean: 10.0
@@ -138,7 +134,9 @@ population:
     class: Gamma
     mean: 10.0
     sd: 1
-  store population: true
+  store population: false
 scenario:
-  class: StandardScenario
+  class: LateMeasures
   sim_length: 500
+  start_measures_inf_frac: 0.004
+  start_quarantine_inf_frac: 0.004

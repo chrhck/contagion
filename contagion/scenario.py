@@ -55,11 +55,11 @@ class LateMeasures(StandardScenario):
                 self._sm._data["is_infected"].sum() /
                 self._sm._data.field_len
                 )
-
             if (inf_frac > self._start_measures_inf_frac or
-                 self.self._measures_active):
-                self._sm._measures.quarantine_active = True
-                self.self._measures_active = True
+                 self._measures_active):
+
+                self._sm._measures.measures_active = True
+                self._measures_active = True
             else:
                 self._sm._measures.measures_active = False
 
