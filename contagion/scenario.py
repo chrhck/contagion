@@ -35,6 +35,47 @@ class StandardScenario(object):
                 start = time()
 
 
+class LateMeasures(StandardScenario):
+    def __init__(
+            self,
+            state_machine: StateMachine,
+            sim_length: int,
+            start_measures_inf_frac: float,
+            *args, **kwargs):
+        super().__init__(state_machine, sim_length, *args, **kwargs)
+
+        self._start_measures_inf_frac = start_measures_inf_frac
+        self._measures_active = False
+
+    def run(self):
+        start = time()
+
+        for step in range(self._sim_length):
+            inf_frac = (
+                self._sm._data["is_infected"].sum() /
+                self._sm._data.field_len
+                )
+
+            if (inf_frac > self._start_measures_inf_frac or
+                 self.self._measures_active):
+                self._sm._measures.quarantine_active = True
+                self.self._measures_active = True
+            else:
+                self._sm._measures.measures_active = False
+
+            stop = self._sm.tick()
+            if stop:
+                _log.debug("Early stopping at %d", step)
+                break
+            if step % (self._sim_length / 10) == 0:
+                end = time()
+                _log.debug("In step %d" % step)
+                _log.debug(
+                    "Last round of simulations took %f seconds" % (end - start)
+                )
+                start = time()
+
+
 class SocialDistancing(StandardScenario):
 
     def __init__(

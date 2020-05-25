@@ -63,6 +63,8 @@ class Measures(object):
         else:
             _log.info("No testing")
 
+        self.measures_active = True
+
     @property
     def contact_tracing(self):
         return self.__contact_tracing
