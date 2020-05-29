@@ -69,29 +69,18 @@ class MC_Sim(object):
         self.__population = pd.DataFrame(
             {
                 "is_infected": False,
-                "is_new_infected": False,
                 "is_latent": False,
-                "is_new_latent": False,
                 "is_infectious": False,
-                "is_new_infectious": False,
                 "will_have_symptoms": False,
-                "will_have_symptoms_new": False,
                 "is_symptomatic": False,
-                "is_symptomatic_new": False,
                 "is_removed": False,
                 "is_hospitalized": False,
-                "is_new_hospitalized": False,
                 "is_recovering": False,
-                "is_new_recovering": False,
                 "is_recovered": False,
                 "will_die": False,
-                "will_die_new": False,
                 "will_be_hospitalized": False,
-                "will_be_hospitalized_new": False,
                 "is_dead": False,
-                "is_new_dead": False,
                 "is_quarantined": False,
-                "is_new_quarantined": False,
                 "is_tracked": False,
                 "infectious_duration": 0,
                 "latent_duration": 0,
@@ -103,14 +92,20 @@ class MC_Sim(object):
                 "time_until_symptoms": 0,
                 "quarantine_duration": 0,
                 "time_since_quarantine": -np.inf,
-                "will_be_tested": False,
-                "will_be_tested_new": False,
                 "is_tested": False,
+                "is_reported": False,
+                "is_tested_second": False,
+                "is_tested_negative": False,
+                "is_tested_negative_second": False,
                 "is_tested_positive": False,
-                "is_new_tested": False,
+                "is_tested_positive_second": False,
+                "is_tracable": False,
                 "will_test_negative": False,
                 "time_until_test": 0,
+                "time_until_second_test": 0,
                 "time_until_test_result": 0,
+                "time_until_second_test_result": 0,
+                "time_since_last_test_result": -np.inf,
             },
             index=np.arange(self.__pop_size),
         )
@@ -126,24 +121,33 @@ class MC_Sim(object):
                 g.nodes[inf_id]["initial_infected"] = True
 
         # Their infection duration
-        infec_dur = np.around(
-            self.__infect.infectious_duration.rvs(self.__infected)
+        latent_dur = np.around(
+            self.__infect.latent_duration.rvs(self.__infected)
         )
 
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
-        self.__population.loc[infect_id, "is_infectious"] = True
-        self.__population.loc[infect_id, "is_new_infectious"] = True
-        self.__population.loc[infect_id, "infectious_duration"] = infec_dur
+        self.__population.loc[infect_id, "is_latent"] = True
+        self.__population.loc[infect_id, "latent_duration"] = latent_dur
+
+        # self.__population.loc[infect_id, "time_since_infectious"] = 0
+        # self.__population.loc[infect_id, "infectious_duration"] = infec_dur
         # TODO: Add a switch if these people have symptoms or not
 
-        # Set Contact Tracing
-        tracked = self.__measures.tracked
-        if tracked is not None:
-            _log.debug("Constructing tracked people ids")
+        # Set population tracking
+        if self.__measures.population_tracking:
+
+            tracked_pop = int(
+                config["population"]["population size"]
+                * config["measures"]["tracked fraction"]
+            )
+            _log.debug("Number of people tracked is %d" % tracked_pop)
+            tracked = self.__rstate.choice(
+                range(config["population"]["population size"]),
+                size=tracked_pop,
+                replace=False,
+            ).flatten()
             self.__population.loc[tracked, "is_tracked"] = True
-        else:
-            _log.debug("Population is not tracked")
 
         # The storage dictionary
         self.__statistics = defaultdict(list)
@@ -161,12 +165,16 @@ class MC_Sim(object):
                 "is_dead",
                 "is_quarantined",
                 "is_symptomatic",
-                "will_be_tested",
                 "is_tested",
                 "is_tested_positive",
-                "will_test_negative"
+                "is_tested_negative",
+                "is_tested_positive_second",
+                "is_tested_negative_second",
+                #"will_test_negative"
             ],
-            [("is_recovered", "is_tested_positive", True)]
+            [
+                ("is_recovered", "is_tested_positive", True),
+                ("is_infected", "is_quarantined", True)]
         )
         # The state machine
         _log.debug("Setting up the state machine")
@@ -176,6 +184,7 @@ class MC_Sim(object):
             self.__pop,
             self.__infect,
             self.__measures,
+            trace_states=config["general"]["trace states"]
         )
 
         _log.debug("Setting simulation scenario")
@@ -224,6 +233,20 @@ class MC_Sim(object):
                 Stores the spread
         """
         return self._sm.trace_contacts
+
+    @property
+    def traced_states(self):
+        """
+        function: trace_contacts
+        Getter functions for the simulation results
+        from the simulation
+        Parameters:
+            -None
+        Returns:
+            -list trace_contacts:
+                Stores the spread
+        """
+        return self._sm._traced_states
 
     @property
     def trace_infection(self):

@@ -51,13 +51,13 @@ class LateMeasures(StandardScenario):
         start = time()
 
         for step in range(self._sim_length):
+            # print("day: ", step)
             inf_frac = (
                 self._sm._data["is_infected"].sum() /
                 self._sm._data.field_len
                 )
             if (inf_frac > self._start_measures_inf_frac or
                  self._measures_active):
-
                 self._sm._measures.measures_active = True
                 self._measures_active = True
             else:

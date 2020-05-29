@@ -25,6 +25,7 @@ _baseconfig = {
         # Trace the infection spread
         "trace spread": False,
         "track graph history": True,
+        "trace states": False
     },
     "population": {
         "population size": 10000,
@@ -34,51 +35,12 @@ _baseconfig = {
         "population storage": "../populations/generic.pkl",
         "population class": "HomogeneousPopulation",
         # Social circle pdf:
-        "social circle pdf": {"class": "Gamma", "mean": 40, "sd": 5},
+        "social circle pdf": {"class": "Gamma", "mean": 10, "sd": 1},
         "social circle interactions pdf": {
             "class": "Gamma",
-            "mean": 6,
-            "sd": 0.2,
+            "mean": 10,
+            "sd": 1,
         },
-        "hierarchy": [
-            {
-                # Close contacts (family)
-                "social circle pdf": {"class": "Gamma", "mean": 2, "sd": 2},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 3,
-                    "sd": 1,
-                },
-                # A person can only be in one of these circles
-                # -> Not interactions between circles of this type
-                "interconnectivity": 0,
-                "fully_connected": True,
-            },
-            {
-                # Friends
-                "social circle pdf": {"class": "Gamma", "mean": 10, "sd": 5},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 5,
-                    "sd": 2,
-                },
-                # 30 % of people in this group can be in other groups
-                "interconnectivity": 0.3,
-                "fully_connected": True,
-            },
-            {
-                # Loose contacts (work, ...)
-                "social circle pdf": {"class": "Gamma", "mean": 20, "sd": 5},
-                "social circle interactions pdf": {
-                    "class": "Gamma",
-                    "mean": 5,
-                    "sd": 2,
-                },
-                # 10 % of people in this group can be in other groups
-                "interconnectivity": 0.1,
-                "fully_connected": True,
-            },
-        ],
         "random interactions pdf": {
             "class": "Gamma",
             "mean": 0.0001,
@@ -117,7 +79,7 @@ _baseconfig = {
             "class": "Gamma",
             "mean": 3.0,
             "sd": 2.42,
-            "max_val": 0.15,
+            "max_val": 0.25,
         },
         "infectious duration pdf": {"class": "Gamma", "mean": 8.0, "sd": 2.42},
         "latency duration pdf": {"class": "Gamma", "mean": 6, "sd": 3},
@@ -155,6 +117,7 @@ _baseconfig = {
     "measures": {
         # Measures implemented (True, False)
         "contact tracing": False,
+        "population tracking": False,
         # fraction of population tracked
         "tracked fraction": 1.0,
         # Second order Tracing (True, False)
@@ -175,6 +138,10 @@ _baseconfig = {
         "time until test": 1.0,
         # Time until test results
         "time until result": 1.0,
+        "test true positive rate": 0.9,
+        "time until second test": 5,
+        "time until second test result": 0,
+        "test false positive rate": 0.01
     },
     "scenario": {"class": "StandardScenario", "sim_length": 200},
 }

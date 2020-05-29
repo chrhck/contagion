@@ -96,10 +96,17 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         """
 
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
+        n_contacts *= self.interaction_rate_scaling
+        n_contacts_sym = np.asarray(np.round(n_contacts), dtype=np.int)
+        all_sel_indices = []
+        succesful_rows = []
+        contact_rates = []
+
         with np.errstate(all="ignore"):
             contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
 
+        """
         # n_contacts is the number of contacts for each infected
         # we also want the number of times the infected person
         # is contacted by others. For the ad-hoc calculation,
@@ -118,10 +125,6 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
         contact_rates = []
         # NOTE: This calculation will producde duplicate contacts
 
-        all_sel_indices = []
-
-        succesful_rows = []
-
         n_contacts_sym = np.asarray(
             np.round(
                 np.min(
@@ -136,28 +139,34 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             ),
             dtype=np.int,
         )
-        all_sel_indices = np.split(
-            self._rstate.randint(
+        """
+
+        # only draw valid indices
+
+        all_sel_indices = self._rstate.randint(
                 0, self._pop_size, size=np.sum(n_contacts_sym), dtype=np.int
-            ),
-            np.cumsum(n_contacts_sym),
-        )[:-1]
+        )
 
-        for i, (row_index, sel_indices) in enumerate(
-            zip(rows, all_sel_indices)
-        ):
-            if len(all_sel_indices[i]) == 0:
-                continue
+        if len(all_sel_indices) > 0:
+            all_sel_indices = np.split(
+                all_sel_indices,
+                np.cumsum(n_contacts_sym),
+            )[:-1]
 
-            succesful_rows.append(
-                np.ones(len(all_sel_indices[i]), dtype=np.int) * row_index
-            )
-            contact_rates.append(
-                np.ones(len(all_sel_indices[i]), dtype=np.float)
-                * contact_rate[i]
-            )
+            for i, (row_index, sel_indices) in enumerate(
+                zip(rows, all_sel_indices)
+            ):
+                if len(all_sel_indices[i]) == 0:
+                    continue
 
-        if all_sel_indices:
+                succesful_rows.append(
+                    np.ones(len(all_sel_indices[i]), dtype=np.int) * row_index
+                )
+                contact_rates.append(
+                    np.ones(len(all_sel_indices[i]), dtype=np.float)
+                    * contact_rate[i]
+                )
+
             all_sel_indices = np.concatenate(all_sel_indices)
             contact_rates = np.concatenate(contact_rates)
             succesful_rows = np.concatenate(succesful_rows)
@@ -171,7 +180,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             )
 
             counts = counts[pos]
-            contact_rates = contact_rates[ind][pos] * counts
+            contact_rates = contact_rates[ind][pos]
             succesful_rows = succesful_rows[ind][pos]
         else:
             sel_indices = np.empty(0, dtype=int)
@@ -225,7 +234,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             contact_rates = np.empty(0, dtype=int)
             succesful_rows = np.empty(0, dtype=int)
         """
-        contact_rates = contact_rates * self.interaction_rate_scaling
+        contact_rates = None  # Don't use poisson
         if return_rows:
             return sel_indices, contact_rates, succesful_rows
         return sel_indices, contact_rates

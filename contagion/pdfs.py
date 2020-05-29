@@ -264,7 +264,8 @@ class Gamma(ScipyPDF):
             self,
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
-            max_val=None) -> None:
+            max_val=None,
+            scaling=None) -> None:
         """
         function: __init__
         Initializes the Gamma class
@@ -278,6 +279,8 @@ class Gamma(ScipyPDF):
         Returns:
             -None
         """
+        if max_val is not None and scaling is not None:
+            raise ValueError("Cannot set both scaling and max_val")
         self._mean = mean
         self._sd = sd
         self._beta = self._mean / self._sd**2.
@@ -287,6 +290,7 @@ class Gamma(ScipyPDF):
         self._scale = 1. / self._beta
         self._mode = (self._alpha-1) / self._beta
         self._max_val = max_val
+        self._scaling = scaling
 
         self._pdf = scipy.stats.gamma(
             self._shape,
@@ -302,6 +306,9 @@ class Gamma(ScipyPDF):
 
         if self._max_val is not None:
             pdf_vals = pdf_vals / self._val_at_mode * self._max_val
+
+        elif self._scaling is not None:
+            pdf_vals = pdf_vals * self._scaling
 
         return pdf_vals
 

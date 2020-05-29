@@ -12,7 +12,7 @@ from typing import Union, Optional
 import numpy as np
 import logging
 
-from .pdfs import Uniform
+from .pdfs import Uniform, Delta, construct_pdf
 from .config import config
 
 _log = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class Measures(object):
         self.__rstate = config["runtime"]["random state"]
 
         self.__contact_tracing = config["measures"]["contact tracing"]
+        self.__population_tracking = config["measures"]["population tracking"]
         self.__quarantine = config["measures"]["quarantine"]
         self.__testing = config["measures"]["testing"]
 
@@ -49,7 +50,11 @@ class Measures(object):
             self.__def_contact_tracing()
         else:
             _log.info("No contact tracing")
-            self.__tracked = None
+
+        if self.__population_tracking:
+            _log.info("Using population tracking")
+        else:
+            _log.info("No population tracking")
 
         if self.__quarantine:
             _log.info("Using quarantine")
@@ -78,17 +83,8 @@ class Measures(object):
         return self.__testing
 
     @property
-    def tracked(self):
-        """
-        function: tracked
-        Getter function for the tracked population
-        Parameters:
-            -None
-        Returns:
-            -np.array tracked:
-                The ids of the tracked population
-        """
-        return self.__tracked
+    def population_tracking(self):
+        return self.__population_tracking
 
     @property
     def quarantine_duration(self):
@@ -121,6 +117,28 @@ class Measures(object):
         return self.__time_until_test_pdf
 
     @property
+    def time_until_second_test(self):
+        """
+        Getter function for the delay of the second test
+        Parameters:
+            -None
+        Returns:
+            -PDF
+        """
+        return self.__time_until_second_test_pdf
+
+    @property
+    def time_until_second_test_result(self):
+        """
+        Getter function for the delay of the second test
+        Parameters:
+            -None
+        Returns:
+            -PDF
+        """
+        return self.__time_until_second_test_result_pdf
+
+    @property
     def time_until_test_result(self):
         """
         function: time_until_test_result
@@ -132,6 +150,19 @@ class Measures(object):
                 The pdf of the quarantine duration
         """
         return self.__time_until_test_result_pdf
+
+    @property
+    def test_false_positive_pdf(self):
+        """
+        function: time_until_test_result
+        Getter function for the delay of the test results
+        Parameters:
+            -None
+        Returns:
+            -PDF
+                The pdf of the quarantine duration
+        """
+        return self.__test_false_positive_pdf
 
     def test_efficiency(
         self, points: Union[float, np.ndarray], dtype: Optional[type] = None
@@ -184,16 +215,6 @@ class Measures(object):
         Returns:
             -None
         """
-        tracked_pop = int(
-            config["population"]["population size"]
-            * config["measures"]["tracked fraction"]
-        )
-        _log.debug("Number of people tracked is %d" % tracked_pop)
-        self.__tracked = self.__rstate.choice(
-            range(config["population"]["population size"]),
-            size=tracked_pop,
-            replace=False,
-        ).flatten()
 
         self.__backtrack_length = config["measures"]["backtrack length"]
         _log.debug(
@@ -217,9 +238,8 @@ class Measures(object):
         Returns:
             -None
         """
-        quarantine_duration_pdf = Uniform(
-            config["measures"]["quarantine duration"], 0.0
-        )
+        quarantine_duration_pdf = Delta(
+            config["measures"]["quarantine duration"])
         self.__quarantine_duration = quarantine_duration_pdf
         self.__report_symptomatic = config["measures"]["report symptomatic"]
 
@@ -238,27 +258,45 @@ class Measures(object):
         # a = 8.5
         # b = 0.74408163
         # c = 8.48725228
-        def test_efficiency_function(x, a=8.5, b=0.74408163, c=8.48725228):
-            if x < a:
-                return config["measures"]["test true positive rate"]
-            else:
-                return (
-                    config["measures"]["test true positive rate"] *
-                    np.exp(-b * (x - c)))
 
-        time_until_test_pdf = Uniform(
-            config["measures"]["time until test"], 0.0
-        )
+        infectivity_curve = construct_pdf(
+            config["infection"]["infection probability pdf"])
+
+        def test_efficiency_function(x):
+            infectivity = infectivity_curve.pdf(x)
+
+            tpr = config["measures"]["test true positive rate"]
+            t_thresh = config["measures"]["test threshold"]
+            if infectivity > t_thresh:
+                return tpr
+
+            return tpr/t_thresh * infectivity
+
+        time_until_test_pdf = Delta(config["measures"]["time until test"])
         self.__time_until_test_pdf = time_until_test_pdf
 
-        time_until_test_result_pdf = Uniform(
-            config["measures"]["time until result"], 0.0
+        time_until_test_result_pdf = Delta(
+            config["measures"]["time until result"]
         )
+
         self.__time_until_test_result_pdf = time_until_test_result_pdf
+
+        time_until_second_test_pdf = Delta(
+            config["measures"]["time until second test"]
+        )
+        self.__time_until_second_test_pdf = time_until_second_test_pdf
+
+        time_until_second_test_result_pdf = Delta(
+            config["measures"]["time until second test result"]
+        )
+        self.__time_until_second_test_result_pdf =\
+            time_until_second_test_result_pdf
 
         self.__test_efficiency_function = np.vectorize(
             test_efficiency_function
         )
 
-
-
+        self.__test_false_positive_pdf = Delta(
+            config["measures"]["test false positive rate"]
+        )
+        

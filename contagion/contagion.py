@@ -210,6 +210,20 @@ class Contagion(object):
         return self.__mc_run.trace_contacts
 
     @property
+    def traced_states(self):
+        """
+        function: trace_contacts
+        Getter functions for the simulation results
+        from the simulation
+        Parameters:
+            -None
+        Returns:
+            -list trace_contacts:
+                Stores the results from the simulation
+        """
+        return self.__mc_run.traced_states
+
+    @property
     def trace_infection(self):
         """
         function: trace_infection
