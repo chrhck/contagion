@@ -2089,7 +2089,7 @@ class ContagionStateMachine(StateMachine):
             if config["general"]["trace spread"]:
                 #self._trace_contacts.append(np.empty((1, 0, 2)))
                 self._trace_contacts.append(defaultdict(list))
-                self._trace_infection.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2), dtype=np.int))
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
@@ -2117,7 +2117,7 @@ class ContagionStateMachine(StateMachine):
             if config["general"]["trace spread"]:
                 #self._trace_contacts.append(np.empty((1, 0, 2)))
                 self._trace_contacts.append(defaultdict(list))
-                self._trace_infection.append(np.empty((1, 0, 2)))
+                self._trace_infection.append(np.empty((1, 0, 2)), dtype=np.int)
             return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # NOTE: This is ~2times slower
@@ -2439,7 +2439,8 @@ class ContagionStateMachine(StateMachine):
         infectee_ids = find_infectee_bt(
             infect_history, tracked_reported_indices)
 
-        contacted_mask[infectee_ids] = True
+        if len(infectee_ids) > 0:
+            contacted_mask[infectee_ids] = True
 
         if not self._measures.track_uninfected:
             infected_mask = self.states["is_infected"](data)
