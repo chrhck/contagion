@@ -120,6 +120,22 @@ class Condition(object):
 
         return Condition(new_condition)
 
+    def __or__(self, other: TCondition) -> Condition:
+        """
+        Logical and of a condition and an object of type `TCondition`
+
+        Parameters:
+            other: TCondition
+
+        """
+
+        def new_condition(data: DataDict):
+            cond = unify_condition(other, data)
+
+            return self(data) | cond
+
+        return Condition(new_condition)
+
 
 TCondition = Union["_State", np.ndarray, Condition, None]
 
@@ -1952,9 +1968,15 @@ class ContagionStateMachine(StateMachine):
                 # Quarantine release
 
                 free_condition = (
-                    Condition(self.__quarantine_test_free) &
+                    (
+                        Condition(self.__quarantine_test_free) &
+                        Condition.from_state(
+                            boolean_states["is_quarantined"]
+                        )
+                    ) |
                     Condition.from_state(
-                        boolean_states["is_quarantined"])
+                        boolean_states["is_tested_negative_second"]
+                    )
                 )
 
                 reset_states = [
