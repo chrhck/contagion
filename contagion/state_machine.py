@@ -2439,7 +2439,8 @@ class ContagionStateMachine(StateMachine):
         infectee_ids = find_infectee_bt(
             infect_history, tracked_reported_indices)
 
-        contacted_mask[infectee_ids] = True
+        if len(infectee_ids) > 0:
+            contacted_mask[infectee_ids] = True
 
         if not self._measures.track_uninfected:
             infected_mask = self.states["is_infected"](data)
