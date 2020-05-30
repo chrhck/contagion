@@ -2215,11 +2215,11 @@ class ContagionStateMachine(StateMachine):
             )
             """
 
-        num_succesful_contacts = len(successful_contacts_indices)
+        num_succesful_contacts = np.sum(successful_contacts_strength)
         num_succesful_contactees = len(np.unique(successful_contactee_indices))
         self._stat_collector["contacts"].append(num_succesful_contacts)
         if num_succesful_contactees > 0:
-            c_per_p = num_succesful_contacts /  num_succesful_contactees
+            c_per_p = num_succesful_contacts / num_succesful_contactees
         else:
             c_per_p = 0
         self._stat_collector["contacts_per_person"].append(

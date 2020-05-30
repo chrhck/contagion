@@ -153,7 +153,7 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
             sel_indices = unique_indices
             # contact_rates = contact_rates[ind] * counts
             succesful_rows = succesful_rows[ind]
-            contact_rates = np.ones_like(unique_indices)
+            contact_rates = np.ones_like(unique_indices) * counts
 
             """
             unique_indices, ind, counts = np.unique(
@@ -610,7 +610,7 @@ class NetworkXWrappers(object):
                 print("Min community is smaller than min(k)+1. Adjusting")
                 min_community = min(deg_seq) + 1
         if max_community is None:
-            max_community = 3*max(deg_seq) 
+            max_community = 3*max(deg_seq)
         else:
             if max_community < max(deg_seq) + 1:
                 print("Max community is smaller than max(k)+1. Adjusting")
@@ -1131,11 +1131,21 @@ class NetworkXPopulation(Population):
             contact_rows = np.concatenate(contact_rows)
             contact_strengths = np.concatenate(contact_strengths)
 
+            unique_indices, ind, counts = np.unique(
+                contact_cols, return_index=True, return_counts=True
+            )
+
+            contact_cols = unique_indices
+            # contact_rates = contact_rates[ind] * counts
+            contact_rows = contact_rows[ind]
+            contact_strengths = np.ones_like(unique_indices) * counts
+
         else:
             contact_cols = np.empty(0, dtype=int)
             contact_rows = np.empty(0, dtype=int)
             contact_strengths = np.empty(0, dtype=int)
 
+        contact_strengths = np.ones_like(contact_cols)
         if return_rows:
             return contact_cols, contact_strengths, contact_rows
         else:
