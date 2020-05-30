@@ -12,9 +12,11 @@ class StandardScenario(object):
             self,
             state_machine: StateMachine,
             sim_length: int,
+            early_stopping: bool = True,
             *args, **kwargs):
         self._sim_length = sim_length
         self._sm = state_machine
+        self._early_stopping = early_stopping
 
         _log.info("There will be %d simulation steps", self._sim_length)
 
@@ -23,7 +25,7 @@ class StandardScenario(object):
 
         for step in range(self._sim_length):
             stop = self._sm.tick()
-            if stop:
+            if stop and self._early_stopping:
                 _log.debug("Early stopping at %d", step)
                 break
             if step % (self._sim_length / 10) == 0:
@@ -41,11 +43,13 @@ class LateMeasures(StandardScenario):
             state_machine: StateMachine,
             sim_length: int,
             start_measures_inf_frac: float,
+            early_stopping: bool = True,
             *args, **kwargs):
         super().__init__(state_machine, sim_length, *args, **kwargs)
 
         self._start_measures_inf_frac = start_measures_inf_frac
         self._measures_active = False
+        self._early_stopping = early_stopping
 
     def run(self):
         start = time()
@@ -64,7 +68,7 @@ class LateMeasures(StandardScenario):
                 self._sm._measures.measures_active = False
 
             stop = self._sm.tick()
-            if stop:
+            if stop and self._early_stopping:
                 _log.debug("Early stopping at %d", step)
                 break
             if step % (self._sim_length / 10) == 0:

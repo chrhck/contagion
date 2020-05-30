@@ -44,6 +44,7 @@ class Measures(object):
         self.__population_tracking = config["measures"]["population tracking"]
         self.__quarantine = config["measures"]["quarantine"]
         self.__testing = config["measures"]["testing"]
+        self.__rnd_testing = config["measures"]["rnd testing"]
 
         if self.__contact_tracing:
             _log.info("Using contact tracing")
@@ -67,6 +68,9 @@ class Measures(object):
             self.__def_testing()
         else:
             _log.info("No testing")
+
+        if self.__rnd_testing:
+            self.__def_rnd_testing()
 
         self.measures_active = True
 
@@ -194,6 +198,14 @@ class Measures(object):
         return np.bool(self.__track_uninfected)
 
     @property
+    def random_test_num(self):
+        return self.__random_test_num
+
+    @property
+    def random_testing(self):
+        return self.__rnd_testing
+
+    @property
     def is_SOT_active(self):
         """
         function: is_SOT_active
@@ -243,6 +255,9 @@ class Measures(object):
         self.__quarantine_duration = quarantine_duration_pdf
         self.__report_symptomatic = config["measures"]["report symptomatic"]
 
+    def __def_rnd_testing(self):
+        self.__random_test_num = config["measures"]["random test num"]
+
     def __def_testing(self):
         """
         function: __def_testing
@@ -263,14 +278,19 @@ class Measures(object):
             config["infection"]["infection probability pdf"])
 
         def test_efficiency_function(x):
+            x = np.atleast_1d(x)
             infectivity = infectivity_curve.pdf(x)
 
             tpr = config["measures"]["test true positive rate"]
             t_thresh = config["measures"]["test threshold"]
-            if infectivity > t_thresh:
-                return tpr
 
-            return tpr/t_thresh * infectivity
+            efficiency = np.empty_like(infectivity)
+
+            mask = infectivity > t_thresh
+            efficiency[mask] = tpr
+            efficiency[~mask] = tpr/t_thresh * infectivity[~mask]
+
+            return efficiency
 
         time_until_test_pdf = Delta(config["measures"]["time until test"])
         self.__time_until_test_pdf = time_until_test_pdf
@@ -292,11 +312,10 @@ class Measures(object):
         self.__time_until_second_test_result_pdf =\
             time_until_second_test_result_pdf
 
-        self.__test_efficiency_function = np.vectorize(
-            test_efficiency_function
-        )
+        self.__test_efficiency_function = test_efficiency_function
+
 
         self.__test_false_positive_pdf = Delta(
             config["measures"]["test false positive rate"]
         )
-        
+       

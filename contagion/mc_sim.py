@@ -69,6 +69,7 @@ class MC_Sim(object):
         self.__population = pd.DataFrame(
             {
                 "is_infected": False,
+                "was_infected": False,
                 "is_latent": False,
                 "is_infectious": False,
                 "will_have_symptoms": False,
@@ -93,13 +94,17 @@ class MC_Sim(object):
                 "quarantine_duration": 0,
                 "time_since_quarantine": -np.inf,
                 "is_tested": False,
+                "has_first_test_result": False,
+                "has_second_test_result": False,
                 "is_reported": False,
+                "is_index_case": False,
                 "is_tested_second": False,
                 "is_tested_negative": False,
                 "is_tested_negative_second": False,
                 "is_tested_positive": False,
                 "is_tested_positive_second": False,
                 "is_tracable": False,
+                "is_rnd_tested": False,
                 "will_test_negative": False,
                 "time_until_test": 0,
                 "time_until_second_test": 0,
@@ -149,6 +154,18 @@ class MC_Sim(object):
             ).flatten()
             self.__population.loc[tracked, "is_tracked"] = True
 
+        if self.__measures.contact_tracing:
+            has_app = int(
+                config["population"]["population size"]
+                * config["measures"]["app fraction"]
+            )
+            has_app_ids = self.__rstate.choice(
+                range(config["population"]["population size"]),
+                size=has_app,
+                replace=False,
+            )
+            self.__population.loc[has_app_ids, "is_tracable"] = True
+
         # The storage dictionary
         self.__statistics = defaultdict(list)
 
@@ -159,6 +176,7 @@ class MC_Sim(object):
                 "is_latent",
                 "is_infectious",
                 "is_infected",
+                "was_infected",
                 "is_hospitalized",
                 "is_recovered",
                 "is_recovering",
@@ -170,6 +188,7 @@ class MC_Sim(object):
                 "is_tested_negative",
                 "is_tested_positive_second",
                 "is_tested_negative_second",
+                "is_index_case"
                 #"will_test_negative"
             ],
             [

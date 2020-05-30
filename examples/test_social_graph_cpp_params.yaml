@@ -4,6 +4,7 @@ general:
   log file handler: ../run/contagion.log
   random state seed: 6
   trace spread: true
+  trace states: false
   track graph history: true
 infection:
   hospitalization duration pdf:
@@ -11,27 +12,55 @@ infection:
     mean: 14.0
     sd: 0.01
   hospitalization probability pdf:
-    class: Beta
-    mean: 0.0001
-    sd: 1.0e-05
+    class: Delta
+    mean: 0
   incubation duration pdf:
     class: Gamma
-    mean: 7.47522
-    sd: 4.27014
+    mean: !!python/object/apply:numpy.core.multiarray.scalar
+    - &id001 !!python/object/apply:numpy.dtype
+      args:
+      - f8
+      - 0
+      - 1
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      6Gor9pfdHUA=
+    sd: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Atc86LESEUA=
   infected: 1
   infection probability pdf:
     class: Gamma
-    max_val: 0.069
-    mean: 3.0
-    sd: 2.42
+    mean: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      hXzQs1n1CUA=
+    scaling: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Nl+s20Fy0z8=
+    sd: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      5ljWsbj/AUA=
   infectious duration pdf:
-    class: Gamma
-    mean: 8.0
-    sd: 2.42
+    class: Delta
+    mean: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      GmRGh5MsJUA=
   latency duration pdf:
-    class: Gamma
-    mean: 6
-    sd: 3
+    class: Delta
+    mean: 2.42
   mortality prob pdf:
     class: Beta
     mean: 0.01
@@ -49,64 +78,52 @@ infection:
     mean: 2.52
     sd: 1.0
   will have symptoms prob pdf:
-    class: Beta
+    class: Delta
     mean: 0.6
-    sd: 0.01
 measures:
+  app fraction: 1.0
   backtrack length: 14
   contact tracing: true
+  population tracking: false
   quarantine: true
   quarantine duration: 14
+  random test num: 0
   report symptomatic: true
+  rnd testing: false
   second order: false
+  test false positive rate: 0.01
+  test threshold: 0.01
   test true positive rate: 0.9
   testing: true
-  time until result: 1
-  time until test: 1
+  time until result: 0
+  time until second test: 6
+  time until second test result: 0
+  time until test: 0
   track uninfected: true
   tracked fraction: 0
 population:
-  hierarchy:
-  - fully_connected: true
-    interconnectivity: 0
-    social circle interactions pdf:
-      class: Gamma
-      mean: 3
-      sd: 1
-    social circle pdf:
-      class: Gamma
-      mean: 2
-      sd: 2
-  - fully_connected: true
-    interconnectivity: 0.3
-    social circle interactions pdf:
-      class: Gamma
-      mean: 5
-      sd: 2
-    social circle pdf:
-      class: Gamma
-      mean: 10
-      sd: 5
-  - fully_connected: true
-    interconnectivity: 0.1
-    social circle interactions pdf:
-      class: Gamma
-      mean: 5
-      sd: 2
-    social circle pdf:
-      class: Gamma
-      mean: 20
-      sd: 5
   nx:
     func: lfr_ba
     inter freq pdf:
       class: Gamma
-      mean: 10.0
-      sd: 1
+      mean: !!python/object/apply:numpy.core.multiarray.scalar
+      - *id001
+      - !!binary |
+        AAAAAAAAJEA=
+      sd: !!python/object/apply:numpy.core.multiarray.scalar
+      - *id001
+      - !!binary |
+        wAofAMZIHEA=
     intra freq pdf:
       class: Gamma
-      mean: 10.0
-      sd: 1
+      mean: !!python/object/apply:numpy.core.multiarray.scalar
+      - *id001
+      - !!binary |
+        AAAAAAAAJEA=
+      sd: !!python/object/apply:numpy.core.multiarray.scalar
+      - *id001
+      - !!binary |
+        wAofAMZIHEA=
     kwargs:
       m: 3
       max_iters: 4000
@@ -117,26 +134,36 @@ population:
       tolerance: 0.1
   population class: NetworkXPopulation
   population size: 100000
-  population storage: 1E6_lfr_ba.pickle
+  population storage: ../populations/generic.pkl
   random interactions intensity pdf:
-    class: Gamma
-    mean: 0.0001
-    sd: 0.0001
+    class: Delta
+    mean: 0.0
   random interactions pdf:
     class: Delta
-    mean: 0.001
-  re-use population: true
+    mean: 0.0
+  re-use population: false
   social circle interactions pdf:
     class: Gamma
-    mean: 10.0
-    sd: 1
+    mean: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AAAAAAAAJEA=
+    sd: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      wAofAMZIHEA=
   social circle pdf:
     class: Gamma
-    mean: 10.0
-    sd: 1
+    mean: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AAAAAAAAJEA=
+    sd: !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      wAofAMZIHEA=
   store population: false
 scenario:
   class: LateMeasures
   sim_length: 500
   start_measures_inf_frac: 0.004
-  start_quarantine_inf_frac: 0.004

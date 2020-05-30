@@ -141,7 +141,11 @@ _baseconfig = {
         "test true positive rate": 0.9,
         "time until second test": 5,
         "time until second test result": 0,
-        "test false positive rate": 0.01
+        "test false positive rate": 0.01,
+        "test threshold": 0.01,
+        "app fraction": 1,
+        "random test num": 0,
+        "rnd testing": False
     },
     "scenario": {"class": "StandardScenario", "sim_length": 200},
 }

@@ -97,144 +97,83 @@ class HomogeneousPopulation(PopulationWithSocialCircles):
 
         n_contacts = self._soc_circ_interact_pdf.rvs(rows.shape[0])
         n_contacts *= self.interaction_rate_scaling
-        n_contacts_sym = np.asarray(np.round(n_contacts), dtype=np.int)
-        all_sel_indices = []
-        succesful_rows = []
-        contact_rates = []
 
+        # reduce by uninfectable
+        n_contacts *= len(cols) / self._pop_size
+
+        n_contacts_sym = np.asarray(np.round(n_contacts), dtype=np.int)
+
+        """
         with np.errstate(all="ignore"):
             contact_rate = n_contacts / self._social_circles[rows]
         contact_rate[self._social_circles[rows] == 0] = 0
-
-        """
-        # n_contacts is the number of contacts for each infected
-        # we also want the number of times the infected person
-        # is contacted by others. For the ad-hoc calculation,
-        # we use the contact rate of each infected person
-        # Number of people who can contact each infected:
-        # n_candidates = pop_size - n_infected
-        # contact_rate = 1 / pop_size * n_candidates * contact_rate
-
-        n_candidates = self._pop_size - len(rows)
-        contact_rate_others = 1 / self._pop_size * n_candidates * contact_rate
-        n_contacts_others = self._rstate.poisson(
-            contact_rate_others, size=len(rows)
-        )
-
-        sel_indices = []
-        contact_rates = []
-        # NOTE: This calculation will producde duplicate contacts
-
-        n_contacts_sym = np.asarray(
-            np.round(
-                np.min(
-                    np.vstack(
-                        [
-                            n_contacts + n_contacts_others,
-                            np.ones_like(n_contacts) * len(cols),
-                        ]
-                    ),
-                    axis=0,
-                )
-            ),
-            dtype=np.int,
-        )
         """
 
-        # only draw valid indices
+        # contact_rate = np.ones_like(rows, dtype=int)
 
+        """
         all_sel_indices = self._rstate.randint(
                 0, self._pop_size, size=np.sum(n_contacts_sym), dtype=np.int
         )
+        """
+
+        all_sel_indices = self._rstate.randint(
+                0, len(cols), size=np.sum(n_contacts_sym), dtype=np.int
+        )
+        all_sel_indices = cols[all_sel_indices]
+
+        succesful_rows = []
+        # contact_rates = []
 
         if len(all_sel_indices) > 0:
-            all_sel_indices = np.split(
+            all_sel_indices_split = np.split(
                 all_sel_indices,
                 np.cumsum(n_contacts_sym),
             )[:-1]
 
             for i, (row_index, sel_indices) in enumerate(
-                zip(rows, all_sel_indices)
+                zip(rows, all_sel_indices_split)
             ):
-                if len(all_sel_indices[i]) == 0:
+                if len(all_sel_indices_split[i]) == 0:
                     continue
 
                 succesful_rows.append(
-                    np.ones(len(all_sel_indices[i]), dtype=np.int) * row_index
-                )
-                contact_rates.append(
-                    np.ones(len(all_sel_indices[i]), dtype=np.float)
-                    * contact_rate[i]
-                )
+                    [row_index] * len(all_sel_indices_split[i]))
+                # contact_rates.append(
+                #     [contact_rate[i]] * len(all_sel_indices_split[i])
+                # )
 
-            all_sel_indices = np.concatenate(all_sel_indices)
-            contact_rates = np.concatenate(contact_rates)
+            # all_sel_indices = np.concatenate(all_sel_indices)
+            # contact_rates = np.concatenate(contact_rates)
             succesful_rows = np.concatenate(succesful_rows)
 
             unique_indices, ind, counts = np.unique(
                 all_sel_indices, return_index=True, return_counts=True
             )
+            sel_indices = unique_indices
+            # contact_rates = contact_rates[ind] * counts
+            succesful_rows = succesful_rows[ind]
+            contact_rates = np.ones_like(unique_indices)
 
+            """
+            unique_indices, ind, counts = np.unique(
+                all_sel_indices, return_index=True, return_counts=True
+            )
             sel_indices, pos, _ = np.intersect1d(
                 unique_indices, cols, assume_unique=True, return_indices=True
             )
 
             counts = counts[pos]
-            contact_rates = contact_rates[ind][pos]
+            contact_rates = contact_rates[ind][pos] * counts
             succesful_rows = succesful_rows[ind][pos]
+            """
+
         else:
             sel_indices = np.empty(0, dtype=int)
             contact_rates = np.empty(0, dtype=int)
             succesful_rows = np.empty(0, dtype=int)
 
-        """
-        unique_indices, counts = np.unique(
-            this_sel_indices, return_counts=True)
-        this_sel_indices, pos, _ = np.intersect1d(
-            unique_indices, cols, assume_unique=True, return_indices=True)
-
-        counts = counts[pos]
-
-        sel_indices.append(this_sel_indices)
-        contact_rates.append(
-            np.ones(
-                len(this_sel_indices),
-                dtype=np.float)
-            *contact_rate[i]*counts)
-        succesful_rows.append(
-                np.ones(len(this_sel_indices), dtype=int) * row_index)
-
-        for i, row_index in enumerate(rows):
-            n_contact = min(int(n_contacts[i]+n_contacts_others[i]), len(cols))
-
-            this_sel_indices = set()
-            for _ in range(n_contact):
-                while True:
-                    ind = self._rstate.randint(0, len(cols), dtype=np.int)
-                    if ind not in this_sel_indices:
-                        this_sel_indices.add(ind)
-                        break
-
-            sel_indices.append(list(this_sel_indices))
-            contact_rates.append(
-                np.ones(n_contact, dtype=np.float)*contact_rate[i])
-            if np.any(contact_rate[i] > 0):
-                succesful_rows.append(
-                    np.ones(int(n_contact), dtype=int) * row_index)
-            else:
-                succesful_rows.append(np.empty(0, dtype=int))
-
-
-        if sel_indices:
-            sel_indices = np.concatenate(sel_indices)
-            contact_rates = np.concatenate(contact_rates)
-            succesful_rows = np.concatenate(succesful_rows)
-        else:
-            sel_indices = np.empty(0, dtype=int)
-            contact_rates = np.empty(0, dtype=int)
-            succesful_rows = np.empty(0, dtype=int)
-        """
-        contact_rates = None  # Don't use poisson
+        # contact_rates = None  # Don't use poisson
         if return_rows:
             return sel_indices, contact_rates, succesful_rows
         return sel_indices, contact_rates
