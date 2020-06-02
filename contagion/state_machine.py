@@ -1518,8 +1518,10 @@ class ContagionStateMachine(StateMachine):
         )
 
         if self._measures.random_testing:
+            contacts_traced_cond = Condition(
+                    self.__has_contacts_traced)
             rnd_test_cond = Condition(
-                self.__takes_random_test)
+                self.__takes_random_test) & contacts_traced_cond
 
             test_result_cond = Condition.from_state(
                 ~timer_states["time_until_test_result"]
@@ -2266,7 +2268,7 @@ class ContagionStateMachine(StateMachine):
         # If multiple sucessful interacions pick the first
         newly_infectee_indices = newly_infectee_indices[uq_ind]
 
-        if config["general"]["trace spread"]:
+        if config["measures"]["contact tracing"]:
             if self._measures.backtrack_length > 0:
                 # generate contacts to fill up backtrace
                 bt_len = min(
