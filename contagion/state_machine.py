@@ -698,14 +698,13 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         num_zero_rows = zero_rows.sum(axis=0)
 
         initial_vals = self._initialization_pdf.rvs(num_zero_rows)
-
+        # print(len(initial_vals), (~self._state_a(data)).sum())
         changed = (~self._state_a).change_state(data, initial_vals, cond)
         if self._log:
             print(self._name)
             # print("Nonzero cond ", np.nonzero(condition_mask))
             if np.any(np.nonzero(cond)[0] == 0):
                 print("Time until second ", data["time_until_second_test"][0])
-
 
         if self._pipe_condition_mask:
             return condition_mask
@@ -2383,7 +2382,10 @@ class ContagionStateMachine(StateMachine):
         else:
             base_mask = np.ones(data.field_len, dtype=np.bool)
 
-        reported_mask = self.states["is_reported"](data)
+        reported_mask = (
+            self.states["is_reported"](data) & 
+            self.states["is_tracable"](data)
+            )
         reported_mask = reported_mask & base_mask
 
         if reported_mask.sum() == 0:
@@ -2472,7 +2474,14 @@ class ContagionStateMachine(StateMachine):
 
         contacted_mask &= base_mask
 
-        return contacted_mask
+        # apply tracing efficiency
+
+        is_suc_traced = self._rstate.binomial(
+            1,
+            self._measures.tracing_efficiency,
+            size=data.field_len) == 1
+
+        return contacted_mask & is_suc_traced
 
         """
         if self._measures.is_SOT_active:

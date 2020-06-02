@@ -126,6 +126,7 @@ _baseconfig = {
         "backtrack length": 0.0,
         # track uninfected (True, False)
         "track uninfected": False,
+        "tracing efficiency": 1.0,
         # quarantine (True, False)
         "quarantine": False,
         # report symptomatic (True, False)

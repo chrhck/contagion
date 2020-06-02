@@ -198,6 +198,10 @@ class Measures(object):
         return np.bool(self.__track_uninfected)
 
     @property
+    def tracing_efficiency(self):
+        return self.__tracing_efficiency
+
+    @property
     def random_test_num(self):
         return self.__random_test_num
 
@@ -240,6 +244,9 @@ class Measures(object):
 
         self.__track_uninfected = config["measures"]["track uninfected"]
         _log.debug("Track uninfected: {0}".format(self.__second_order_tracing))
+
+        self.__tracing_efficiency = config["measures"]["tracing efficiency"]
+
 
     def __def_quarantine(self):
         """
@@ -314,8 +321,7 @@ class Measures(object):
 
         self.__test_efficiency_function = test_efficiency_function
 
-
         self.__test_false_positive_pdf = Delta(
             config["measures"]["test false positive rate"]
         )
-       
+
