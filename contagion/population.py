@@ -1145,7 +1145,6 @@ class NetworkXPopulation(Population):
             contact_rows = np.empty(0, dtype=int)
             contact_strengths = np.empty(0, dtype=int)
 
-        contact_strengths = np.ones_like(contact_cols)
         if return_rows:
             return contact_cols, contact_strengths, contact_rows
         else:

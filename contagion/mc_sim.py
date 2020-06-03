@@ -188,7 +188,8 @@ class MC_Sim(object):
                 "is_tested_negative",
                 "is_tested_positive_second",
                 "is_tested_negative_second",
-                "is_index_case"
+                "is_index_case",
+                "is_reported",
                 #"will_test_negative"
             ],
             [
