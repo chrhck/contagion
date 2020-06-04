@@ -146,7 +146,8 @@ _baseconfig = {
         "test threshold": 0.01,
         "app fraction": 1,
         "random test num": 0,
-        "rnd testing": False
+        "rnd testing": False,
+        "random testing mode": "lin weight"
     },
     "scenario": {"class": "StandardScenario", "sim_length": 200},
 }

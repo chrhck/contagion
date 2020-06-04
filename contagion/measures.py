@@ -210,6 +210,10 @@ class Measures(object):
         return self.__rnd_testing
 
     @property
+    def random_test_mode(self):
+        return self.__random_test_mode
+
+    @property
     def is_SOT_active(self):
         """
         function: is_SOT_active
@@ -264,6 +268,7 @@ class Measures(object):
 
     def __def_rnd_testing(self):
         self.__random_test_num = config["measures"]["random test num"]
+        self.__random_test_mode = config["measures"]["testing mode"]
 
     def __def_testing(self):
         """

@@ -2625,21 +2625,48 @@ class ContagionStateMachine(StateMachine):
         eligible = (
             ~self._states["is_quarantined"](data) &
             ~(
-                self._states["is_recovered"](data) & 
+                self._states["is_recovered"](data) &
                 self._states["is_index_case"](data)
             ) &
             ~self._states["is_symptomatic"](data)
         )
 
         num_eligible = np.sum(eligible)
-        p_test = min(1, self._measures.random_test_num / num_eligible)
+        if (
+                isinstance(self._population, NetworkXPopulation) and
+                (self._measures.random_test_mode == "lin weight")
+           ):
+            eligible_indices = np.nonzero(eligible)[0]
+            g = self._population._graph
 
-        random_test_mask = self._rstate.binomial(
-            1,
-            p_test,
-            size=num_eligible) == 1
+            weights = np.asarray(list(dict(g.degree)))
+            weights /= weights.sum()
+            num_tests = min(self._measures.random_test_num, num_eligible)
+            test_indices = self._rstate.choice(
+                eligible_indices,
+                size=num_tests,
+                p=weights,
+                replace=False)
+            takes_random_test = np.zeros(
+                data.field_len,
+                dtype=np.bool)
+            takes_random_test[test_indices] = True
 
-        takes_random_test = np.zeros(data.field_len, dtype=np.bool)
-        takes_random_test[eligible] = random_test_mask
+            """
+            sorted_indices = sorted(
+                eligible_indices,
+                key=lambda i: g.degree[i],
+                reverse=True)
+            """
+        else:
+            p_test = min(1, self._measures.random_test_num / num_eligible)
+
+            random_test_mask = self._rstate.binomial(
+                1,
+                p_test,
+                size=num_eligible) == 1
+
+            takes_random_test = np.zeros(data.field_len, dtype=np.bool)
+            takes_random_test[eligible] = random_test_mask
 
         return takes_random_test
