@@ -2639,18 +2639,25 @@ class ContagionStateMachine(StateMachine):
             eligible_indices = np.nonzero(eligible)[0]
             g = self._population._graph
 
-            weights = np.asarray(list(dict(g.degree)))
+            weights = np.asarray(list(dict(g.degree)), dtype=np.float)[eligible_indices]
             weights /= weights.sum()
-            num_tests = min(self._measures.random_test_num, num_eligible)
-            test_indices = self._rstate.choice(
-                eligible_indices,
-                size=num_tests,
-                p=weights,
-                replace=False)
-            takes_random_test = np.zeros(
-                data.field_len,
-                dtype=np.bool)
-            takes_random_test[test_indices] = True
+            nzero = np.sum(weights > 0)
+            num_tests = min(self._measures.random_test_num, nzero)
+            if num_tests == nzero:
+                takes_random_test = np.zeros(
+                    data.field_len,
+                    dtype=np.bool)
+                takes_random_test[eligible_indices] = True
+            else:
+                test_indices = self._rstate.choice(
+                    eligible_indices,
+                    size=num_tests,
+                    p=weights,
+                    replace=False)
+                takes_random_test = np.zeros(
+                    data.field_len,
+                    dtype=np.bool)
+                takes_random_test[test_indices] = True
 
             """
             sorted_indices = sorted(
