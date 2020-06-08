@@ -669,9 +669,10 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         self,
         name: str,
         state_a: FloatState,
-        initialization_pdf: PDF,
+        initialization_pdf: Optional[PDF] = None,
         condition: TCondition = None,
         pipe_condition_mask: bool = False,
+        stateful_init_func=None,
         log=False,
         *args,
         **kwargs,
@@ -680,7 +681,15 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         _Transition.__init__(self, name, *args, **kwargs)
         ConditionalMixin.__init__(self, condition)
         self._state_a = state_a
+        if initialization_pdf is None and stateful_init_func is None:
+            raise ValueError(
+                "Must either supply initialization_pdf or stateful_init_func")
+        if initialization_pdf is not None and stateful_init_func is not None:
+            raise ValueError(
+                "Supply only one of initialization_pdf or stateful_init_func")
+
         self._initialization_pdf = initialization_pdf
+        self._stateful_init_func = stateful_init_func
         self._pipe_condition_mask = pipe_condition_mask
         self._log = log
 
@@ -696,8 +705,10 @@ class InitializeTimerTransition(_Transition, ConditionalMixin):
         # Rows which are currently 0
         zero_rows = (~self._state_a(data)) & cond
         num_zero_rows = zero_rows.sum(axis=0)
-
-        initial_vals = self._initialization_pdf.rvs(num_zero_rows)
+        if self._initialization_pdf is not None:
+            initial_vals = self._initialization_pdf.rvs(num_zero_rows)
+        else:
+            initial_vals = self._stateful_init_func(data, zero_rows)
         # print(len(initial_vals), (~self._state_a(data)).sum())
         changed = (~self._state_a).change_state(data, initial_vals, cond)
         if self._log:
@@ -1209,19 +1220,20 @@ class ContagionStateMachine(StateMachine):
                     ),
 
                     InitializeTimerTransition(
-                        "init_latent_duration",
-                        timer_states["latent_duration"],
-                        self._infection.latent_duration,
-                        pipe_condition_mask=True,
-                        log=False
-                    ),
-
-                    InitializeTimerTransition(
                         "init_time_until_symptoms",
                         timer_states["time_until_symptoms"],
                         self._infection.incubation_duration,
-                    )
+                        pipe_condition_mask=True,
+                    ),
 
+                    InitializeTimerTransition(
+                        "init_latent_duration",
+                        timer_states["latent_duration"],
+                        stateful_init_func=self.__correlated_latent,
+                        # self._infection.latent_duration,
+                        pipe_condition_mask=True,
+                        log=False
+                    )
                 ]
             )
         )
@@ -1649,7 +1661,7 @@ class ContagionStateMachine(StateMachine):
                         ChangeStateConditionalTransition(
                             "reported",
                             ~boolean_states["is_reported"],
-                            quarantine_condition  # & Condition(self.__tracing_active),
+                            quarantine_condition & Condition(self.__tracing_active),
 
                         ),
                         ChangeStateConditionalTransition(
@@ -1676,6 +1688,11 @@ class ContagionStateMachine(StateMachine):
                                 ~boolean_states["is_tested_positive"],
                                 pipe_condition_mask=True
                             ),
+                            ChangeStateConditionalTransition(
+                                "reset_time_since_last_test_result",
+                                (counter_states["time_since_last_test_result"],
+                                 -np.inf),
+                                pipe_condition_mask=True),
                             InitializeCounterTransition(
                                 "init_time_since_last_test_result",
                                 counter_states["time_since_last_test_result"],
@@ -1775,6 +1792,11 @@ class ContagionStateMachine(StateMachine):
                                         ~boolean_states["is_tested"],
                                         pipe_condition_mask=True
                                     ),
+                                    ChangeStateConditionalTransition(
+                                        "reset_time_since_last_test_result",
+                                        (counter_states["time_since_last_test_result"],
+                                         -np.inf),
+                                        pipe_condition_mask=True),
 
                                     InitializeTimerTransition(
                                         "init_time_until_test_result",
@@ -1859,6 +1881,13 @@ class ContagionStateMachine(StateMachine):
                                         (boolean_states["will_test_negative"], False),
                                         pipe_condition_mask=True
                                     ),
+                                    ChangeStateConditionalTransition(
+                                        "reset_time_until_second_test",
+                                        (counter_states["time_until_second_test"],
+                                         -np.inf
+                                         ),
+                                        pipe_condition_mask=True
+                                    ),
 
                                     InitializeTimerTransition(
                                         "init_time_until_second_test",
@@ -1899,6 +1928,13 @@ class ContagionStateMachine(StateMachine):
                                             ~boolean_states["will_test_negative"],
                                             self.__will_test_negative
                                         ),
+                                        pipe_condition_mask=True
+                                    ),
+                                    ChangeStateConditionalTransition(
+                                        "reset_time_until_second_test_result",
+                                        (counter_states["time_until_second_test_result"],
+                                         -np.inf
+                                         ),
                                         pipe_condition_mask=True
                                     ),
 
@@ -2020,6 +2056,28 @@ class ContagionStateMachine(StateMachine):
                                  ),
                                 pipe_condition_mask=True
                             ),
+                            ChangeStateConditionalTransition(
+                                "reset_time_until_rest_result",
+                                (timer_states["time_until_test_result"],
+                                 0
+                                 ),
+                                pipe_condition_mask=True
+                            ),
+                            ChangeStateConditionalTransition(
+                                "reset_time_until_second_test",
+                                (timer_states["time_until_second_test"],
+                                 0
+                                 ),
+                                pipe_condition_mask=True
+                            ),
+                            ChangeStateConditionalTransition(
+                                "reset_time_until_second_test_result",
+                                (timer_states["time_until_second_test_result"],
+                                 0
+                                 ),
+                                pipe_condition_mask=True
+                            ),
+
                         ] + resetters
                     )
                 )
@@ -2137,7 +2195,12 @@ class ContagionStateMachine(StateMachine):
         is_infectable_indices = np.nonzero(is_infectable)[0]
 
         if config["general"]["trace spread"]:
-            self._trace_infectable.append(is_infectable_indices)
+            if self._measures.quarantine:
+                avail = ~quarantined_mask
+            else:
+                avail = np.ones(data.field_len, dtype=np.bool)
+            avail_ind = np.nonzero(avail)[0]
+            self._trace_infectable.append(avail_ind)
 
         if len(is_infectable_indices) == 0:
             self._stat_collector["contacts"].append(0)
@@ -2206,7 +2269,10 @@ class ContagionStateMachine(StateMachine):
         infectious_dur = data["time_since_infectious"][
             successful_contactee_indices
         ]
-
+        """
+        infectious_dur += self._rstate.uniform(
+            -0.5, 0.5, size=len(infectious_dur))
+        """
         infection_prob = self._infection.pdf_infection_prob.pdf(
             infectious_dur)
         # An infection is successful if the bernoulli outcome
@@ -2281,7 +2347,7 @@ class ContagionStateMachine(StateMachine):
                 if bt_len > 0:
                     bt_days = self._trace_contacts[-bt_len:]
                     inf_at_day = self._trace_infectable[-bt_len:]
-
+                    tot_cont = 0
                     for bt_day, inf_day in zip(bt_days, inf_at_day):
                         (
                             contact_cols,
@@ -2291,12 +2357,12 @@ class ContagionStateMachine(StateMachine):
                             newly_infected_indices,
                             inf_day,
                             return_rows=True)
-
+                        tot_cont += len(contact_cols)
                         for contact, contactee in zip(
                                 contact_cols,
                                 contact_rows):
                             bt_day[contactee].append(contact)
-
+    
         if isinstance(self._population, NetworkXPopulation):
             # update graph history
             g = self._population._graph
@@ -2484,7 +2550,6 @@ class ContagionStateMachine(StateMachine):
         infectee_ids = find_infectee_bt(
             infect_history, tracked_reported_indices)
 
-
         self._stat_collector["num_traced_infectee"][-1] += len(infectee_ids)
 
         if len(infectee_ids) > 0:
@@ -2571,7 +2636,7 @@ class ContagionStateMachine(StateMachine):
         num_mask = mask.sum()
         is_infectious_mask = self.states["is_infectious"](data)[mask]
         is_symptomatic_mask = self.states["is_symptomatic"](data)[mask]
-        time_since_infect = self.states["time_since_infectious"](data)[mask]
+        time_since_infect = data["time_since_infectious"][mask]
 
         always_negative_mask = ~is_infectious_mask
 
@@ -2582,7 +2647,8 @@ class ContagionStateMachine(StateMachine):
             self._measures.test_false_positive_pdf.rvs(always_negative_num)
             ) == 0
 
-        result = np.zeros(num_mask, dtype=np.bool)
+        # default is will_test_negative = True
+        result = np.ones(num_mask, dtype=np.bool)
         result[always_negative_indices] = always_negative
         # Assume that symptomatic always get tested positive
 
@@ -2677,3 +2743,14 @@ class ContagionStateMachine(StateMachine):
             takes_random_test[eligible] = random_test_mask
 
         return takes_random_test
+
+    def __correlated_latent(self, data, rows):
+        incub_time = data["time_until_symptoms"][rows]
+
+        num_rows = rows.sum()
+        latent_duration = self._infection.latent_duration.rvs(num_rows)
+
+        latent_duration = (incub_time - latent_duration).astype(np.int)
+        latent_duration[latent_duration < 0] = 0
+
+        return latent_duration
