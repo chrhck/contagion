@@ -265,7 +265,8 @@ class Gamma(ScipyPDF):
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
             max_val=None,
-            scaling=None) -> None:
+            scaling=None,
+            as_dtype=np.float) -> None:
         """
         function: __init__
         Initializes the Gamma class
@@ -291,7 +292,7 @@ class Gamma(ScipyPDF):
         self._mode = (self._alpha-1) / self._beta
         self._max_val = max_val
         self._scaling = scaling
-
+        self._as_dtype = as_dtype
         self._pdf = scipy.stats.gamma(
             self._shape,
             scale=self._scale
@@ -330,7 +331,7 @@ class Gamma(ScipyPDF):
 
         rvs = rstate.standard_gamma(self._shape, size=num) * self._scale
 
-        return rvs
+        return rvs.astype(self._as_dtype)
 
 
 class Gamma_Benchmark(ScipyPDF):

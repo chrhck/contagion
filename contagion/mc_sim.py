@@ -130,12 +130,16 @@ class MC_Sim(object):
             self.__infect.latent_duration.rvs(self.__infected)
         )
 
+        infec_dur = np.around(
+            self.__infect.infectious_duration.rvs(self.__infected)
+        )
+
         # Filling the array
         self.__population.loc[infect_id, "is_infected"] = True
-        self.__population.loc[infect_id, "is_latent"] = True
-        self.__population.loc[infect_id, "latent_duration"] = latent_dur
+        self.__population.loc[infect_id, "is_infectious"] = True
+        self.__population.loc[infect_id, "infectious_duration"] = infec_dur
+        self.__population.loc[infect_id, "time_since_infectious"] = 0
 
-        # self.__population.loc[infect_id, "time_since_infectious"] = 0
         # self.__population.loc[infect_id, "infectious_duration"] = infec_dur
         # TODO: Add a switch if these people have symptoms or not
 
@@ -194,6 +198,7 @@ class MC_Sim(object):
             ],
             [
                 ("is_recovered", "is_tested_positive", True),
+                ("is_recovered", "is_index_case", True),
                 ("is_infected", "is_quarantined", True)]
         )
         # The state machine
