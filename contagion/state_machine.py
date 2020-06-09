@@ -1883,8 +1883,8 @@ class ContagionStateMachine(StateMachine):
                                     ),
                                     ChangeStateConditionalTransition(
                                         "reset_time_until_second_test",
-                                        (counter_states["time_until_second_test"],
-                                         -np.inf
+                                        (timer_states["time_until_second_test"],
+                                         0
                                          ),
                                         pipe_condition_mask=True
                                     ),
@@ -1932,8 +1932,8 @@ class ContagionStateMachine(StateMachine):
                                     ),
                                     ChangeStateConditionalTransition(
                                         "reset_time_until_second_test_result",
-                                        (counter_states["time_until_second_test_result"],
-                                         -np.inf
+                                        (timer_states["time_until_second_test_result"],
+                                         0
                                          ),
                                         pipe_condition_mask=True
                                     ),

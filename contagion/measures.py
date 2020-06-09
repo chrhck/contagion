@@ -268,7 +268,7 @@ class Measures(object):
 
     def __def_rnd_testing(self):
         self.__random_test_num = config["measures"]["random test num"]
-        self.__random_test_mode = config["measures"]["testing mode"]
+        self.__random_test_mode = config["measures"]["random testing mode"]
 
     def __def_testing(self):
         """
