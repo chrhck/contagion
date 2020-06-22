@@ -1081,6 +1081,7 @@ class ContagionStateMachine(StateMachine):
 
         # Boolean states
         boolean_state_names = [
+            "is_patient_zero",
             "is_latent",
             "will_have_symptoms",
             "is_symptomatic",
@@ -1191,7 +1192,10 @@ class ContagionStateMachine(StateMachine):
             infected_condition = Condition(
                 self.__get_new_infections
             ) & Condition.from_state(~boolean_states["is_removed"])
-
+        infected_condition = (
+            infected_condition |
+            Condition.from_state(boolean_states["is_patient_zero"])
+        )
         self._transitions.append(
             TransitionChain(
                 "healthy_latent_timer",
@@ -2166,14 +2170,6 @@ class ContagionStateMachine(StateMachine):
 
         infectious_mask = self.states["is_infectious"](data)
 
-        if infectious_mask.sum() == 0:
-            self._stat_collector["contacts"].append(0)
-            self._stat_collector["contacts_per_person"].append(0)
-            if config["general"]["trace spread"]:
-                #self._trace_contacts.append(np.empty((1, 0, 2)))
-                self._trace_contacts.append(defaultdict(list))
-                self._trace_infection.append(np.empty((1, 0, 2), dtype=np.int))
-            return np.zeros_like(infectious_mask, dtype=np.bool)
 
         # Only infectious non removed, non-quarantined can infect others
         removed_mask = self.states["is_removed"](data)
@@ -2188,6 +2184,14 @@ class ContagionStateMachine(StateMachine):
 
         infectious_indices = np.nonzero(infectious_mask)[0]
 
+        if len(infectious_indices) == 0:
+            self._stat_collector["contacts"].append(0)
+            self._stat_collector["contacts_per_person"].append(0)
+            if config["general"]["trace spread"]:
+                #self._trace_contacts.append(np.empty((1, 0, 2)))
+                self._trace_contacts.append(defaultdict(list))
+                self._trace_infection.append(np.empty((1, 0, 2), dtype=np.int))
+            return np.zeros_like(infectious_mask, dtype=np.bool)
         healthy_mask = ~self.states["is_infected"](data)
         is_infectable = healthy_mask & (~removed_mask)
         if self._measures.quarantine:
@@ -2337,8 +2341,7 @@ class ContagionStateMachine(StateMachine):
 
         # If multiple sucessful interacions pick the first
         newly_infectee_indices = newly_infectee_indices[uq_ind]
-
-        if config["measures"]["contact tracing"]:
+        if config["measures"]["contact tracing"] and len(newly_infected_indices) > 0:
             if self._measures.backtrack_length > 0:
                 # generate contacts to fill up backtrace
                 bt_len = min(

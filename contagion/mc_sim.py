@@ -68,6 +68,7 @@ class MC_Sim(object):
         # TODO: doesn't actually have to be a DataFrame anymore
         self.__population = pd.DataFrame(
             {
+                "is_patient_zero": False,
                 "is_infected": False,
                 "was_infected": False,
                 "is_latent": False,
@@ -125,20 +126,8 @@ class MC_Sim(object):
             for inf_id in infect_id:
                 g.nodes[inf_id]["initial_infected"] = True
 
-        # Their infection duration
-        latent_dur = np.around(
-            self.__infect.latent_duration.rvs(self.__infected)
-        )
-
-        infec_dur = np.around(
-            self.__infect.infectious_duration.rvs(self.__infected)
-        )
-
         # Filling the array
-        self.__population.loc[infect_id, "is_infected"] = True
-        self.__population.loc[infect_id, "is_infectious"] = True
-        self.__population.loc[infect_id, "infectious_duration"] = infec_dur
-        self.__population.loc[infect_id, "time_since_infectious"] = 0
+        self.__population.loc[infect_id, "is_patient_zero"] = True
 
         # self.__population.loc[infect_id, "infectious_duration"] = infec_dur
         # TODO: Add a switch if these people have symptoms or not

@@ -3,6 +3,8 @@
 # Ignoring the log file
 contagion.log
 
+pics/
+
 # Don't need to keep the pyc files
 *.pyc
 

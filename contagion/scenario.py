@@ -44,12 +44,14 @@ class LateMeasures(StandardScenario):
             sim_length: int,
             start_measures_inf_frac: float,
             early_stopping: bool = True,
+            social_dist_contact_pdf = None,
             *args, **kwargs):
         super().__init__(state_machine, sim_length, *args, **kwargs)
 
         self._start_measures_inf_frac = start_measures_inf_frac
         self._measures_active = False
         self._early_stopping = early_stopping
+        self._social_dist_contact_pdf = social_dist_contact_pdf
 
     def run(self):
         start = time()
@@ -64,6 +66,8 @@ class LateMeasures(StandardScenario):
                  self._measures_active):
                 self._sm._measures.measures_active = True
                 self._measures_active = True
+                if self._social_dist_contact_pdf is not None:
+                    self._sm._population.set_contact_pdf(self._social_dist_contact_pdf)
             else:
                 self._sm._measures.measures_active = False
 

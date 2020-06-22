@@ -87,7 +87,27 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     Returns:
         -None
     """
+
+    def __init__(self, lower, upper, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lower = lower
+        self._upper = upper
+    
     def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
+        if num == 0:
+            return np.zeros(0)
+        samples = []
+        s = 0
+        
+        while s < num:
+            sample = self._rvs(num, dtype)
+            select = sample[
+                np.logical_and(sample >= self._lower, sample <= self._upper)]
+            samples.append(select)
+            s += len(select)
+        return np.concatenate(samples)[:num] 
+
+    def _rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
         function: rvs
         Calculates the random variates
@@ -145,7 +165,9 @@ class TruncatedNormal(ScipyPDF):
             self,
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
-            max_val=np.infty) -> None:
+            max_val=np.infty,
+            lower=-np.inf,
+            upper=np.inf) -> None:
         """
         function: __init__
         Initializes the TruncatedNormal class
@@ -155,7 +177,7 @@ class TruncatedNormal(ScipyPDF):
         Returns:
             -None
         """
-        super().__init__()
+        super().__init__(lower, upper)
         # Other cases aren't used
         self._lower = 0.
         self._upper = max_val
@@ -186,7 +208,7 @@ class Beta(ScipyPDF):
         -None
     """
 
-    def __init__(self, mean, sd):
+    def __init__(self, mean, sd, lower=-np.inf, upper=np.inf):
         """
         function: __init__
         Initializes the Beta class
@@ -198,6 +220,7 @@ class Beta(ScipyPDF):
         Returns:
             -None
         """
+        super().__init__(lower, upper)
         self._mean = np.atleast_1d(mean)
         self._sd = np.atleast_1d(sd)
 
@@ -266,7 +289,9 @@ class Gamma(ScipyPDF):
             sd: Union[float, np.ndarray],
             max_val=None,
             scaling=None,
-            as_dtype=np.float) -> None:
+            as_dtype=np.float,
+            lower=-np.inf,
+            upper=np.inf) -> None:
         """
         function: __init__
         Initializes the Gamma class
@@ -280,6 +305,7 @@ class Gamma(ScipyPDF):
         Returns:
             -None
         """
+        super().__init__(lower, upper)
         if max_val is not None and scaling is not None:
             raise ValueError("Cannot set both scaling and max_val")
         self._mean = mean
@@ -313,7 +339,7 @@ class Gamma(ScipyPDF):
 
         return pdf_vals
 
-    def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
+    def _rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
         function: rvs
         Calculates the random variates
@@ -332,47 +358,6 @@ class Gamma(ScipyPDF):
         rvs = rstate.standard_gamma(self._shape, size=num) * self._scale
 
         return rvs.astype(self._as_dtype)
-
-
-class Gamma_Benchmark(ScipyPDF):
-    """
-    class: Gamma
-    Class for the benchmark gamma distribution
-    Parameters:
-        -Union[float, np.array] shape:
-            The shape value
-        -Union[float, np.array] loc:
-            The loc
-        -Union[float, np.array] scale:
-            The scale parameters
-        -optional float max_val:
-            The maximum value of the pdf
-    Returns:
-        -None
-    """
-
-    def __init__(
-            self,
-            shape: Union[float, np.ndarray],
-            loc: Union[float, np.ndarray],
-            scale: Union[float, np.ndarray]) -> None:
-        """
-        function: __init__
-        Initializes the Gamma class
-        Parameters:
-            -Union[float, np.array] mean:
-                The mean value
-            -Union[float, np.array] sd:
-                The sd
-            -Union[float, np.array] scale:
-                The scale parameters
-        Returns:
-            -None
-        """
-        self._pdf = scipy.stats.gamma(
-            shape, loc=loc,
-            scale=scale
-        )
 
 
 class NormalizedProbability(Probability):

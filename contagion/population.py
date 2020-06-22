@@ -19,7 +19,7 @@ from networkx.utils import py_random_state
 from networkx.generators.community import _zipf_rv_below
 
 from .config import config
-from .pdfs import construct_pdf
+from .pdfs import construct_pdf, PDF
 
 _log = logging.getLogger(__name__)
 
@@ -76,6 +76,9 @@ class PopulationWithSocialCircles(Population):
 
 
 class HomogeneousPopulation(PopulationWithSocialCircles):
+    def set_contact_pdf(self, pdf: PDF):
+        self._soc_circ_interact_pdf = construct_pdf(pdf)
+
     def get_contacts(
         self, rows: np.ndarray, cols: np.ndarray, return_rows=False
     ) -> Union[
