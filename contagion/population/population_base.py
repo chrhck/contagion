@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 
-from .config import config
+from ..config import config
 
 _log = logging.getLogger(__name__)
 

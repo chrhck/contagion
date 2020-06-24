@@ -20,6 +20,7 @@ _log = logging.getLogger(__name__)
 class HomogeneousPopulation(Population):
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         contact_pdf = construct_pdf(
             config["population"]["social circle interactions pdf"]
         )

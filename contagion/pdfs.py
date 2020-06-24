@@ -92,20 +92,20 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
         super().__init__(*args, **kwargs)
         self._lower = lower
         self._upper = upper
-    
+
     def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         if num == 0:
             return np.zeros(0)
         samples = []
         s = 0
-        
+
         while s < num:
             sample = self._rvs(num, dtype)
             select = sample[
                 np.logical_and(sample >= self._lower, sample <= self._upper)]
             samples.append(select)
             s += len(select)
-        return np.concatenate(samples)[:num] 
+        return np.concatenate(samples)[:num]
 
     def _rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
@@ -232,6 +232,27 @@ class Beta(ScipyPDF):
         self._beta = self._alpha * (1/self._mean-1)
 
         self._pdf = scipy.stats.beta(self._alpha, self._beta)
+
+
+class Pareto(ScipyPDF):
+    """
+    class: Pareto
+    Class for the Pareto distribution
+    Parameters:
+        -x_min: Union[float, np.ndarray]
+            Min value (mode)
+        -index: Union[float, np.ndarray]
+            Powerlaw index
+    Returns:
+        -None
+    """
+
+    def __init__(self, x_min, index, upper=np.inf):
+        super().__init__(x_min, upper)
+        self._x_min = np.atleast_1d(x_min)
+        self._index = np.atleast_1d(index)
+
+        self._pdf = scipy.stats.pareto(self._index, scale=self._x_min)
 
 
 class Uniform(ScipyPDF):

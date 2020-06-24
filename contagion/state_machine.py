@@ -23,7 +23,7 @@ from .infection import Infection
 from .measures import Measures
 from .pdfs import PDF
 from .population import Population, NetworkXPopulation
-import itertools
+
 _log = logging.getLogger(__name__)
 
 DEBUG = False
@@ -488,7 +488,7 @@ class ChangeStateConditionalTransition(_Transition, ConditionalMixin):
         state_a: Union[_State, Tuple[_State, bool]],
         condition: TCondition = None,
         pipe_condition_mask: bool = False,
-        log = False,
+        log=False,
         *args,
         **kwargs,
     ):
