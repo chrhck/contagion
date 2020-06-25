@@ -9,6 +9,7 @@ import random
 import numpy as np  # type: ignore
 import logging
 import networkx as nx  # type: ignore
+import scipy.stats
 
 from networkx.utils import py_random_state
 from networkx.generators.community import _zipf_rv_below
@@ -575,47 +576,11 @@ class NetworkXWrappers(object):
 
     @staticmethod
     def relaxed_caveman_graph(pop_size, **kwargs):
-        rstate = config["runtime"]["random state"]
         clique_size = kwargs["clique_size"]
         n_cliques = pop_size // clique_size
         p = kwargs["p"]
 
-        inter_actions_rvs = construct_pdf(
-            config["population"]["nx"]["inter freq pdf"]
-        ).rvs
-        intra_actions_rvs = construct_pdf(
-            config["population"]["nx"]["intra freq pdf"]
-        ).rvs
-
         g = nx.relaxed_caveman_graph(n_cliques, clique_size, p)
-
-        inter_actions = inter_actions_rvs(len(g))
-        intra_actions = intra_actions_rvs(len(g))
-
-        edge_weights = {}
-
-        nodes = list(g)
-        for (u, v) in g.edges():
-            if rstate.random() < p:  # rewire the edge
-                x = rstate.choice(nodes)
-                if g.has_edge(u, x):
-                    continue
-                g.remove_edge(u, v)
-                g.add_edge(u, x)
-                inter_rate_0 = inter_actions[u] / g.degree[u]
-                inter_rate_1 = inter_actions[x] / g.degree[x]
-
-                avg_int = np.average([inter_rate_0, inter_rate_1])
-                edge_weights[(u, x)] = avg_int
-            else:
-                intra_rate_0 = intra_actions[u] / g.degree[u]
-                intra_rate_1 = intra_actions[v] / g.degree[v]
-
-                avg_int = np.average([intra_rate_0, intra_rate_1])
-                # mu is the fraction of inter-community interacions
-                edge_weights[(u, v)] = avg_int
-
-        nx.set_edge_attributes(g, edge_weights, "weight")
         g.remove_edges_from(nx.selfloop_edges(g))
 
         if kwargs["pruning_frac"] > 0:
@@ -626,6 +591,40 @@ class NetworkXWrappers(object):
         g.remove_edges_from(rem_edges)
 
         return g
+
+    @staticmethod
+    def schools_model(pop_size, **kwargs):
+        rstate = config["runtime"]["random state"]
+
+        school_graph = NetworkXWrappers.relaxed_caveman_graph(
+            pop_size, **kwargs
+        )
+
+        # add families
+        family_sizes = scipy.stats.nbinom.rvs(
+            8, 0.9, size=len(school_graph), random_state=rstate) + 1
+
+        cur_size = len(school_graph)
+        combined = nx.Graph()
+        combined.add_nodes_from(school_graph.nodes(data=True))
+        combined.add_edges_from(school_graph.edges)
+
+        print(family_sizes.sum())
+        for node, fam_size in zip(school_graph.nodes, family_sizes):
+            combined.nodes[node]["type"] = "school"
+            f_graph = nx.generators.complete_graph(fam_size)
+            mapping = {i: i+cur_size for i in range(fam_size)}
+            nx.relabel_nodes(f_graph, mapping, copy=False)
+
+            for v in f_graph.nodes:
+                f_graph.nodes[v]["type"] = "family"
+            combined.add_nodes_from(f_graph.nodes(data=True))
+            combined.add_edges_from(f_graph.edges)
+            combined.add_edge(node, list(f_graph.nodes.keys())[0])
+
+            cur_size += fam_size
+        config["population"]["population size"] = len(combined)
+        return combined
 
 
 class NetworkXPopulation(Population):
