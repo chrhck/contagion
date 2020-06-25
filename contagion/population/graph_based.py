@@ -609,7 +609,6 @@ class NetworkXWrappers(object):
         combined.add_nodes_from(school_graph.nodes(data=True))
         combined.add_edges_from(school_graph.edges)
 
-        print(family_sizes.sum())
         for node, fam_size in zip(school_graph.nodes, family_sizes):
             combined.nodes[node]["type"] = "school"
             f_graph = nx.generators.complete_graph(fam_size)
