@@ -623,7 +623,6 @@ class NetworkXWrappers(object):
             combined.add_edge(node, list(f_graph.nodes.keys())[0])
 
             cur_size += fam_size
-        config["population"]["population size"] = len(combined)
         return combined
 
 
@@ -696,7 +695,6 @@ class NetworkXPopulation(Population):
                 if rnd_ind not in adj:
                     sel_cols.append(rnd_ind)
                     sel_rows.append(row)
-                    strs.append(intens)
 
             contact_cols.append(np.array(sel_cols, dtype=int))
             contact_rows.append(np.array(sel_rows, dtype=int))

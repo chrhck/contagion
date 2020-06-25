@@ -160,6 +160,8 @@ class Contagion(object):
                     (self.pop, config["population"]),
                     open(config["population"]["population storage"], "wb"),
                 )
+        if config["population"]["population class"] == "NetworkXPopulation":
+            config["population"]["population_size"] = len(self.pop._graph)
         _log.info("Finished the population")
 
         _log.info("Starting the infection construction")
