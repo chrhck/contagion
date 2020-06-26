@@ -2573,7 +2573,7 @@ class ContagionStateMachine(StateMachine):
         contacted_mask &= is_suc_traced
 
         if isinstance(self._population, NetworkXPopulation):
-            contacted_indices = np.nonzero(contacted_mask)
+            contacted_indices = np.nonzero(contacted_mask)[0]
             # update graph history
             g = self._population._graph
             for ci in contacted_indices:
