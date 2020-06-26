@@ -1,4 +1,5 @@
 #! /bin/env python
+from copy import deepcopy
 import os
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ seed = config["general"]["random state seed"]
 results = []
 for i in range(args.n_rep):
     config["general"]["random state seed"] = seed+i
-    contagion = Contagion(config)
+    contagion = Contagion(deepcopy(config))
     contagion.sim()
     inf_hist = np.atleast_2d(np.squeeze(np.hstack(contagion.trace_infection)))
     stats = pd.DataFrame(contagion.statistics)

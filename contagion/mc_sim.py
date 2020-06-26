@@ -188,7 +188,7 @@ class MC_Sim(object):
             [
                 ("is_recovered", "is_tested_positive", True),
                 ("is_recovered", "is_index_case", True),
-                ("is_infected", "is_quarantined", True)]
+                ("was_infected", "is_index_case", False)]
         )
         # The state machine
         _log.debug("Setting up the state machine")

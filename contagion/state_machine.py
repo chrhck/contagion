@@ -914,7 +914,7 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         if self._cond_fields is not None:
             for (field, field2, state) in self._cond_fields:
                 cond = data[field] & (data[field2] == state)
-                self._statistics[field + "_" + field2].append(cond.sum())
+                self._statistics[field + "_" + field2 + "_" + str(state)].append(cond.sum())
 
         # Re
         if inf_trace is not None:
