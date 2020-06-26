@@ -2710,6 +2710,16 @@ class ContagionStateMachine(StateMachine):
         )
 
         num_eligible = np.sum(eligible)
+
+        if isinstance(self._population, NetworkXPopulation):
+            eligible_indices = np.nonzero(eligible)[0]
+
+            g = self._population._graph
+
+            for ei in eligible_indices:
+                if not g.nodes[ei]["random_testable"]:
+                    eligible[ei] = False
+
         if (
                 isinstance(self._population, NetworkXPopulation) and
                 (self._measures.random_test_mode == "lin weight")
@@ -2753,6 +2763,8 @@ class ContagionStateMachine(StateMachine):
 
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
             takes_random_test[eligible] = random_test_mask
+
+
 
         return takes_random_test
 
