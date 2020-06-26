@@ -2365,7 +2365,7 @@ class ContagionStateMachine(StateMachine):
                                 contact_cols,
                                 contact_rows):
                             bt_day[contactee].append(contact)
-    
+
         if isinstance(self._population, NetworkXPopulation):
             # update graph history
             g = self._population._graph
@@ -2571,6 +2571,15 @@ class ContagionStateMachine(StateMachine):
             self._measures.tracing_efficiency,
             size=data.field_len) == 1
         contacted_mask &= is_suc_traced
+
+        if isinstance(self._population, NetworkXPopulation):
+            contacted_indices = np.nonzero(contacted_mask)
+            # update graph history
+            g = self._population._graph
+            for ci in contacted_indices:
+                if "traced" not in g.nodes[ci]["history"]:
+                    g.nodes[ci]["history"]["traced"] = []
+                g.nodes[ci]["history"]["traced"].append(self._cur_tick)
 
         self._stat_collector["num_traced_infected_total"][-1] += (
             data["is_infected"][contacted_mask].sum())
