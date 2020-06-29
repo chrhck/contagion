@@ -2433,8 +2433,20 @@ class ContagionStateMachine(StateMachine):
         if num_new_infec == 0:
             return np.zeros(0)
 
-        # new_infec_indices = new_infec.nonzero()[0]
-        symp_prob = self._infection.will_have_symptoms_prob.rvs(num_new_infec)
+        if isinstance(self._population, NetworkXPopulation):
+            # read probs from graph
+            symp_probs = nx.get_node_attributes(
+                self._population._graph,
+                "symp_prob"
+            ).values()
+
+            symp_prob = np.fromiter(
+                symp_probs,
+                count=len(symp_probs),
+                dtype=np.float)[new_infec]
+        else:
+            symp_prob = self._infection.will_have_symptoms_prob.rvs(
+                num_new_infec)
 
         will_have_symp = (
             self._rstate.binomial(1, symp_prob, size=num_new_infec) == 1

@@ -600,6 +600,9 @@ class NetworkXWrappers(object):
             pop_size, **kwargs
         )
 
+        nx.set_node_attributes(
+            school_graph, kwargs["school_symp_prob"], "symp_prob")
+
         # add families
         family_sizes = scipy.stats.nbinom.rvs(
             8, 0.9, size=len(school_graph), random_state=rstate) + 1
@@ -614,6 +617,8 @@ class NetworkXWrappers(object):
             combined.nodes[node]["random_testable"] = True
             combined.nodes[node]["family_index"] = node
             f_graph = nx.generators.complete_graph(fam_size)
+            nx.set_node_attributes(
+                f_graph, kwargs["family_symp_prob"], "symp_prob")
             mapping = {i: i+cur_size for i in range(fam_size)}
             nx.relabel_nodes(f_graph, mapping, copy=False)
 
