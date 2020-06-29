@@ -2765,7 +2765,7 @@ class ContagionStateMachine(StateMachine):
 
             tests_per_class = self._rstate.multinomial(
                 self._measures.random_test_num,
-                1 / n_cliques)
+                np.ones(n_cliques) / n_cliques)
 
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
             class_indices = np.arange(clique_size)
