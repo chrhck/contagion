@@ -16,6 +16,8 @@ import logging
 import pickle
 import yaml
 
+from copy import deepcopy
+
 import numpy as np  # type: ignore
 
 # -----------------------------------------
@@ -73,7 +75,7 @@ class Contagion(object):
         # Inputs
         if userconfig is not None:
             if isinstance(userconfig, dict):
-                config.from_dict(userconfig)
+                config.from_dict(deepcopy(userconfig))
             else:
                 config.from_yaml(userconfig)
 

@@ -626,6 +626,7 @@ class NetworkXWrappers(object):
             combined.add_edge(node, list(f_graph.nodes.keys())[0])
 
             cur_size += fam_size
+        combined.graph["n_school"] = len(school_graph)
         return combined
 
 

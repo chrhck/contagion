@@ -2709,7 +2709,6 @@ class ContagionStateMachine(StateMachine):
             ~self._states["is_symptomatic"](data)
         )
 
-
         if isinstance(self._population, NetworkXPopulation):
             eligible_indices = np.nonzero(eligible)[0]
 
@@ -2754,6 +2753,30 @@ class ContagionStateMachine(StateMachine):
                 key=lambda i: g.degree[i],
                 reverse=True)
             """
+        elif (
+                isinstance(self._population, NetworkXPopulation) and
+                (self._measures.random_test_mode == "distribute class")
+             ):
+            eligible_indices = np.nonzero(eligible)[0]
+            g = self._population._graph
+
+            clique_size = config["population"]["nx"]["kwargs"]["clique_size"]
+            n_cliques = g.graph["n_school"] // clique_size
+
+            tests_per_class = self._rstate.multinomial(
+                self._measures.random_test_num,
+                1 / n_cliques)
+
+            takes_random_test = np.zeros(data.field_len, dtype=np.bool)
+            class_indices = np.arange(clique_size)
+            for i, tests in enumerate(tests_per_class):
+                test_indices = self._rstate.choice(
+                    class_indices,
+                    size=tests,
+                    replace=False) + i*clique_size
+
+                takes_random_test[test_indices] = eligible[test_indices]
+
         else:
             p_test = min(1, self._measures.random_test_num / num_eligible)
 
@@ -2764,8 +2787,6 @@ class ContagionStateMachine(StateMachine):
 
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
             takes_random_test[eligible] = random_test_mask
-
-
 
         return takes_random_test
 
