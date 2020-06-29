@@ -29,11 +29,12 @@ def plot_infection_history(
             Plot all infections rather than only currently infected
     """
 
-    fig = plt.figure(figsize=(15, 20))
-    spec = gs.GridSpec(ncols=1, nrows=3, figure=fig, height_ratios=[3, 1, 1])
-    ax1 = fig.add_subplot(spec[0, 0])
-    ax2 = fig.add_subplot(spec[1, 0])
-    ax3 = fig.add_subplot(spec[2, 0])
+    fig = plt.figure(figsize=(16, 9))
+    spec = gs.GridSpec(ncols=2, nrows=1, figure=fig, width_ratios=[3, 2])
+    spec2 = gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=spec[1])
+    ax1 = fig.add_subplot(spec[0])
+    ax2 = fig.add_subplot(spec2[0])
+    ax3 = fig.add_subplot(spec2[1])
 
     max_val = 0
     for node in g:
@@ -73,10 +74,19 @@ def plot_infection_history(
                     if ((state_history[0][0] <= t) and
                         ((len(state_history) == 1) or
                          (state_history[1][0] > t))):
-                        col = "r"
+                        if (("traced" in g.nodes[node]["history"] )
+                                and (min(g.nodes[node]["history"]["traced"]) <= t)):
+                            col = "darkorange"
+                        else:                            
+                            col = "r"
                     if ((len(state_history) == 2) and
-                            (state_history[1][0] < t)):
-                        col = "lightgreen"
+                            (state_history[1][0] <= t)):
+                        if (("traced" in g.nodes[node]["history"] )
+                                and (min(g.nodes[node]["history"]["traced"]) <=
+                                     state_history[1][0])):
+                            col = "darkgreen"
+                        else:
+                            col = "purple"
             if "infected_by" in g.nodes[node]["history"]:
                 if state_history[0][0] <= t:
                     inf_by[g.nodes[node]["history"]["infected_by"]] += 1
@@ -98,7 +108,7 @@ def plot_infection_history(
             ax3.bar(np.arange(min_len), list(inf_by.values())[:min_len])
             ax3.set_xticks(np.arange(min_len))
             ax3.set_xticklabels(list(inf_by.keys())[:min_len])
-
+            ax3.set_ylabel("Num infected")
         return pcol, line, line2
 
     anim = FuncAnimation(

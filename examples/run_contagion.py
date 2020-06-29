@@ -27,7 +27,7 @@ for i in range(args.n_rep):
     contagion.sim()
     inf_hist = np.atleast_2d(np.squeeze(np.hstack(contagion.trace_infection)))
     stats = pd.DataFrame(contagion.statistics)
-    results.append((stats, inf_hist))
+    results.append((stats, inf_hist, contagion.pop._graph))
 
 res_dict = {
     "args": args,

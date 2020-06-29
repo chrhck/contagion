@@ -612,12 +612,14 @@ class NetworkXWrappers(object):
         for node, fam_size in zip(school_graph.nodes, family_sizes):
             combined.nodes[node]["type"] = "school"
             combined.nodes[node]["random_testable"] = True
+            combined.nodes[node]["family_index"] = node
             f_graph = nx.generators.complete_graph(fam_size)
             mapping = {i: i+cur_size for i in range(fam_size)}
             nx.relabel_nodes(f_graph, mapping, copy=False)
 
             for v in f_graph.nodes:
                 f_graph.nodes[v]["type"] = "family"
+                f_graph.nodes[v]["family_index"] = node
                 f_graph.nodes[v]["random_testable"] = False
             combined.add_nodes_from(f_graph.nodes(data=True))
             combined.add_edges_from(f_graph.edges)

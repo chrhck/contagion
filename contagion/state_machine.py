@@ -2709,7 +2709,6 @@ class ContagionStateMachine(StateMachine):
             ~self._states["is_symptomatic"](data)
         )
 
-        num_eligible = np.sum(eligible)
 
         if isinstance(self._population, NetworkXPopulation):
             eligible_indices = np.nonzero(eligible)[0]
@@ -2719,6 +2718,8 @@ class ContagionStateMachine(StateMachine):
             for ei in eligible_indices:
                 if not g.nodes[ei]["random_testable"]:
                     eligible[ei] = False
+
+        num_eligible = np.sum(eligible)
 
         if (
                 isinstance(self._population, NetworkXPopulation) and
