@@ -2778,7 +2778,7 @@ class ContagionStateMachine(StateMachine):
             n_tests_per_class = self._measures.random_test_num / n_cliques
             min_tests_per_class = int(np.floor(n_tests_per_class))
             remaining_tests = int(
-                self._measures.random_test_num - min_tests_per_class)
+                self._measures.random_test_num - min_tests_per_class*n_cliques)
 
             tests_per_class = (
                 np.zeros(n_cliques, dtype=np.int) + min_tests_per_class
