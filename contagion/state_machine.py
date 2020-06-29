@@ -2763,10 +2763,19 @@ class ContagionStateMachine(StateMachine):
             clique_size = config["population"]["nx"]["kwargs"]["clique_size"]
             n_cliques = g.graph["n_school"] // clique_size
 
-            tests_per_class = self._rstate.multinomial(
-                self._measures.random_test_num,
-                np.ones(n_cliques) / n_cliques)
+            n_tests_per_class = self._measures.random_test_num / n_cliques
+            min_tests_per_class = int(np.floor(n_tests_per_class))
+            remaining_tests = int(
+                self._measures.random_test_num - min_tests_per_class)
 
+            tests_per_class = (
+                np.zeros(n_cliques, dtype=np.int) + min_tests_per_class
+            )
+            rnd_classes = np.random.choice(
+                np.arange(n_cliques),
+                size=remaining_tests,
+                replace=False)
+            tests_per_class[rnd_classes] += 1
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
             class_indices = np.arange(clique_size)
             for i, tests in enumerate(tests_per_class):
@@ -2787,7 +2796,6 @@ class ContagionStateMachine(StateMachine):
 
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
             takes_random_test[eligible] = random_test_mask
-
         return takes_random_test
 
     def __correlated_latent(self, data, rows):
