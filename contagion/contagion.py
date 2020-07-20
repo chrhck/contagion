@@ -132,9 +132,10 @@ class Contagion(object):
 
             return pop_conf_a == pop_conf_b
 
+        pop = None
         if config["population"]["re-use population"]:
             try:
-                self.pop, pop_config = pickle.load(
+                pop, pop_config = pickle.load(
                     open(config["population"]["population storage"], "rb")
                 )
                 if not is_same_config(pop_config, config["population"]):
@@ -143,25 +144,24 @@ class Contagion(object):
                         "different config. Continue at own risk."
                     )
                 _log.debug("Population loaded")
-            except ImportError:
+            except (ImportError, FileNotFoundError):
                 _log.error("Population file not found!")
-                raise ImportError(
-                    "Population file not found! Check the config file."
-                )
-        else:
+        if pop is None:
             _log.info("Starting population construction")
             population_class = getattr(
                 population, config["population"]["population class"]
             )
-            self.pop = population_class()
+            pop = population_class()
             if config["population"]["store population"]:
                 # Storing for later
                 _log.debug("Storing for later use")
 
                 pickle.dump(
-                    (self.pop, config["population"]),
+                    (pop, config["population"]),
                     open(config["population"]["population storage"], "wb"),
                 )
+        self.pop = pop
+
         if config["population"]["population class"] == "NetworkXPopulation":
             config["population"]["population size"] = len(self.pop._graph)
         _log.info("Finished the population")

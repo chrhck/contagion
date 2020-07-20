@@ -497,6 +497,8 @@ class NetworkXWrappers(object):
                         not_optimal_nodes.add(u)
 
         g = NetworkXWrappers.add_lfr_weights(g)
+        nx.set_node_attributes(
+            g, kwargs["symp_prob"], "symp_prob")
         return g
 
     @staticmethod
@@ -572,6 +574,8 @@ class NetworkXWrappers(object):
                     combined.add_edge(u, randint)
                     combined.add_edge(adj, partner)
         combined = NetworkXWrappers.add_lfr_weights(combined)
+        nx.set_node_attributes(
+            g, kwargs["school_symp_prob"], "symp_prob")
         return combined
 
     @staticmethod
@@ -588,7 +592,7 @@ class NetworkXWrappers(object):
                 g.edges,
                 k=int(kwargs["pruning_frac"] * len(g.edges))
             )
-        g.remove_edges_from(rem_edges)
+            g.remove_edges_from(rem_edges)
 
         return g
 
@@ -627,8 +631,9 @@ class NetworkXWrappers(object):
                 f_graph.nodes[v]["family_index"] = node
                 f_graph.nodes[v]["random_testable"] = False
             combined.add_nodes_from(f_graph.nodes(data=True))
+            for v in f_graph.nodes:
+                combined.add_edge(node, v)
             combined.add_edges_from(f_graph.edges)
-            combined.add_edge(node, list(f_graph.nodes.keys())[0])
 
             cur_size += fam_size
         combined.graph["n_school"] = len(school_graph)

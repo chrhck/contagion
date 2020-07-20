@@ -1,6 +1,6 @@
 import json
 import os
-
+import time
 import pyssub.sbatch
 
 from argparse import ArgumentParser
@@ -12,7 +12,7 @@ parser.add_argument("--outdir", required=True, dest="outdir")
 parser.add_argument("-n", default=1, dest="n_rep", type=int)
 args = parser.parse_args()
 
-logfile = "/scratch4/chaack/logs/{macros[jobname]}.out"
+logfile = "/scratch4/chaack/logs/{macros[jobname]}_"+ time.strftime("%d_%b_%Y_%H_%M_%S", time.gmtime(time.time())) + ".out"
 
 script = pyssub.sbatch.SBatchScript(
     "/scratch4/chaack/software/scripts/contagion/examples/run_contagion.py",

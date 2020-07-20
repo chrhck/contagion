@@ -2451,6 +2451,12 @@ class ContagionStateMachine(StateMachine):
         will_have_symp = (
             self._rstate.binomial(1, symp_prob, size=num_new_infec) == 1
         )
+        if isinstance(self._population, NetworkXPopulation):
+            symp_indices = np.nonzero(new_infec)[0][will_have_symp]
+            # update graph history
+            g = self._population._graph
+            for si in symp_indices:
+                g.nodes[si]["history"]["symptomatic"] = self._cur_tick
         return will_have_symp
 
     def __reported_quarantine(self, data: DataDict) -> np.ndarray:
