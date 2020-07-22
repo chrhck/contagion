@@ -2296,7 +2296,6 @@ class ContagionStateMachine(StateMachine):
             # if not self._measures.measures_active:
             #    self._trace_contacts.append(defaultdict(set))
             #else:
-
             cdict = defaultdict(list)
             for contact, contactee in zip(
                     successful_contacts_indices,
