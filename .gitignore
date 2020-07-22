@@ -2,6 +2,11 @@
 
 # Ignoring the log file
 contagion.log
+*.jobs
+*.out
+*.in
+*.png
+*.pickle
 
 pics/
 
