@@ -497,6 +497,8 @@ class NetworkXWrappers(object):
                         not_optimal_nodes.add(u)
 
         g = NetworkXWrappers.add_lfr_weights(g)
+        nx.set_node_attributes(
+            g, kwargs["symp_prob"], "symp_prob")
         return g
 
     @staticmethod
@@ -572,6 +574,8 @@ class NetworkXWrappers(object):
                     combined.add_edge(u, randint)
                     combined.add_edge(adj, partner)
         combined = NetworkXWrappers.add_lfr_weights(combined)
+        nx.set_node_attributes(
+            g, kwargs["school_symp_prob"], "symp_prob")
         return combined
 
     @staticmethod
@@ -588,7 +592,7 @@ class NetworkXWrappers(object):
                 g.edges,
                 k=int(kwargs["pruning_frac"] * len(g.edges))
             )
-        g.remove_edges_from(rem_edges)
+            g.remove_edges_from(rem_edges)
 
         return g
 
@@ -600,6 +604,9 @@ class NetworkXWrappers(object):
             pop_size, **kwargs
         )
 
+        nx.set_node_attributes(
+            school_graph, kwargs["school_symp_prob"], "symp_prob")
+
         # add families
         family_sizes = scipy.stats.nbinom.rvs(
             8, 0.9, size=len(school_graph), random_state=rstate) + 1
@@ -609,20 +616,27 @@ class NetworkXWrappers(object):
         combined.add_nodes_from(school_graph.nodes(data=True))
         combined.add_edges_from(school_graph.edges)
 
-        print(family_sizes.sum())
         for node, fam_size in zip(school_graph.nodes, family_sizes):
             combined.nodes[node]["type"] = "school"
+            combined.nodes[node]["random_testable"] = True
+            combined.nodes[node]["family_index"] = node
             f_graph = nx.generators.complete_graph(fam_size)
+            nx.set_node_attributes(
+                f_graph, kwargs["family_symp_prob"], "symp_prob")
             mapping = {i: i+cur_size for i in range(fam_size)}
             nx.relabel_nodes(f_graph, mapping, copy=False)
 
             for v in f_graph.nodes:
                 f_graph.nodes[v]["type"] = "family"
+                f_graph.nodes[v]["family_index"] = node
+                f_graph.nodes[v]["random_testable"] = False
             combined.add_nodes_from(f_graph.nodes(data=True))
+            for v in f_graph.nodes:
+                combined.add_edge(node, v)
             combined.add_edges_from(f_graph.edges)
-            combined.add_edge(node, list(f_graph.nodes.keys())[0])
 
             cur_size += fam_size
+        combined.graph["n_school"] = len(school_graph)
         return combined
 
 

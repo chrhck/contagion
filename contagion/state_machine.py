@@ -914,7 +914,7 @@ class StatCollector(object, metaclass=abc.ABCMeta):
         if self._cond_fields is not None:
             for (field, field2, state) in self._cond_fields:
                 cond = data[field] & (data[field2] == state)
-                self._statistics[field + "_" + field2].append(cond.sum())
+                self._statistics[field + "_" + field2 + "_" + str(state)].append(cond.sum())
 
         # Re
         if inf_trace is not None:
@@ -2296,7 +2296,6 @@ class ContagionStateMachine(StateMachine):
             # if not self._measures.measures_active:
             #    self._trace_contacts.append(defaultdict(set))
             #else:
-
             cdict = defaultdict(list)
             for contact, contactee in zip(
                     successful_contacts_indices,
@@ -2365,7 +2364,7 @@ class ContagionStateMachine(StateMachine):
                                 contact_cols,
                                 contact_rows):
                             bt_day[contactee].append(contact)
-    
+
         if isinstance(self._population, NetworkXPopulation):
             # update graph history
             g = self._population._graph
@@ -2433,12 +2432,30 @@ class ContagionStateMachine(StateMachine):
         if num_new_infec == 0:
             return np.zeros(0)
 
-        # new_infec_indices = new_infec.nonzero()[0]
-        symp_prob = self._infection.will_have_symptoms_prob.rvs(num_new_infec)
+        if isinstance(self._population, NetworkXPopulation):
+            # read probs from graph
+            symp_probs = nx.get_node_attributes(
+                self._population._graph,
+                "symp_prob"
+            ).values()
+
+            symp_prob = np.fromiter(
+                symp_probs,
+                count=len(symp_probs),
+                dtype=np.float)[new_infec]
+        else:
+            symp_prob = self._infection.will_have_symptoms_prob.rvs(
+                num_new_infec)
 
         will_have_symp = (
             self._rstate.binomial(1, symp_prob, size=num_new_infec) == 1
         )
+        if isinstance(self._population, NetworkXPopulation):
+            symp_indices = np.nonzero(new_infec)[0][will_have_symp]
+            # update graph history
+            g = self._population._graph
+            for si in symp_indices:
+                g.nodes[si]["history"]["symptomatic"] = self._cur_tick
         return will_have_symp
 
     def __reported_quarantine(self, data: DataDict) -> np.ndarray:
@@ -2572,6 +2589,15 @@ class ContagionStateMachine(StateMachine):
             size=data.field_len) == 1
         contacted_mask &= is_suc_traced
 
+        if isinstance(self._population, NetworkXPopulation):
+            contacted_indices = np.nonzero(contacted_mask)[0]
+            # update graph history
+            g = self._population._graph
+            for ci in contacted_indices:
+                if "traced" not in g.nodes[ci]["history"]:
+                    g.nodes[ci]["history"]["traced"] = []
+                g.nodes[ci]["history"]["traced"].append(self._cur_tick)
+
         self._stat_collector["num_traced_infected_total"][-1] += (
             data["is_infected"][contacted_mask].sum())
         return contacted_mask
@@ -2700,12 +2726,22 @@ class ContagionStateMachine(StateMachine):
             ~self._states["is_symptomatic"](data)
         )
 
+        eligible_indices = np.nonzero(eligible)[0]
+
+        if isinstance(self._population, NetworkXPopulation):
+
+            g = self._population._graph
+
+            for ei in eligible_indices:
+                if not g.nodes[ei]["random_testable"]:
+                    eligible[ei] = False
+        eligible_indices = np.nonzero(eligible)[0]
         num_eligible = np.sum(eligible)
+
         if (
                 isinstance(self._population, NetworkXPopulation) and
                 (self._measures.random_test_mode == "lin weight")
            ):
-            eligible_indices = np.nonzero(eligible)[0]
             g = self._population._graph
 
             weights = np.asarray(list(dict(g.degree)), dtype=np.float)[eligible_indices]
@@ -2734,17 +2770,48 @@ class ContagionStateMachine(StateMachine):
                 key=lambda i: g.degree[i],
                 reverse=True)
             """
-        else:
-            p_test = min(1, self._measures.random_test_num / num_eligible)
+        elif (
+                isinstance(self._population, NetworkXPopulation) and
+                (self._measures.random_test_mode == "distribute class")
+             ):
+            g = self._population._graph
 
-            random_test_mask = self._rstate.binomial(
-                1,
-                p_test,
-                size=num_eligible) == 1
+            clique_size = config["population"]["nx"]["kwargs"]["clique_size"]
+            n_cliques = g.graph["n_school"] // clique_size
 
+            n_tests_per_class = self._measures.random_test_num / n_cliques
+            min_tests_per_class = int(np.floor(n_tests_per_class))
+            remaining_tests = int(
+                self._measures.random_test_num - min_tests_per_class*n_cliques)
+
+            tests_per_class = (
+                np.zeros(n_cliques, dtype=np.int) + min_tests_per_class
+            )
+            rnd_classes = self._rstate.choice(
+                np.arange(n_cliques),
+                size=remaining_tests,
+                replace=False)
+            tests_per_class[rnd_classes] += 1
             takes_random_test = np.zeros(data.field_len, dtype=np.bool)
-            takes_random_test[eligible] = random_test_mask
+            class_indices = np.arange(clique_size)
+            for i, tests in enumerate(tests_per_class):
+                test_indices = self._rstate.choice(
+                    class_indices,
+                    size=tests,
+                    replace=False) + i*clique_size
 
+                takes_random_test[test_indices] = eligible[test_indices]
+
+        else:
+            if self._measures.random_test_num >= num_eligible:
+                return eligible
+            else:
+                takes_random_test = np.zeros(data.field_len, dtype=np.bool)
+                rnd_indices = self._rstate.choice(
+                    eligible_indices,
+                    size=self._measures.random_test_num,
+                    replace=False)
+                takes_random_test[rnd_indices] = True
         return takes_random_test
 
     def __correlated_latent(self, data, rows):
