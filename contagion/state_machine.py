@@ -526,7 +526,7 @@ class ChangeStateConditionalTransition(_Transition, ConditionalMixin):
             _State,
             Tuple[
                 _State,
-                Union[bool, Callable[[DataDict, TCondition], np.ndarray]
+                Union[bool, Callable[[DataDict, TCondition], np.ndarray]]
             ]
         ],
         condition: TCondition = None,
