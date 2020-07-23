@@ -52,6 +52,8 @@ class ContagionStateMachine(StateMachine):
         self._statistics = defaultdict(list)
         self._measures = measures
 
+        self._total_tests_today = 0
+
         graph = None
         if isinstance(self._population, NetworkXPopulation):
             graph = self._population._graph
@@ -660,7 +662,10 @@ class ContagionStateMachine(StateMachine):
                         [
                             ChangeStateConditionalTransition(
                                 "symptomatic_quarantined",
-                                ~boolean_states["is_quarantined"],
+                                (
+                                    ~boolean_states["is_quarantined"],
+                                    self._check_test_capacity
+                                )
                                 quarantine_condition
                             ),
                             ChangeStateConditionalTransition(
@@ -763,7 +768,10 @@ class ContagionStateMachine(StateMachine):
                                 [
                                     ChangeStateConditionalTransition(
                                         "quarantined",
-                                        ~boolean_states["is_quarantined"],
+                                        (
+                                            ~boolean_states["is_quarantined"],
+                                            self._check_test_capacity
+                                        )
                                         has_been_traced_cond
                                     ),
 
@@ -1117,6 +1125,8 @@ class ContagionStateMachine(StateMachine):
         """
 
         super().tick()
+
+        self._total_tests_today = 0
 
         if isinstance(self._population, NetworkXPopulation):
             self._population._graph.graph["cur_tick"] += 1
@@ -1632,6 +1642,22 @@ class ContagionStateMachine(StateMachine):
 
         cond = new_quarantined | needs_second_test
         return cond
+
+    def _check_test_capacity(
+            self,
+            data: DataDict,
+            mask: np.ndarray) -> np.ndarray:
+        if self._measures.test_capacity is not None:
+            test_cap_today = self._measures.test_capacity(self._cur_tick)
+            new_tests = mask.sum()
+            if new_tests + self._total_tests_today > test_cap_today:
+                rnd_ind = self._state.choice(
+                    np.nonzero(mask)[0],
+                    size=test_cap_today - self._total_tests_today)
+                mask = np.zeros_like(mask, dtype=np.bool)
+                mask[rnd_ind] = True
+        self._total_tests_today += mask.sum()
+        return mask
 
     def __will_test_negative(
             self,

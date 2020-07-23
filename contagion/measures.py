@@ -72,6 +72,11 @@ class Measures(object):
         if self.__rnd_testing:
             self.__def_rnd_testing()
 
+        if config["measures"]["test_capacity"] is not None:
+            self.__def_test_capacity()
+        else:
+            self.__test_capacity = None
+
         self.measures_active = True
 
     @property
@@ -214,6 +219,10 @@ class Measures(object):
         return self.__random_test_mode
 
     @property
+    def test_capacity(self):
+        return self.__test_capacity
+
+    @property
     def is_SOT_active(self):
         """
         function: is_SOT_active
@@ -251,6 +260,10 @@ class Measures(object):
 
         self.__tracing_efficiency = config["measures"]["tracing efficiency"]
 
+    def __def_test_capacity(self):
+        def test_cap_func(day):
+            return config["measures"]["test_capacity"][day]
+        self.__test_capacity = test_cap_func
 
     def __def_quarantine(self):
         """
