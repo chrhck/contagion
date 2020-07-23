@@ -10,7 +10,7 @@ from .measures import Measures
 from .population import Population, NetworkXPopulation
 from .state_machine import (
     BooleanState, ChangeStateConditionalTransition, Condition,
-    ConditionalTransition, DataDict,
+    ConditionalTransition, DecreaseTimerTransition, DataDict,
     FloatState, InitializeCounterTransition, InitializeTimerTransition,
     MultiStateConditionalTransition, StateMachine, StatCollector,
     TransitionChain, _State)
