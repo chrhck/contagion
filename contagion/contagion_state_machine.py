@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+import networkx as nx
 
 from .config import config
 from .infection import Infection
@@ -11,7 +12,8 @@ from .population import Population, NetworkXPopulation
 from .state_machine import (
     BooleanState, ChangeStateConditionalTransition, Condition,
     ConditionalTransition, DecreaseTimerTransition, DataDict,
-    FloatState, InitializeCounterTransition, InitializeTimerTransition,
+    FloatState, IncreaseTimerTransition, InitializeCounterTransition,
+    InitializeTimerTransition,
     MultiStateConditionalTransition, StateMachine, StatCollector,
     TransitionChain, _State)
 
