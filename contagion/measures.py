@@ -12,7 +12,7 @@ from typing import Union, Optional
 import numpy as np
 import logging
 
-from .pdfs import Uniform, Delta, construct_pdf
+from .pdfs import Delta, construct_pdf
 from .config import config
 
 _log = logging.getLogger(__name__)
@@ -329,4 +329,3 @@ class Measures(object):
         self.__test_false_positive_pdf = Delta(
             config["measures"]["test false positive rate"]
         )
-

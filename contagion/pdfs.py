@@ -14,60 +14,56 @@ _log = logging.getLogger(__name__)
 
 class Probability(object, metaclass=abc.ABCMeta):
     """
-    class: Probability
     Abstract class to interface to the probabilities
-    Parameters:
-        -class pdf:
-            The probability distribution class
-    Returns:
-        -None
+
+    Subclasses have to implement `__call__`
     """
 
     @abc.abstractmethod
-    def __call__(self, values: np.ndarray):
+    def __call__(self, values: np.ndarray) -> np.ndarray:
         """
-        function: __call__
-        Calls the normalized pdfs
+        Calculate the probabilites for `values`
+
         Parameters:
-            -np.array values:
-                The values to flatten
-        Returns:
-            -None
+            values: np.narray
+
         """
         pass
 
 
 class PDF(object, metaclass=abc.ABCMeta):
     """
-    class: PDF
-    Interface class for the pdfs.
-    One layer inbetween to allow different
-    pdf packages such as scipy and numpy
-    Parameters:
-        -class pdf_interface:
-            Interface class to the pdf
-            classes
-    Returns:
-        -None
+    Metaclass for pdfs.
+
+    Subclasses have to implement `rvs`
     """
 
     @abc.abstractmethod
-    def rvs(self, num: int) -> np.ndarray:
+    def rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
-        function: rvs
-        Random variate sampling, filled
-        with the subclasses definition
+        Random variate sampling
+
         Parameters:
-            -int num:
+            num: int
                 Number of samples to draw
+            dtype: Optional[type]
+                dtype of the returned samples
         Returns:
-            -np.array rvs:
+            rvs: np.ndarray
                 The drawn samples
         """
         pass
 
 
 class Delta(PDF):
+    """
+    Delta distribution
+
+    Returns a fixed value.
+
+    Parameters:
+        mean: Union[float, np.ndarray]
+    """
     def __init__(
             self,
             mean: Union[float, np.ndarray],
@@ -80,15 +76,14 @@ class Delta(PDF):
 
 class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     """
-    class: ScipyPDF
-    Class pdf classes are inheriting from.
+    Interface to scipy distributions
+
     Parameters:
-        -None
-    Returns:
-        -None
+        lower, upper: float
+            Lower and upper boundaries for returned samples
     """
 
-    def __init__(self, lower, upper, *args, **kwargs):
+    def __init__(self, lower: float, upper: float, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._lower = lower
         self._upper = upper
@@ -109,15 +104,15 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
 
     def _rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
-        function: rvs
-        Calculates the random variates
+        Call the underlying scipy distributon
+
         Parameters:
-            -int num:
-                The number of samples
-            -optional dtype:
+            num: int
+                Number of samples
+            dtype: Optional[type]
                 Type of the output
         Returns:
-            -np.array rvs:
+            rvs: np.array
                 The drawn samples
         """
         rvs = self._pdf.rvs(
@@ -130,16 +125,13 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
     def pdf(self, points: Union[float, np.ndarray],
             dtype: Optional[type] = None) -> np.ndarray:
         """
-        function: pdf
-        Calculates the pdf for given values
+        Calculates the pdf at given values
         Parameters:
-            -float points:
-                Points to check probability for
-            -optional dtype:
-                Type of the output
+            points:  Union[float, np.ndarray]
+            dtype: Optional[type]
+                dtype of the returned values
         Returns:
-            -np.array pdf:
-                The calculated pdfs
+            pdf: np.array
         """
         pdf = self._pdf.pdf(
             points
@@ -152,35 +144,23 @@ class ScipyPDF(PDF, metaclass=abc.ABCMeta):
 
 class TruncatedNormal(ScipyPDF):
     """
-    class: TuncatedNormal
     Class for the truncated normal distributon
+
     Parameters:
         mean: Union[float, np.ndarray]
         sd: Union[float, np.ndarray]
-    Returns:
-        -None
+        lower, upper: float
+            Lower and upper boundaries for returned samples
     """
 
     def __init__(
             self,
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
-            max_val=np.infty,
             lower=-np.inf,
             upper=np.inf) -> None:
-        """
-        function: __init__
-        Initializes the TruncatedNormal class
-        Parameters:
-            mean: Union[float, np.ndarray]
-            sd: Union[float, np.ndarray]
-        Returns:
-            -None
-        """
         super().__init__(lower, upper)
         # Other cases aren't used
-        self._lower = 0.
-        self._upper = max_val
         self._mean = mean
         self._sd = sd
 
@@ -197,29 +177,17 @@ class TruncatedNormal(ScipyPDF):
 
 class Beta(ScipyPDF):
     """
-    class: Beta
     Class for the beta distribution
     Parameters:
-        -mean: Union[float, np.ndarray]
+        mean: Union[float, np.ndarray]
             Mean of the distribution
-        -sd: Union[float, np.ndarray]
+        sd: Union[float, np.ndarray]
              Standard deviation (has to be smaller than sqrt(mean(1-mean)))
-    Returns:
-        -None
+        lower, upper: float
+            Lower and upper boundaries for returned samples
     """
 
     def __init__(self, mean, sd, lower=-np.inf, upper=np.inf):
-        """
-        function: __init__
-        Initializes the Beta class
-        Parameters:
-            -mean: Union[float, np.ndarray]
-                Mean of the distribution
-            -sd: Union[float, np.ndarray]
-                Standard deviation (has to be smaller than sqrt(mean(1-mean)))
-        Returns:
-            -None
-        """
         super().__init__(lower, upper)
         self._mean = np.atleast_1d(mean)
         self._sd = np.atleast_1d(sd)
@@ -236,18 +204,17 @@ class Beta(ScipyPDF):
 
 class Pareto(ScipyPDF):
     """
-    class: Pareto
     Class for the Pareto distribution
     Parameters:
-        -x_min: Union[float, np.ndarray]
+        x_min: Union[float, np.ndarray]
             Min value (mode)
-        -index: Union[float, np.ndarray]
+        index: Union[float, np.ndarray]
             Powerlaw index
-    Returns:
-        -None
+        lower, upper: float
+            Lower and upper boundaries for returned samples
     """
 
-    def __init__(self, x_min, index, upper=np.inf):
+    def __init__(self, x_min, index, lower=-np.inf, upper=np.inf):
         super().__init__(x_min, upper)
         self._x_min = np.atleast_1d(x_min)
         self._index = np.atleast_1d(index)
@@ -257,33 +224,15 @@ class Pareto(ScipyPDF):
 
 class Uniform(ScipyPDF):
     """
-    class: Uniform
     Class for the uniform distribution
     Parameters:
         lower: Union[float, np.ndarray]
             Lower bound
         upper: Union[float, np.ndarray]
             Upper bound
-    Returns:
-        -None
     """
 
-    def __init__(
-            self,
-            lower: Union[float, np.ndarray],
-            upper: Union[float, np.ndarray]
-            ) -> None:
-        """
-        function: __init__
-        Initializes the Uniform class
-        Parameters:
-            -lower: Union[float, np.ndarray]
-                    Lower bound
-            -upper: Union[float, np.ndarray]
-                    Upper bound
-        Returns:
-            -None
-        """
+    def __init__(self, lower: float, upper: float) -> None:
         self._lower = lower
         self._upper = upper
         self._pdf = scipy.stats.uniform(self._lower, self._upper)
@@ -291,41 +240,33 @@ class Uniform(ScipyPDF):
 
 class Gamma(ScipyPDF):
     """
-    class: Gamma
-    Class for the scaled gamma distribution
+    Class for the gamma distribution
     Parameters:
-        -Union[float, np.array] mean:
-            The mean value
-        -Union[float, np.array] std:
-            The std
-        -optional float max_val:
-            The maximum value of the pdf
-    Returns:
-        -None
+        mean: Union[float, np.array]:
+            Mean value
+        std: Union[float, np.array]
+            Standard deviation
+        max_val: Optional[float]
+            Maximum value of the pdf. Adjusts the normalization such
+            that the mode is equal to max_val
+        scaling: Optional[float]
+            Scale the pdf by this value.
+        as_dtype: Optional[type]
+            dtype of the rvs. Overwrites dtype specified in call to `rvs``.
+        lower, upper: float
+            Lower and upper boundaries for returned samples
     """
 
     def __init__(
             self,
             mean: Union[float, np.ndarray],
             sd: Union[float, np.ndarray],
-            max_val=None,
-            scaling=None,
-            as_dtype=np.float,
-            lower=-np.inf,
-            upper=np.inf) -> None:
-        """
-        function: __init__
-        Initializes the Gamma class
-        Parameters:
-            -Union[float, np.array] mean:
-                The mean value
-            -Union[float, np.array] sd:
-                The sd
-            -optional float max_val:
-                The maximum value of the pdf
-        Returns:
-            -None
-        """
+            max_val: Optional[float] = None,
+            scaling: Optional[float] = None,
+            as_dtype: Optional[type] = np.float,
+            lower: Optional[float] = -np.inf,
+            upper: Optional[float] = np.inf) -> None:
+
         super().__init__(lower, upper)
         if max_val is not None and scaling is not None:
             raise ValueError("Cannot set both scaling and max_val")
@@ -362,73 +303,76 @@ class Gamma(ScipyPDF):
 
     def _rvs(self, num: int, dtype: Optional[type] = None) -> np.ndarray:
         """
-        function: rvs
-        Calculates the random variates
+        Call the underlying scipy distributon
+
         Parameters:
-            -int num:
-                The number of samples
-            -optional dtype:
+            num: int
+                Number of samples
+            dtype: Optional[type]
                 Type of the output
         Returns:
-            -np.array rvs:
+            rvs: np.array
                 The drawn samples
         """
         # scipy rvs is slow
         rstate = config["runtime"]["random state"]
 
+        # This is much faster than the scipy implementation
         rvs = rstate.standard_gamma(self._shape, size=num) * self._scale
 
         return rvs.astype(self._as_dtype)
 
 
-class NormalizedProbability(Probability):
-    """
-    class: NormalizedProbability
-    Class to normalize the pdf to the interval [0,1]
-    Parameters:
-        -int lower:
-            The lower bound
-        -int upper:
-            The upper bound
-    Returns:
-        -None
-    """
-
-    def __init__(self, lower: int, upper: int) -> None:
-        """
-        function: __init__
-        Initializes the normalization class
-        Parameters:
-            -int lower:
-                The lower bound
-            -int upper:
-                The upper bound
-        Returns:
-            -None
-        """
-        super().__init__()
-
-        self._lower = lower
-        self._upper = upper
-        self._interval_length = self._upper - self._lower
-
-    def __call__(self, values: np.ndarray):
-        """
-        function: __call__
-        Call handling
-        Parameters:
-            -np.array values:
-                The values to flatten
-        Returns:
-            -None
-        """
-
-        values = np.atleast_1d(values)
-        if ~np.all((values <= self._upper) &
-                   (values >= self._lower)):
-            raise ValueError("Not all values in range")
-
-        return (values - self._lower) / self._interval_length
+# class NormalizedProbability(Probability):
+#     """
+#     Uniform probability on an interval.
+#
+#     The probability is calculated as 1/(upper - lower)
+#
+#     Parameters:
+#         lower: int
+#             Lower bound
+#         -int upper:
+#             The upper bound
+#     Returns:
+#         -None
+#     """
+#
+#     def __init__(self, lower: int, upper: int) -> None:
+#         """
+#         function: __init__
+#         Initializes the normalization class
+#         Parameters:
+#             -int lower:
+#                 The lower bound
+#             -int upper:
+#                 The upper bound
+#         Returns:
+#             -None
+#         """
+#         super().__init__()
+#
+#         self._lower = lower
+#         self._upper = upper
+#         self._interval_length = self._upper - self._lower
+#
+#     def __call__(self, values: np.ndarray):
+#         """
+#         function: __call__
+#         Call handling
+#         Parameters:
+#             -np.array values:
+#                 The values to flatten
+#         Returns:
+#             -None
+#         """
+#
+#         values = np.atleast_1d(values)
+#         if ~np.all((values <= self._upper) &
+#                    (values >= self._lower)):
+#             raise ValueError("Not all values in range")
+#
+#         return (values - self._lower) / self._interval_length
 
 
 def construct_pdf(conf_dict: Dict[str, Any]) -> PDF:

@@ -76,10 +76,9 @@ class ContagionStateMachine(StateMachine):
         ]
 
         if self._measures.contact_tracing:
-            boolean_state_names.append("is_tracked")
+            boolean_state_names += ["is_tracable", "is_tracked"]
         if self._measures.quarantine:
-            boolean_state_names.append("is_quarantined")
-            boolean_state_names.append("is_reported")
+            boolean_state_names += ["is_quarantined", "is_reported"]
         if self._measures.testing:
             boolean_state_names += [
                 "is_tested",
@@ -91,7 +90,6 @@ class ContagionStateMachine(StateMachine):
                 "is_tested_positive",
                 "is_tested_positive_second",
                 "will_test_negative",
-                "is_tracable",
                 "is_rnd_tested"
                 ]
 
@@ -129,10 +127,9 @@ class ContagionStateMachine(StateMachine):
         if self._measures.quarantine:
             timer_state_names.append("quarantine_duration")
         if self._measures.testing:
-            timer_state_names.append("time_until_test")
-            timer_state_names.append("time_until_test_result")
-            timer_state_names.append("time_until_second_test")
-            timer_state_names.append("time_until_second_test_result")
+            timer_state_names += [
+                "time_until_test", "time_until_test_result",
+                "time_until_second_test", "time_until_second_test_result",
             counter_state_names.append("time_since_last_test_result")
 
         timer_states = {
@@ -197,6 +194,7 @@ class ContagionStateMachine(StateMachine):
                     ChangeStateConditionalTransition(
                         "is_latent",
                         ~boolean_states["is_latent"],
+                        pipe_condition_mask=True
                     ),
 
                     InitializeTimerTransition(
@@ -212,7 +210,6 @@ class ContagionStateMachine(StateMachine):
                         stateful_init_func=self.__correlated_latent,
                         # self._infection.latent_duration,
                         pipe_condition_mask=True,
-                        log=False
                     )
                 ]
             )
@@ -286,7 +283,7 @@ class ContagionStateMachine(StateMachine):
                         (
                             ~boolean_states["will_die"],
                             self.__will_die
-                        )
+                        ),
                     ),
 
                     InitializeTimerTransition(
@@ -659,7 +656,7 @@ class ContagionStateMachine(StateMachine):
                         "quarantined_tested_timer",
                         [
                             ChangeStateConditionalTransition(
-                                "quarantined_symptomatic",
+                                "symptomatic_quarantined",
                                 ~boolean_states["is_quarantined"],
                                 quarantine_condition
                             ),
