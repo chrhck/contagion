@@ -14,7 +14,8 @@ import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 from .config import config
-from .state_machine import ContagionStateMachine, StatCollector
+from .state_machine import StatCollector
+from .contagion_state_machine import ContagionStateMachine
 from . import scenario
 
 
@@ -58,9 +59,7 @@ class MC_Sim(object):
         self.__infect = infection
         self.__pop = population
         self.__measures = measures
-
         self.__rstate = config["runtime"]["random state"]
-
         self.__pop_size = config["population"]["population size"]
 
         _log.debug("Constructing the population array")
@@ -183,7 +182,6 @@ class MC_Sim(object):
                 "is_tested_negative_second",
                 "is_index_case",
                 "is_reported",
-                #"will_test_negative"
             ],
             [
                 ("is_recovered", "is_tested_positive", True),
