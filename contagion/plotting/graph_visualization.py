@@ -81,9 +81,10 @@ def plot_infection_history(
                             col = "r"
                     if ((len(state_history) == 2) and
                             (state_history[1][0] <= t)):
-                        if (("traced" in g.nodes[node]["history"] )
+                        if ((("traced" in g.nodes[node]["history"])
                                 and (min(g.nodes[node]["history"]["traced"]) <=
-                                     state_history[1][0])):
+                                     state_history[1][0]))
+                             or "symptomatic" in g.nodes[node]["history"]):
                             col = "darkgreen"
                         else:
                             col = "purple"
