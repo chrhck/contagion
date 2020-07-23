@@ -130,6 +130,7 @@ class ContagionStateMachine(StateMachine):
             timer_state_names += [
                 "time_until_test", "time_until_test_result",
                 "time_until_second_test", "time_until_second_test_result",
+            ]
             counter_state_names.append("time_since_last_test_result")
 
         timer_states = {
