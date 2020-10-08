@@ -119,6 +119,7 @@ _baseconfig = {
         "contact tracing": False,
         "population tracking": False,
         # fraction of population tracked
+        "backward tracing": True,
         "tracked fraction": 1.0,
         # Second order Tracing (True, False)
         "second order": False,
@@ -127,6 +128,7 @@ _baseconfig = {
         # track uninfected (True, False)
         "track uninfected": False,
         "tracing efficiency": 1.0,
+        "fill backtrace random": True,
         # quarantine (True, False)
         "quarantine": False,
         # report symptomatic (True, False)
@@ -148,7 +150,7 @@ _baseconfig = {
         "random test num": 0,
         "rnd testing": False,
         "random testing mode": "lin weight",
-        "test_capcity": None
+        "test capacity": None
     },
     "scenario": {"class": "StandardScenario", "sim_length": 200},
 }

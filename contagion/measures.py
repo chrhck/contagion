@@ -45,6 +45,7 @@ class Measures(object):
         self.__quarantine = config["measures"]["quarantine"]
         self.__testing = config["measures"]["testing"]
         self.__rnd_testing = config["measures"]["rnd testing"]
+        self.__fill_bt_rnd = config["measures"]["fill backtrace random"]
 
         if self.__contact_tracing:
             _log.info("Using contact tracing")
@@ -72,7 +73,7 @@ class Measures(object):
         if self.__rnd_testing:
             self.__def_rnd_testing()
 
-        if config["measures"]["test_capacity"] is not None:
+        if config["measures"]["test capacity"] is not None:
             self.__def_test_capacity()
         else:
             self.__test_capacity = None
@@ -82,6 +83,10 @@ class Measures(object):
     @property
     def contact_tracing(self):
         return self.__contact_tracing
+
+    @property
+    def fill_bt_rnd(self):
+        return self.__fill_bt_rnd
 
     @property
     def quarantine(self):
@@ -207,6 +212,10 @@ class Measures(object):
         return self.__tracing_efficiency
 
     @property
+    def backward_tracing(self):
+        return self.__backward_tracing
+
+    @property
     def random_test_num(self):
         return self.__random_test_num
 
@@ -245,6 +254,7 @@ class Measures(object):
             -None
         """
 
+        self.__backward_tracing = config["measures"]["backward tracing"]
         self.__backtrack_length = config["measures"]["backtrack length"]
         _log.debug(
             "Length of backtracking: {0}".format(self.__backtrack_length)

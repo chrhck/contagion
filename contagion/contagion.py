@@ -144,7 +144,6 @@ class Contagion(object):
                         "different config. Continue at own risk."
                     )
                 _log.debug("Population loaded")
-                print("Reusing pop.")
             except (ImportError, FileNotFoundError):
                 _log.error("Population file not found!")
         if pop is None:

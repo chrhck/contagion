@@ -159,6 +159,36 @@ class ContagionStateMachine(StateMachine):
         #   - is_infected
         # if the is infectable condition is true
 
+        # Latent - Infectious
+        infectious_cond = Condition.from_state(
+            ~timer_states["latent_duration"]
+        )
+
+        self._transitions.append(
+            TransitionChain(
+                "latent_infectious_timer",
+                [
+                    ConditionalTransition(
+                        "latent_infectious",
+                        boolean_states["is_latent"],
+                        boolean_states["is_infectious"],
+                        infectious_cond,
+                    ),
+
+                    InitializeTimerTransition(
+                        "init_infectious_duration",
+                        timer_states["infectious_duration"],
+                        self._infection.infectious_duration,
+                        pipe_condition_mask=True
+                    ),
+
+                    InitializeCounterTransition(
+                        "init_time_since_infectious",
+                        counter_states["time_since_infectious"],
+                    )
+                ]
+            )
+        )
         # Condition that stores the new infections from this tick
         if self._measures.quarantine:
             infected_condition = (
@@ -167,12 +197,16 @@ class ContagionStateMachine(StateMachine):
                 & Condition.from_state(~boolean_states["is_quarantined"])
             )
         else:
-            infected_condition = Condition(
-                self.__get_new_infections
-            ) & Condition.from_state(~boolean_states["is_removed"])
+            infected_condition = (
+                Condition(self.__get_new_infections)
+                & Condition.from_state(~boolean_states["is_removed"])
+                & Condition.from_state(~boolean_states["was_infected"])
+            )
         infected_condition = (
-            infected_condition |
-            Condition.from_state(boolean_states["is_patient_zero"])
+            infected_condition | ( 
+                Condition.from_state(boolean_states["is_patient_zero"]) &
+                Condition.from_state(~boolean_states["was_infected"])
+            )
         )
         self._transitions.append(
             TransitionChain(
@@ -220,36 +254,6 @@ class ContagionStateMachine(StateMachine):
             )
         )
 
-        # Latent - Infectious
-        infectious_cond = Condition.from_state(
-            ~timer_states["latent_duration"]
-        )
-
-        self._transitions.append(
-            TransitionChain(
-                "latent_infectious_timer",
-                [
-                    ConditionalTransition(
-                        "latent_infectious",
-                        boolean_states["is_latent"],
-                        boolean_states["is_infectious"],
-                        infectious_cond,
-                    ),
-
-                    InitializeTimerTransition(
-                        "init_infectious_duration",
-                        timer_states["infectious_duration"],
-                        self._infection.infectious_duration,
-                        pipe_condition_mask=True
-                    ),
-
-                    InitializeCounterTransition(
-                        "init_time_since_infectious",
-                        counter_states["time_since_infectious"],
-                    )
-                ]
-            )
-        )
 
         # No Symptoms - Symptomatic
         symptomatic_cond = Condition.from_state(
@@ -633,8 +637,6 @@ class ContagionStateMachine(StateMachine):
                 )
             )
 
-            is_tracable_cond = Condition.from_state(
-                boolean_states["is_tracable"])
 
             self._transitions.append(
                 TransitionChain(
@@ -656,6 +658,8 @@ class ContagionStateMachine(StateMachine):
 
             if self._measures.testing:
 
+                is_tracable_cond = Condition.from_state(
+                    boolean_states["is_tracable"])
                 self._transitions.append(
                     TransitionChain(
                         "quarantined_tested_timer",
@@ -665,7 +669,7 @@ class ContagionStateMachine(StateMachine):
                                 (
                                     ~boolean_states["is_quarantined"],
                                     self._check_test_capacity
-                                )
+                                ),
                                 quarantine_condition
                             ),
                             ChangeStateConditionalTransition(
@@ -771,7 +775,7 @@ class ContagionStateMachine(StateMachine):
                                         (
                                             ~boolean_states["is_quarantined"],
                                             self._check_test_capacity
-                                        )
+                                        ),
                                         has_been_traced_cond
                                     ),
 
@@ -1071,7 +1075,7 @@ class ContagionStateMachine(StateMachine):
                 )
 
             else:
-                self._transitions.append(
+                self._transitions += [
                     TransitionChain(
                         "quarantined_timer",
                         [
@@ -1087,13 +1091,49 @@ class ContagionStateMachine(StateMachine):
                                 self._measures.quarantine_duration,
                             ),
                         ]
+                    )]
+                if self._measures.contact_tracing:
+
+                    is_tracable_cond = Condition.from_state(
+                            boolean_states["is_tracable"])
+                    has_been_traced_cond = (
+                        Condition(self.__quarantined_traced) &
+                        Condition.from_state(
+                            ~boolean_states["is_removed"]) &
+                        Condition.from_state(
+                            ~boolean_states["is_quarantined"]) &
+                        is_tracable_cond
                     )
-                )
+                    contacts_traced_cond = Condition(
+                        self.__tracing_active)
+                    self._transitions += [
+                        TransitionChain(
+                            "tracing",
+                            [
+                            ChangeStateConditionalTransition(
+                                "traced_quarantined",
+                                ~boolean_states["is_quarantined"],
+                                has_been_traced_cond
+                            ),
+                            InitializeTimerTransition(
+                                "init_quarantine_duration",
+                                timer_states["quarantine_duration"],
+                                self._measures.quarantine_duration,
+                            ),
+                            ]
+                        ),
+
+                        ChangeStateConditionalTransition(
+                            "reported_off",
+                            (boolean_states["is_reported"], False),
+                            contacts_traced_cond,
+                        ),
+                   ] 
 
                 # Quarantine release
 
                 free_condition = Condition.from_state(
-                    timer_states["quarantine_duration"])
+                    ~timer_states["quarantine_duration"])
 
                 self._transitions.append(
                     ChangeStateConditionalTransition(
@@ -1126,6 +1166,7 @@ class ContagionStateMachine(StateMachine):
 
         super().tick()
 
+        self._stat_collector["tests_today"].append(self._total_tests_today)
         self._total_tests_today = 0
 
         if isinstance(self._population, NetworkXPopulation):
@@ -1277,6 +1318,9 @@ class ContagionStateMachine(StateMachine):
             newly_infected_mask
         ]
 
+        newly_infectee_indices = successful_contactee_indices[
+            newly_infected_mask
+        ]
         if config["general"]["trace spread"]:
             # app starts at day 1
             # if not self._measures.measures_active:
@@ -1308,9 +1352,6 @@ class ContagionStateMachine(StateMachine):
         self._stat_collector["contacts_per_person"].append(
             c_per_p
             )
-        newly_infectee_indices = successful_contactee_indices[
-            newly_infected_mask
-        ]
 
         if config["general"]["trace spread"]:
 
@@ -1327,7 +1368,9 @@ class ContagionStateMachine(StateMachine):
         # If multiple sucessful interacions pick the first
         newly_infectee_indices = newly_infectee_indices[uq_ind]
         if config["measures"]["contact tracing"] and len(newly_infected_indices) > 0:
-            if self._measures.backtrack_length > 0:
+            if (
+                self._measures.backtrack_length > 0 and
+                self._measures.fill_bt_rnd):
                 # generate contacts to fill up backtrace
                 bt_len = min(
                         len(self._trace_contacts),
@@ -1350,7 +1393,6 @@ class ContagionStateMachine(StateMachine):
                                 contact_cols,
                                 contact_rows):
                             bt_day[contactee].append(contact)
-
         if isinstance(self._population, NetworkXPopulation):
             # update graph history
             g = self._population._graph
@@ -1456,20 +1498,22 @@ class ContagionStateMachine(StateMachine):
             self._stat_collector["num_traced_infected"].append(0)
             self._stat_collector["num_traced_infectee"].append(0)
             self._stat_collector["num_traced_infected_total"].append(0)
-
+            self._stat_collector["num_traced_infected_per_reported"].append(0)
         if (not self._measures.contact_tracing or
                 not self._measures.measures_active):
             return np.zeros(data.field_len, dtype=np.bool)
 
         if self._measures.population_tracking:
             # Only a subset of the population responds to measures
-            base_mask = self.states["is_tracked"](data)
+            base_mask = (
+                self.states["is_tracked"](data) &
+                self.states["is_tracable"](data)
+            )
         else:
-            base_mask = np.ones(data.field_len, dtype=np.bool)
+            base_mask = self.states["is_tracable"](data) 
 
         reported_mask = (
-            self.states["is_reported"](data) &
-            self.states["is_tracable"](data)
+            self.states["is_reported"](data) 
             )
         reported_mask = reported_mask & base_mask
 
@@ -1522,11 +1566,12 @@ class ContagionStateMachine(StateMachine):
 
         def find_ci(con_history, tracked_reported_indices):
             contacts = []
-            for day in con_history:
-
+            for i, day in enumerate(con_history):
+                contacts_today = 0
                 for ti in tracked_reported_indices:
                     this_contacts = day[ti]
                     contacts += this_contacts
+                    contacts_today += len(this_contacts)
 
             return np.unique(contacts)
 
@@ -1547,19 +1592,23 @@ class ContagionStateMachine(StateMachine):
         self._stat_collector["num_traced"][-1] += contacted_mask.sum()
         self._stat_collector["num_traced_infected"][-1] += (
             data["is_infected"][contacted_mask].sum())
+        self._stat_collector["num_traced_infected_per_reported"][-1] += (
+            data["is_infected"][contacted_mask].sum() /
+            len(tracked_reported_indices))
 
         # backwards traces
 
-        infect_history = np.atleast_2d(np.squeeze(
-            np.hstack(self.trace_infection[-backtrack_length:])))
+        if self._measures.backward_tracing:
+            infect_history = np.atleast_2d(np.squeeze(
+                np.hstack(self.trace_infection[-backtrack_length:])))
 
-        infectee_ids = find_infectee_bt(
-            infect_history, tracked_reported_indices)
+            infectee_ids = find_infectee_bt(
+                infect_history, tracked_reported_indices)
 
-        self._stat_collector["num_traced_infectee"][-1] += len(infectee_ids)
+            self._stat_collector["num_traced_infectee"][-1] += len(infectee_ids)
 
-        if len(infectee_ids) > 0:
-            contacted_mask[infectee_ids] = True
+            if len(infectee_ids) > 0:
+                contacted_mask[infectee_ids] = True
 
         if not self._measures.track_uninfected:
             infected_mask = self.states["is_infected"](data)
@@ -1574,7 +1623,6 @@ class ContagionStateMachine(StateMachine):
             self._measures.tracing_efficiency,
             size=data.field_len) == 1
         contacted_mask &= is_suc_traced
-
         if isinstance(self._population, NetworkXPopulation):
             contacted_indices = np.nonzero(contacted_mask)[0]
             # update graph history
@@ -1657,7 +1705,7 @@ class ContagionStateMachine(StateMachine):
                 mask = np.zeros_like(mask, dtype=np.bool)
                 mask[rnd_ind] = True
         self._total_tests_today += mask.sum()
-        return mask
+        return mask[mask]
 
     def __will_test_negative(
             self,

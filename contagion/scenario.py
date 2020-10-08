@@ -2,7 +2,10 @@ import logging
 from typing import List
 from time import time
 
+import scipy.stats
+
 from .state_machine import StateMachine
+
 _log = logging.getLogger(__name__)
 
 
@@ -92,11 +95,13 @@ class SocialDistancing(StandardScenario):
             sim_length: int,
             t_steps: List[int],
             contact_rate_scalings: List[int],
+            n_contacts_per_day_baseline: float,
             *args, **kwargs):
         super().__init__(state_machine, sim_length, *args, **kwargs)
 
         self._t_steps = t_steps[::-1]
         self._contact_rate_scalings = contact_rate_scalings[::-1]
+        self._n_contacts_per_day_baseline = n_contacts_per_day_baseline
 
     def run(self):
         start = time()
@@ -108,7 +113,16 @@ class SocialDistancing(StandardScenario):
         for step in range(self._sim_length):
             if step == next_change:
                 _log.debug("New social distancing step")
-                self._sm._population.interaction_rate_scaling = next_scaling
+                new_contact_pdf = scipy.stats.gamma(
+                    2,
+                    scale=next_scaling*self._n_contacts_per_day_baseline/2)
+                pdf_config = {
+                    "class": "Gamma",
+                    "mean": new_contact_pdf.mean(),
+                    "sd": new_contact_pdf.std(),
+                    "upper": 15
+                }                
+                self._sm._population.set_contact_pdf(pdf_config)
                 if self._t_steps:
                     next_change = self._t_steps.pop()
                     next_scaling = self._contact_rate_scalings.pop()

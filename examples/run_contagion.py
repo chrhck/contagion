@@ -25,7 +25,7 @@ results = []
 
 for i in range(args.n_rep):
     start = time()
-    print("Running rep: {}".format(i))
+    # print("Running rep: {}".format(i))
     config["general"]["random state seed"] = seed+i + args.seed_offset
     contagion = Contagion(deepcopy(config))
     contagion.sim()
@@ -59,7 +59,7 @@ for i in range(args.n_rep):
         results.append((stats, inf_hist, g))
     else:
         results.append((stats, inf_hist))
-    print("Last round took: {}".format(time()-start))
+    # print("Last round took: {}".format(time()-start))
         
     
     
