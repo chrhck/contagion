@@ -46,5 +46,5 @@ results = contagion.statistics
 
 ## Code structure
 
-On overview of the code structure UPDATE THIS!!!
+On overview of the code structure
 ![Sketch of the model](images/Code_Structure.png)
